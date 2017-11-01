@@ -1,1 +1,1 @@
-include ':middleware', ':api', ':common'
+include ':middleware', ':api', ':common', ':demo'

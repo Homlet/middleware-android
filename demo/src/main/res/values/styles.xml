@@ -1,0 +1,13 @@
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="BottomNavigation" parent="AppTheme">
+        <item name="itemIconTint">@drawable/selector_nav</item>
+        <item name="itemTextColor">@drawable/selector_nav</item>
+        <item name="itemBackground">@color/colorPrimaryDark</item>
+    </style>
+</resources>
