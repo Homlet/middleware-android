@@ -23,7 +23,7 @@
             android:layout_marginStart="16dp"
             android:layout_marginTop="16dp"
             android:text="datetime"
-            android:textAppearance="@android:style/TextAppearance.Material.Medium"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             app:layout_constraintEnd_toStartOf="@+id/endpoint_type"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"/>
@@ -50,6 +50,7 @@
             android:layout_marginStart="16dp"
             android:layout_marginTop="8dp"
             android:text="An endpoint that emits the date-time in ISO-8601 format every second."
+            android:textAppearance="@style/TextAppearance.AppCompat.Small"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/endpoint_type"
             app:layout_constraintStart_toStartOf="parent"

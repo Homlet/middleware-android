@@ -1,5 +1,6 @@
 package uk.ac.cam.seh208.middleware.demo.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.IdRes;
 import android.support.design.widget.BottomNavigationView;
@@ -63,7 +64,9 @@ public class MainActivity extends AppCompatActivity implements EndpointListFragm
      */
     @Override
     public void onListFragmentInteraction(DummyContent.DummyItem item) {
-        // TODO: launch 'view endpoint' activity.
+        Intent intent = new Intent(this, ViewEndpointActivity.class);
+        intent.putExtra(ViewEndpointActivity.EXTRA_CNAME, "datetime");
+        startActivity(intent);
     }
 
     /**
