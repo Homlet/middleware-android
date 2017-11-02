@@ -11,6 +11,7 @@ public class ViewEndpointActivity extends AppCompatActivity {
 
     public static final String EXTRA_CNAME = "CNAME";
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

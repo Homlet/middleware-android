@@ -12,13 +12,13 @@
         android:name="uk.ac.cam.seh208.middleware.demo.EndpointListFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingTop="8dp"
+        android:scrollbars="vertical"
         app:layoutManager="LinearLayoutManager"
         tools:context="uk.ac.cam.seh208.middleware.demo.ui.EndpointListFragment"
-        tools:listitem="@layout/fragment_endpoint" />
+        tools:listitem="@layout/layout_endpoint"/>
 
     <android.support.design.widget.FloatingActionButton
+        android:id="@+id/button_add"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"

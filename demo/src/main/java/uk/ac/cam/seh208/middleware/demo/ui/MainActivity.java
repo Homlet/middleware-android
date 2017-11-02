@@ -4,23 +4,24 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.IdRes;
 import android.support.design.widget.BottomNavigationView;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 import uk.ac.cam.seh208.middleware.demo.R;
-import uk.ac.cam.seh208.middleware.demo.endpoint.dummy.DummyContent;
+import uk.ac.cam.seh208.middleware.demo.endpoint.Endpoint;
 
 
-public class MainActivity extends AppCompatActivity implements EndpointListFragment.OnListFragmentInteractionListener {
+public class MainActivity extends AppCompatActivity implements EndpointListFragment.OnListItemInteractionListener {
 
     /**
      * Reference to the bottom navigation bar view.
      */
     private BottomNavigationView navigation;
-
 
     /**
      * Callback for when an item on the bottom navigation bar is selected.
@@ -29,6 +30,7 @@ public class MainActivity extends AppCompatActivity implements EndpointListFragm
      */
     private BottomNavigationView.OnNavigationItemSelectedListener listener =
             (MenuItem item) -> navigateTo(item.getItemId(), false);
+
 
     /**
      * Inflate the default 'triple dot' options menu on the actionbar.
@@ -60,13 +62,17 @@ public class MainActivity extends AppCompatActivity implements EndpointListFragm
     /**
      * Launch the 'view endpoint' activity for the selected endpoint card.
      *
-     * @param item Reference to the card in the endpoint list that was selected.
+     * @param endpoint Reference to the endpoint associated with the card.
+     * @param card     Reference to the card view in the endpoint list that was selected.
      */
     @Override
-    public void onListFragmentInteraction(DummyContent.DummyItem item) {
+    public void onListItemInteraction(Endpoint endpoint, View card) {
         Intent intent = new Intent(this, ViewEndpointActivity.class);
-        intent.putExtra(ViewEndpointActivity.EXTRA_CNAME, "datetime");
-        startActivity(intent);
+        intent.putExtra(ViewEndpointActivity.EXTRA_CNAME, endpoint.getCName());
+        ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                this, card, "view_endpoint_container"
+        );
+        startActivity(intent, options.toBundle());
     }
 
     /**
