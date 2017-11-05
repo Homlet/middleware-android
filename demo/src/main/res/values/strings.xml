@@ -13,4 +13,16 @@
     <string name="heading_auto">Auto?</string>
     <string name="heading_data">Data</string>
     <string name="action_send_message">Send message</string>
+    <string name="edit_endpoint">Edit endpoint</string>
+    <string name="canonical_name">Canonical name</string>
+    <string name="description">Description</string>
+    <string name="polarity_source">Source</string>
+    <string name="polarity_sink">Sink</string>
+    <string name="schema_text">Text</string>
+    <string name="schema_int">Integer</string>
+    <string name="schema_subscription">Subscription</string>
+    <string name="input_label_polarity">Polarity</string>
+    <string name="input_label_schema">Schema</string>
+    <string name="action_save">Save</string>
+    <string name="action_edit">Edit</string>
 </resources>

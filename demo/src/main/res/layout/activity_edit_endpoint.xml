@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="uk.ac.cam.seh208.middleware.demo.ui.EditEndpointActivity">
+
+    <android.support.design.widget.TextInputLayout
+        android:id="@+id/input_wrapper_cname"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="24dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <EditText
+            android:id="@+id/input_cname"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:hint="@string/canonical_name"
+            android:inputType="text"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium.Inverse"/>
+
+    </android.support.design.widget.TextInputLayout>
+
+    <android.support.design.widget.TextInputLayout
+        android:id="@+id/input_wrapper_desc"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/input_wrapper_cname">
+
+        <EditText
+            android:id="@+id/input_desc"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:hint="@string/description"
+            android:inputType="textMultiLine"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium.Inverse"/>
+
+    </android.support.design.widget.TextInputLayout>
+
+    <Space
+        android:id="@+id/input_spacer"
+        android:layout_width="16dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
+        app:layout_constraintLeft_toRightOf="@id/input_label_schema"
+        app:layout_constraintTop_toBottomOf="@id/input_wrapper_desc"/>
+
+    <TextView
+        android:id="@+id/input_label_polarity"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:labelFor="@id/input_polarity"
+        android:text="@string/input_label_polarity"
+        android:textAppearance="@style/Caption"
+        app:layout_constraintBaseline_toBaselineOf="@id/input_polarity"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <Spinner
+        android:id="@+id/input_polarity"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="24dp"
+        android:entries="@array/polarities"
+        style="@style/Widget.AppCompat.Spinner.Underlined"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/input_spacer"
+        app:layout_constraintTop_toBottomOf="@+id/input_wrapper_desc"/>
+
+    <TextView
+        android:id="@+id/input_label_schema"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:labelFor="@id/input_schema"
+        android:text="@string/input_label_schema"
+        android:textAppearance="@style/Caption"
+        app:layout_constraintBaseline_toBaselineOf="@id/input_schema"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <Spinner
+        android:id="@+id/input_schema"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="24dp"
+        android:entries="@array/schemata"
+        style="@style/Widget.AppCompat.Spinner.Underlined"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/input_spacer"
+        app:layout_constraintTop_toBottomOf="@+id/input_polarity"/>
+
+    <Button
+        android:id="@+id/button_save"
+        style="@style/Widget.AppCompat.Button.Borderless.Colored"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="16dp"
+        android:text="@string/action_save"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <Button
+        android:id="@+id/button_cancel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="16dp"
+        android:text="@android:string/cancel"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/button_save"/>
+
+</android.support.constraint.ConstraintLayout>

@@ -33,11 +33,11 @@ public class MainActivity extends AppCompatActivity implements EndpointListFragm
 
 
     /**
-     * Inflate the default 'triple dot' options menu on the actionbar.
+     * Inflate the default 'triple dot' options_main menu on the action bar.
      */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.options, menu);
+        getMenuInflater().inflate(R.menu.options_main, menu);
         return true;
     }
 
