@@ -13,14 +13,14 @@ import uk.ac.cam.seh208.middleware.demo.ui.EndpointListFragment;
 import java.util.List;
 
 
-public class EndpointAdapter extends RecyclerView.Adapter<EndpointAdapter.ViewHolder> {
+public class EndpointListAdapter extends RecyclerView.Adapter<EndpointListAdapter.ViewHolder> {
 
     private final List<Endpoint> endpoints;
     private final EndpointListFragment.OnListItemInteractionListener listener;
 
 
-    public EndpointAdapter(List<Endpoint> endpoints,
-                           EndpointListFragment.OnListItemInteractionListener listener) {
+    public EndpointListAdapter(List<Endpoint> endpoints,
+                               EndpointListFragment.OnListItemInteractionListener listener) {
         this.endpoints = endpoints;
         this.listener = listener;
     }

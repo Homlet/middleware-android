@@ -14,7 +14,7 @@ import android.view.ViewGroup;
 import java.util.ArrayList;
 
 import uk.ac.cam.seh208.middleware.demo.endpoint.Endpoint;
-import uk.ac.cam.seh208.middleware.demo.endpoint.EndpointAdapter;
+import uk.ac.cam.seh208.middleware.demo.endpoint.EndpointListAdapter;
 import uk.ac.cam.seh208.middleware.demo.R;
 
 
@@ -75,7 +75,7 @@ public class EndpointListFragment extends Fragment {
         RecyclerView recycler = view.findViewById(R.id.endpoint_list);
         Context context = view.getContext();
         recycler.setLayoutManager(new LinearLayoutManager(context));
-        recycler.setAdapter(new EndpointAdapter(ENDPOINTS, listener));
+        recycler.setAdapter(new EndpointListAdapter(ENDPOINTS, listener));
 
         // Add padding before the first card in the recycler.
         recycler.addItemDecoration(new RecyclerView.ItemDecoration() {
