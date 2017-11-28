@@ -2,10 +2,16 @@
           package="uk.ac.cam.seh208.middleware">
 
     <application
+        android:name=".core.MiddlewareApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme"/>
+        android:theme="@style/AppTheme">
+
+        <service android:name=".core.MiddlewareService"/>
+
+    </application>
+
 </manifest>

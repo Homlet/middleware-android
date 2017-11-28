@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.common;
 
+import static uk.ac.cam.seh208.middleware.common.Keys.EndpointDetails.*;
+
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.Parcel;
@@ -11,6 +13,7 @@ import java.util.Collections;
 import java.util.List;
 
 
+// TODO: add member to select whether endpoint should persist.
 /**
  * Immutable class describing an endpoint. This class may refer to an
  * endpoint in general; a subclass exists for describing endpoints existing
@@ -19,15 +22,6 @@ import java.util.List;
  * @see RemoteEndpointDetails
  */
 public class EndpointDetails implements Parcelable {
-
-    /**
-     * Key strings for storing fields within the serialisation bundle.
-     */
-    private static final String NAME = "NAME";
-    private static final String DESC = "DESC";
-    private static final String POLARITY = "POLARITY";
-    private static final String SCHEMA = "SCHEMA";
-    private static final String TAGS = "TAGS";
 
     /**
      * The name of the endpoint. This is used to uniquely identify the endpoint
@@ -111,38 +105,23 @@ public class EndpointDetails implements Parcelable {
         }
     }
 
-    /**
-     * @return the name of this endpoint.
-     */
     @NonNull
     public String getName() {
         return name;
     }
 
-    /**
-     * @return the endpoint description.
-     */
     public String getDesc() {
         return desc;
     }
 
-    /**
-     * @return the polarity of the endpoint.
-     */
     public Polarity getPolarity() {
         return polarity;
     }
 
-    /**
-     * @return the endpoint message schema string.
-     */
     public String getSchema() {
         return schema;
     }
 
-    /**
-     * @return an unmodifiable list of the tags associated with this endpoint.
-     */
     public List<String> getTags() {
         return Collections.unmodifiableList(tags);
     }

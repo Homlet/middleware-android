@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.common;
 
+import static uk.ac.cam.seh208.middleware.common.Keys.Query.*;
+
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.Parcel;
@@ -19,17 +21,6 @@ import java.util.function.Predicate;
  * to locally held data on remote mappings.
  */
 public class Query implements Parcelable {
-
-    /**
-     * Key strings for storing fields within the serialisation bundle.
-     */
-    private static final String TAGS_TO_INCLUDE = "TAGS_TO_INCLUDE";
-    private static final String TAGS_TO_EXCLUDE = "TAGS_TO_EXCLUDE";
-    private static final String NAME_REGEX = "NAME_REGEX";
-    private static final String DESC_REGEX = "DESC_REGEX";
-    private static final String SCHEMA = "SCHEMA";
-    private static final String POLARITY = "POLARITY";
-    private static final String MATCHES = "MATCHES";
 
     /**
      * Value for matches indicating that the query should accept

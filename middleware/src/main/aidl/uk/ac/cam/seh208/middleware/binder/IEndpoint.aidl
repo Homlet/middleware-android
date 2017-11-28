@@ -1,4 +1,4 @@
-package uk.ac.cam.seh208.middleware;
+package uk.ac.cam.seh208.middleware.binder;
 
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
@@ -13,8 +13,11 @@ interface IEndpoint {
 //    void clearListeners( ... );
 
     List<RemoteEndpointDetails> getPeers();
-    List<RemoteEndpointDetails> map(in String host, in Query query);
+    List<RemoteEndpointDetails> map(in Query query);
+    List<RemoteEndpointDetails> mapTo(in String host, in Query query);
     List<RemoteEndpointDetails> unmap(in Query query);
-    List<RemoteEndpointDetails> unmapFrom(in String host);
+    List<RemoteEndpointDetails> unmapFrom(in String host, in Query query);
     List<RemoteEndpointDetails> unmapAll();
+
+    void setExposed(in boolean exposed);
 }
