@@ -4,7 +4,9 @@ import android.os.RemoteException;
 
 import java.util.List;
 
+import uk.ac.cam.seh208.middleware.common.Command;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
+import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.core.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.core.EndpointNotFoundException;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
@@ -63,6 +65,11 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     }
 
     @Override
+    public void force(String host, Command command) throws RemoteException {
+        // TODO: implement.
+    }
+
+    @Override
     public void setRDC(String host) throws RemoteException {
         // TODO: implement.
     }
@@ -70,5 +77,11 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     @Override
     public void setDiscoverable(boolean visible) throws RemoteException {
         // TODO: implement.
+    }
+
+    @Override
+    public List<String> discover(Query query) throws RemoteException {
+        // TODO: implement.
+        return null;
     }
 }

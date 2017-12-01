@@ -28,6 +28,22 @@ public class Query implements Parcelable {
      */
     public static final int MATCH_INDEFINITELY = -1;
 
+    /**
+     * This object is part of the Parcelable interface. It is used to instantiate
+     * new instances of queries from serialised parcels.
+     */
+    public static final Creator<Query> CREATOR = new Creator<Query>() {
+        @Override
+        public Query createFromParcel(Parcel in) {
+            return new Query(in);
+        }
+
+        @Override
+        public Query[] newArray(int size) {
+            return new Query[size];
+        }
+    };
+
 
     /**
      * Regular expression to test against the endpoint name.
@@ -64,31 +80,15 @@ public class Query implements Parcelable {
      */
     private int matches = MATCH_INDEFINITELY;
 
-    /**
-     * This object is part of the Parcelable interface. It is used to instantiate
-     * new instances of queries from serialised parcels.
-     */
-    public static final Creator<Query> CREATOR = new Creator<Query>() {
-        @Override
-        public Query createFromParcel(Parcel in) {
-            return new Query(in);
-        }
-
-        @Override
-        public Query[] newArray(int size) {
-            return new Query[size];
-        }
-    };
-
 
     public Query() {
         tagsToInclude = new ArrayList<>();
         tagsToExclude = new ArrayList<>();
     }
 
+    @SuppressLint("ParcelClassLoader")
     protected Query(Parcel in) {
         // Read the bundle from the parcel.
-        @SuppressLint("ParcelClassLoader")
         Bundle bundle = in.readBundle();
 
         // Extract the fields from the bundle.

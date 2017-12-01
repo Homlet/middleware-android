@@ -53,7 +53,13 @@ public class EndpointBinder extends IEndpoint.Stub {
     }
 
     @Override
-    public List<RemoteEndpointDetails> map(String host, Query query) throws RemoteException {
+    public List<RemoteEndpointDetails> map(Query query) throws RemoteException {
+        // TODO: implement.
+        return null;
+    }
+
+    @Override
+    public List<RemoteEndpointDetails> mapTo(String host, Query query) throws RemoteException {
         // TODO: implement.
         return null;
     }
@@ -65,7 +71,7 @@ public class EndpointBinder extends IEndpoint.Stub {
     }
 
     @Override
-    public List<RemoteEndpointDetails> unmapFrom(String host) throws RemoteException {
+    public List<RemoteEndpointDetails> unmapFrom(String host, Query query) throws RemoteException {
         // TODO: implement.
         return null;
     }
@@ -74,5 +80,10 @@ public class EndpointBinder extends IEndpoint.Stub {
     public List<RemoteEndpointDetails> unmapAll() throws RemoteException {
         // TODO: implement.
         return null;
+    }
+
+    @Override
+    public void setExposed(boolean exposed) throws RemoteException {
+        // TODO: implement.
     }
 }
