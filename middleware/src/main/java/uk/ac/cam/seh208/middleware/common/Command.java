@@ -55,7 +55,7 @@ public class Command implements Parcelable {
         Bundle options = new Bundle();
         options.putParcelable(QUERY, query);
 
-        return new Command(CommandType.MAP, options);
+        return new EndpointCommand(CommandType.MAP, options);
     }
 
     /**
@@ -73,7 +73,7 @@ public class Command implements Parcelable {
         options.putString(HOST, host);
         options.putParcelable(QUERY, query);
 
-        return new Command(CommandType.MAP_TO, options);
+        return new EndpointCommand(CommandType.MAP_TO, options);
     }
 
     /**
@@ -89,7 +89,7 @@ public class Command implements Parcelable {
         Bundle options = new Bundle();
         options.putParcelable(QUERY, query);
 
-        return new Command(CommandType.UNMAP, options);
+        return new EndpointCommand(CommandType.UNMAP, options);
     }
 
     /**
@@ -106,7 +106,7 @@ public class Command implements Parcelable {
         options.putString(HOST, host);
         options.putParcelable(QUERY, query);
 
-        return new Command(CommandType.UNMAP_FROM, options);
+        return new EndpointCommand(CommandType.UNMAP_FROM, options);
     }
 
     /**
@@ -118,7 +118,7 @@ public class Command implements Parcelable {
         Bundle options = new Bundle();
         options.putBoolean(EXPOSED, exposed);
 
-        return new Command(CommandType.SET_EXPOSED, options);
+        return new EndpointCommand(CommandType.SET_EXPOSED, options);
     }
 
 

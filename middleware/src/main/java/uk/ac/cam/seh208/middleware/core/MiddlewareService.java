@@ -75,8 +75,9 @@ public class MiddlewareService extends Service {
         }
     }
 
-    public void createEndpoint(EndpointDetails details) throws EndpointCollisionException {
-        Endpoint endpoint = new Endpoint(details);
+    public void createEndpoint(EndpointDetails details, boolean exposed,
+                               boolean forceable) throws EndpointCollisionException {
+        Endpoint endpoint = new Endpoint(details, exposed, forceable);
         if (endpointSet.add(endpoint)) {
             // Perform initialisation routines for the endpoint.
             endpoint.initialise();
@@ -103,5 +104,10 @@ public class MiddlewareService extends Service {
             endpoint.destroy();
             endpointSet.remove(endpoint);
         }
+    }
+
+    public EndpointSet getEndpointSet() {
+        // TODO: return unmodifiable view on the endpoint set.
+        return endpointSet;
     }
 }

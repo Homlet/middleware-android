@@ -9,10 +9,18 @@ import uk.ac.cam.seh208.middleware.common.Polarity;
  */
 public class Endpoint {
     private EndpointDetails details;
+    private boolean exposed;
+    private boolean forceable;
 
+
+    public Endpoint(EndpointDetails details, boolean exposed, boolean forceable) {
+        this.details = details;
+        this.exposed = exposed;
+        this.forceable = forceable;
+    }
 
     public Endpoint(EndpointDetails details) {
-        this.details = details;
+        this(details, true, true);
     }
 
     public void initialise() {
@@ -41,10 +49,23 @@ public class Endpoint {
         return details.getPolarity();
     }
 
-    /**
-     * @return a reference to the immutable endpoint details object.
-     */
     public EndpointDetails getDetails() {
         return details;
+    }
+
+    public boolean isExposed() {
+        return exposed;
+    }
+
+    public void setExposed(boolean exposed) {
+        this.exposed = exposed;
+    }
+
+    public boolean isForceable() {
+        return forceable;
+    }
+
+    public void setForceable(boolean forceable) {
+        this.forceable = forceable;
     }
 }

@@ -9,6 +9,7 @@ interface IEndpoint {
     // @see EndpointBinder#send
     void send(in String message);
 
+    // TODO: look into binder callbacks.
 //    // @see EndpointBinder#registerListener
 //    void registerListener( ... );
 //    // @see EndpointBinder#unregisterListener
@@ -16,6 +17,7 @@ interface IEndpoint {
 //    // @see EndpointBinder#clearListeners
 //    void clearListeners( ... );
 
+    // TODO: work persistence into mapping. Use three levels: none, resend-query, perfect-match.
     // @see EndpointBinder#getPeers
     List<RemoteEndpointDetails> getPeers();
     // @see EndpointBinder#map
@@ -29,6 +31,6 @@ interface IEndpoint {
 
     // @see EndpointBinder#setExposed
     void setExposed(in boolean exposed);
-    // @see EndpointBinder#setForcable
-    void setForcable(in boolean forcable);
+    // @see EndpointBinder#setForceable
+    void setForceable(in boolean forceable);
 }

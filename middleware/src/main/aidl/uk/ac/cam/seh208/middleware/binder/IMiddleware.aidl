@@ -1,13 +1,14 @@
 package uk.ac.cam.seh208.middleware.binder;
 
-import uk.ac.cam.seh208.middleware.common.Command;
+import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
+import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.Query;
 
 
 interface IMiddleware {
     // @see MiddlewareBinder#createEndpoint
-    void createEndpoint(in EndpointDetails details);
+    void createEndpoint(in EndpointDetails details, in boolean exposed, in boolean forceable);
     // @see MiddlewareBinder#destroyEndpoint
     void destroyEndpoint(in String name);
 
@@ -17,7 +18,11 @@ interface IMiddleware {
     List<EndpointDetails> getAllEndpointDetails();
 
     // @see MiddlewareBinder#force
-    void force(in String host, in Command command);
+    void force(in String host, in MiddlewareCommand command);
+    // @see MiddlewareBinder#forceEndpoint
+    void forceEndpoint(in String host, in String name, in EndpointCommand command);
+    // @see MiddlewareBinder#setForceable
+    void setForceable(in boolean forceable);
 
     // @see MiddlewareBinder#setRDCHost
     void setRDCHost(in String host);
