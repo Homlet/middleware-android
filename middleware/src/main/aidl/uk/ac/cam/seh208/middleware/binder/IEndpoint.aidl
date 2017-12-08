@@ -1,5 +1,6 @@
 package uk.ac.cam.seh208.middleware.binder;
 
+import uk.ac.cam.seh208.middleware.common.IMessageListener;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.Query;
@@ -9,13 +10,12 @@ interface IEndpoint {
     // @see EndpointBinder#send
     void send(in String message);
 
-    // TODO: look into binder callbacks.
-//    // @see EndpointBinder#registerListener
-//    void registerListener( ... );
-//    // @see EndpointBinder#unregisterListener
-//    void unregisterListener( ... );
-//    // @see EndpointBinder#clearListeners
-//    void clearListeners( ... );
+    // @see EndpointBinder#registerListener
+    void registerListener(in IMessageListener listener);
+    // @see EndpointBinder#unregisterListener
+    void unregisterListener(in IMessageListener listener);
+    // @see EndpointBinder#clearListeners
+    void clearListeners();
 
     // TODO: work persistence into mapping. Use three levels: none, resend-query, perfect-match.
     // @see EndpointBinder#getPeers

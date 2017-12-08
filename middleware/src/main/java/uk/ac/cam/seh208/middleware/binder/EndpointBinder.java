@@ -4,6 +4,7 @@ import android.os.RemoteException;
 
 import java.util.List;
 
+import uk.ac.cam.seh208.middleware.common.IMessageListener;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
@@ -58,6 +59,48 @@ public class EndpointBinder extends IEndpoint.Stub {
      */
     @Override
     public void send(String message) throws RemoteException {
+        // TODO: implement.
+    }
+
+    /**
+     * Register a new message listener with the bound endpoint (provided the endpoint
+     * polarity permits this). The listener must implement the IMessageListener interface
+     * specified in AIDL.
+     *
+     * Whenever a new message is received on the bound endpoint, it is dispatched to all
+     * of the registered listeners via a remote call to their onMessage methods.
+     *
+     * In the case that the process hosting the listener implementation terminates, the
+     * listener will automatically be removed from the endpoint. Therefore, listening
+     * processes should re-register listeners when continuing after being killed.
+     *
+     * @param listener Object implementing the IMessageListener interface, which will be
+     *                 remoted by Android allowing the middleware to call its methods.
+     */
+    @Override
+    public void registerListener(IMessageListener listener) throws RemoteException {
+        // TODO: implement.
+    }
+
+    /**
+     * Unregister a message listener from the bound endpoint. Once unregistered, the
+     * listener will no longer be invoked when new messages arrive on the endpoint.
+     *
+     * @param listener Object previously remoted and registered as a listener.
+     *
+     * @throws RemoteException when the passed listener is not currently registered
+     *                         with the bound endpoint.
+     */
+    @Override
+    public void unregisterListener(IMessageListener listener) throws RemoteException {
+        // TODO: implement.
+    }
+
+    /**
+     * Unregister all message listeners from the bound endpoint.
+     */
+    @Override
+    public void clearListeners() throws RemoteException {
         // TODO: implement.
     }
 
