@@ -1,16 +1,19 @@
 package uk.ac.cam.seh208.middleware.binder;
 
-import android.os.RemoteException;
-
 import java.util.List;
 
+import uk.ac.cam.seh208.middleware.common.BadHostException;
+import uk.ac.cam.seh208.middleware.common.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
+import uk.ac.cam.seh208.middleware.common.ListenerNotFoundException;
+import uk.ac.cam.seh208.middleware.common.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
+import uk.ac.cam.seh208.middleware.common.SchemaMismatchException;
+import uk.ac.cam.seh208.middleware.common.WrongPolarityException;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 
 
-// TODO: differentiate RemoteException types by class.
 /**
  * Implementation of the endpoint inter-process interface stub.
  *
@@ -54,11 +57,11 @@ public class EndpointBinder extends IEndpoint.Stub {
      *
      * @param message JSON string representation of the message to send.
      *
-     * @throws RemoteException when the bound endpoint polarity does not permit sending.
-     * @throws RemoteException when the message string does not match the endpoint schema.
+     * @throws WrongPolarityException when the bound endpoint polarity does not permit sending.
+     * @throws SchemaMismatchException when the message string does not match the endpoint schema.
      */
     @Override
-    public void send(String message) throws RemoteException {
+    public void send(String message) throws WrongPolarityException, SchemaMismatchException {
         // TODO: implement.
     }
 
@@ -78,7 +81,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      *                 remoted by Android allowing the middleware to call its methods.
      */
     @Override
-    public void registerListener(IMessageListener listener) throws RemoteException {
+    public void registerListener(IMessageListener listener) {
         // TODO: implement.
     }
 
@@ -88,11 +91,11 @@ public class EndpointBinder extends IEndpoint.Stub {
      *
      * @param listener Object previously remoted and registered as a listener.
      *
-     * @throws RemoteException when the passed listener is not currently registered
-     *                         with the bound endpoint.
+     * @throws ListenerNotFoundException when the passed listener is not currently
+     *                                   registered with the bound endpoint.
      */
     @Override
-    public void unregisterListener(IMessageListener listener) throws RemoteException {
+    public void unregisterListener(IMessageListener listener) throws ListenerNotFoundException {
         // TODO: implement.
     }
 
@@ -100,7 +103,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      * Unregister all message listeners from the bound endpoint.
      */
     @Override
-    public void clearListeners() throws RemoteException {
+    public void clearListeners() {
         // TODO: implement.
     }
 
@@ -143,12 +146,13 @@ public class EndpointBinder extends IEndpoint.Stub {
      * @return a list of RemoteEndpointDetails objects representing the endpoints that were
      *         successfully mapped to during the operation.
      *
-     * @throws RemoteException if either of the schema or polarity fields are set in the query.
-     * @throws RemoteException if the RDC location is not set in the middleware.
-     * @throws RemoteException if the RDC times out or breaks protocol.
+     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
+     * @throws BadHostException when the set RDC host is invalid.
+     * @throws ProtocolException if the RDC breaks protocol.
      */
     @Override
-    public List<RemoteEndpointDetails> map(Query query) throws RemoteException {
+    public List<RemoteEndpointDetails> map(Query query)
+            throws BadQueryException, BadHostException, ProtocolException {
         // TODO: implement.
         return null;
     }
@@ -172,12 +176,13 @@ public class EndpointBinder extends IEndpoint.Stub {
      * @return a list of RemoteEndpointDetails objects representing the endpoints that were
      *         successfully mapped to during the operation.
      *
-     * @throws RemoteException if the hostname is an invalid URL.
-     * @throws RemoteException if the given host times out or breaks protocol.
-     * @throws RemoteException if either of the schema or polarity fields are set in the query.
+     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
+     * @throws BadHostException if the given host is invalid.
+     * @throws ProtocolException if the given host breaks protocol.
      */
     @Override
-    public List<RemoteEndpointDetails> mapTo(String host, Query query) throws RemoteException {
+    public List<RemoteEndpointDetails> mapTo(String host, Query query)
+            throws BadQueryException, BadHostException, ProtocolException {
         // TODO: implement.
         return null;
     }
@@ -197,10 +202,10 @@ public class EndpointBinder extends IEndpoint.Stub {
      * @return a list of RemoteEndpointDetails object representing the endpoints that were
      *         unmapped from during the operation.
      *
-     * @throws RemoteException if either of the schema or polarity fields are set in the query.
+     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
      */
     @Override
-    public List<RemoteEndpointDetails> unmap(Query query) throws RemoteException {
+    public List<RemoteEndpointDetails> unmap(Query query) throws BadQueryException {
         // TODO: implement.
         return null;
     }
@@ -221,11 +226,12 @@ public class EndpointBinder extends IEndpoint.Stub {
      * @return a list of RemoteEndpointDetails object representing the endpoints that were
      *         unmapped from during the operation.
      *
-     * @throws RemoteException if the hostname is an invalid URL.
-     * @throws RemoteException if either of the schema or polarity fields are set in the query.
+     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
+     * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public List<RemoteEndpointDetails> unmapFrom(String host, Query query) throws RemoteException {
+    public List<RemoteEndpointDetails> unmapFrom(String host, Query query)
+            throws BadQueryException, BadHostException {
         // TODO: implement.
         return null;
     }

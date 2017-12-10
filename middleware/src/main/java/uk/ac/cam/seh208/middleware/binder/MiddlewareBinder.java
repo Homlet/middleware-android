@@ -1,19 +1,17 @@
 package uk.ac.cam.seh208.middleware.binder;
 
-import android.os.RemoteException;
-
 import java.util.List;
 
+import uk.ac.cam.seh208.middleware.common.BadHostException;
 import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.core.EndpointCollisionException;
-import uk.ac.cam.seh208.middleware.core.EndpointNotFoundException;
+import uk.ac.cam.seh208.middleware.common.EndpointCollisionException;
+import uk.ac.cam.seh208.middleware.common.EndpointNotFoundException;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 
 
-// TODO: differentiate RemoteException types by class.
 /**
  * Implementation of the middleware inter-process interface stub.
  *
@@ -47,17 +45,13 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      * @param forceable Whether it should be possible for other instances of the
      *                  middleware to run commands remotely on the endpoint.
      *
-     * @throws RemoteException when the given name for the endpoint is already
-     *                         assigned to an active endpoint.
+     * @throws EndpointCollisionException when the given name for the endpoint is
+     *                                    already assigned to an active endpoint.
      */
     @Override
     public void createEndpoint(EndpointDetails details, boolean exposed,
-                               boolean forceable) throws RemoteException {
-        try {
-            service.createEndpoint(details, exposed, forceable);
-        } catch (EndpointCollisionException e) {
-            throw new RemoteException(e.getMessage());
-        }
+                               boolean forceable) throws EndpointCollisionException {
+        service.createEndpoint(details, exposed, forceable);
     }
 
     /**
@@ -67,15 +61,11 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      *
      * @param name Unique name of the endpoint to destroy.
      *
-     * @throws RemoteException when no endpoint exists with the given name.
+     * @throws EndpointNotFoundException when no endpoint exists with the given name.
      */
     @Override
-    public void destroyEndpoint(String name) throws RemoteException {
-        try {
-            service.destroyEndpoint(name);
-        } catch(EndpointNotFoundException e) {
-            throw new RemoteException(e.getMessage());
-        }
+    public void destroyEndpoint(String name) throws EndpointNotFoundException {
+        service.destroyEndpoint(name);
     }
 
     /**
@@ -96,10 +86,10 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      *
      * @return an EndpointDetails object.
      *
-     * @throws RemoteException when no endpoint exists with the given name.
+     * @throws EndpointNotFoundException when no endpoint exists with the given name.
      */
     @Override
-    public EndpointDetails getEndpointDetails(String name) throws RemoteException {
+    public EndpointDetails getEndpointDetails(String name) throws EndpointNotFoundException {
         // TODO: implement.
         return null;
     }
@@ -110,10 +100,10 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      * @param host The hostname of the device the middleware is accessible on.
      * @param command Object describing the command.
      *
-     * @throws RemoteException if the hostname is an invalid URL.
+     * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public void force(String host, MiddlewareCommand command) throws RemoteException {
+    public void force(String host, MiddlewareCommand command) throws BadHostException {
         // TODO: implement.
     }
 
@@ -124,11 +114,11 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      * @param name The name of the endpoint to run the command on.
      * @param command Object describing the command.
      *
-     * @throws RemoteException if the hostname is an invalid URL.
+     * @throws BadHostException if the given host is invalid.
      */
     @Override
     public void forceEndpoint(String host, String name,
-                              EndpointCommand command) throws RemoteException {
+                              EndpointCommand command) throws BadHostException {
         // TODO: implement.
     }
 
@@ -150,10 +140,10 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      *
      * @param host The hostname of the device the RDC is accessible on.
      *
-     * @throws RemoteException if the hostname is an invalid URL.
+     * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public void setRDCHost(String host) throws RemoteException {
+    public void setRDCHost(String host) throws BadHostException {
         // TODO: implement.
     }
 
@@ -165,7 +155,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      * @param discoverable Whether the middleware should be discoverable.
      */
     @Override
-    public void setDiscoverable(boolean discoverable) throws RemoteException {
+    public void setDiscoverable(boolean discoverable) {
         // TODO: implement.
     }
 
@@ -181,10 +171,10 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      *
      * @return a list of hostnames corresponding to middleware instances.
      *
-     * @throws RemoteException when no RDC hostname is set.
+     * @throws BadHostException when the set RDC host is invalid.
      */
     @Override
-    public List<String> discover(Query query) throws RemoteException {
+    public List<String> discover(Query query) throws BadHostException {
         // TODO: implement.
         return null;
     }

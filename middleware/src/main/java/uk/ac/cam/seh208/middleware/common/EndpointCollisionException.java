@@ -1,9 +1,9 @@
-package uk.ac.cam.seh208.middleware.core;
+package uk.ac.cam.seh208.middleware.common;
 
-import uk.ac.cam.seh208.middleware.common.EndpointDetails;
+import android.os.RemoteException;
 
 
-public class EndpointCollisionException extends Exception {
+public class EndpointCollisionException extends RemoteException {
     public EndpointCollisionException(EndpointDetails details) {
         super("Collision creating endpoint with name \"" + details.getName() + "\".");
     }

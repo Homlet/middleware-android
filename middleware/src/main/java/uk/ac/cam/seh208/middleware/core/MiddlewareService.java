@@ -12,7 +12,9 @@ import java.util.HashMap;
 import uk.ac.cam.seh208.middleware.binder.EndpointBinder;
 import uk.ac.cam.seh208.middleware.binder.MiddlewareBinder;
 import uk.ac.cam.seh208.middleware.common.BinderType;
+import uk.ac.cam.seh208.middleware.common.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
+import uk.ac.cam.seh208.middleware.common.EndpointNotFoundException;
 
 
 public class MiddlewareService extends Service {
