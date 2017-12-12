@@ -11,6 +11,7 @@ import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.WrongPolarityException;
+import uk.ac.cam.seh208.middleware.core.Endpoint;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 
 
@@ -30,20 +31,21 @@ import uk.ac.cam.seh208.middleware.core.MiddlewareService;
  * @see IEndpoint
  */
 public class EndpointBinder extends IEndpoint.Stub {
+
     /**
      * Reference to the running instance of the middleware service.
      */
     private final MiddlewareService service;
 
     /**
-     * Unique name of the endpoint bound to this interface.
+     * Reference to the endpoint object exposed by this binder.
      */
-    private final String name;
+    private final Endpoint endpoint;
 
 
-    public EndpointBinder(MiddlewareService service, String name) {
+    public EndpointBinder(MiddlewareService service, Endpoint endpoint) {
         this.service = service;
-        this.name = name;
+        this.endpoint = endpoint;
     }
 
     /**
@@ -246,9 +248,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      */
     @Override
     public void setExposed(boolean exposed) {
-        service.getEndpointSet()
-                .getEndpointByName(name)
-                .setExposed(exposed);
+        endpoint.setExposed(exposed);
     }
 
     /**
@@ -262,8 +262,6 @@ public class EndpointBinder extends IEndpoint.Stub {
      */
     @Override
     public void setForceable(boolean forceable) {
-        service.getEndpointSet()
-                .getEndpointByName(name)
-                .setForceable(forceable);
+        endpoint.setForceable(forceable);
     }
 }

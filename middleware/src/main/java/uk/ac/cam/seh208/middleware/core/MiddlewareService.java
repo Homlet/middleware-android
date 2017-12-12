@@ -35,6 +35,23 @@ public class MiddlewareService extends Service {
      */
     private EndpointSet endpointSet;
 
+    /**
+     * Indicates whether it should be possible for remote instances of the
+     * middleware to force commands to run on this instance.
+     */
+    private boolean forceable;
+
+    /**
+     * Stores the host on which the resource discovery component (RDC) is accessible.
+     */
+    private String rdcHost;
+
+    /**
+     * Indicates whether the middleware instance should be discoverable
+     * via the registered RDC.
+     */
+    private boolean discoverable;
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -111,5 +128,29 @@ public class MiddlewareService extends Service {
     public EndpointSet getEndpointSet() {
         // TODO: return unmodifiable view on the endpoint set.
         return endpointSet;
+    }
+
+    public boolean isForceable() {
+        return forceable;
+    }
+
+    public synchronized void setForceable(boolean forceable) {
+        this.forceable = forceable;
+    }
+
+    public String getRDCHost() {
+        return rdcHost;
+    }
+
+    public synchronized void setRDCHost(String host) {
+        this.rdcHost = host;
+    }
+
+    public boolean isDiscoverable() {
+        return discoverable;
+    }
+
+    public synchronized void setDiscoverable(boolean discoverable) {
+        this.discoverable = discoverable;
     }
 }

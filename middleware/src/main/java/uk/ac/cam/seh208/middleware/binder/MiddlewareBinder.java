@@ -1,5 +1,6 @@
 package uk.ac.cam.seh208.middleware.binder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import uk.ac.cam.seh208.middleware.common.BadHostException;
@@ -9,6 +10,7 @@ import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.EndpointNotFoundException;
+import uk.ac.cam.seh208.middleware.core.Endpoint;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 
 
@@ -24,6 +26,7 @@ import uk.ac.cam.seh208.middleware.core.MiddlewareService;
  * @see IMiddleware
  */
 public class MiddlewareBinder extends IMiddleware.Stub {
+
     /**
      * Instance of the middleware service this binder is exposing.
      */
@@ -71,12 +74,17 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     /**
      * List the details of all the currently active endpoint in the middleware.
      *
+     * Endpoints are listed in no particular order.
+     *
      * @return a list of EndpointDetails objects.
      */
     @Override
     public List<EndpointDetails> getAllEndpointDetails() {
-        // TODO: implement.
-        return null;
+        ArrayList<EndpointDetails> details = new ArrayList<>();
+        for (Endpoint endpoint : service.getEndpointSet()) {
+            details.add(endpoint.getDetails());
+        }
+        return details;
     }
 
     /**
@@ -90,8 +98,11 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      */
     @Override
     public EndpointDetails getEndpointDetails(String name) throws EndpointNotFoundException {
-        // TODO: implement.
-        return null;
+        Endpoint endpoint = service.getEndpointSet().getEndpointByName(name);
+        if (endpoint == null) {
+            throw new EndpointNotFoundException(name);
+        }
+        return endpoint.getDetails();
     }
 
     /**
@@ -132,11 +143,11 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      */
     @Override
     public void setForceable(boolean forceable) {
-        // TODO: implement.
+        service.setForceable(forceable);
     }
 
     /**
-     * Set the hostname on which the resource discovery component (RDC) is accessible.
+     * Set the host on which the resource discovery component (RDC) is accessible.
      *
      * @param host The hostname of the device the RDC is accessible on.
      *
@@ -144,7 +155,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      */
     @Override
     public void setRDCHost(String host) throws BadHostException {
-        // TODO: implement.
+        service.setRDCHost(host);
     }
 
     /**
@@ -156,7 +167,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      */
     @Override
     public void setDiscoverable(boolean discoverable) {
-        // TODO: implement.
+        service.setDiscoverable(discoverable);
     }
 
     /**

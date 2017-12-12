@@ -15,7 +15,7 @@ import android.os.Parcelable;
  * spaces, by allowing third parties to manage connections between
  * different devices.
  */
-public class Command implements Parcelable {
+public abstract class Command implements Parcelable {
     public enum CommandType {
         MAP,
         MAP_TO,
@@ -23,23 +23,6 @@ public class Command implements Parcelable {
         UNMAP_FROM,
         SET_EXPOSED
     }
-
-
-    /**
-     * This object is part of the Parcelable interface. It is used to instantiate
-     * new instances of commands from serialised parcels.
-     */
-    public static final Creator<Command> CREATOR = new Creator<Command>() {
-        @Override
-        public Command createFromParcel(Parcel in) {
-            return new Command(in);
-        }
-
-        @Override
-        public Command[] newArray(int size) {
-            return new Command[size];
-        }
-    };
 
 
     /**
