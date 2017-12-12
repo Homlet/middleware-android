@@ -3,13 +3,13 @@ package uk.ac.cam.seh208.middleware.binder;
 import java.util.ArrayList;
 import java.util.List;
 
-import uk.ac.cam.seh208.middleware.common.BadHostException;
+import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.common.EndpointCollisionException;
-import uk.ac.cam.seh208.middleware.common.EndpointNotFoundException;
+import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
+import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
 import uk.ac.cam.seh208.middleware.core.Endpoint;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 

@@ -1,4 +1,4 @@
-package uk.ac.cam.seh208.middleware.common;
+package uk.ac.cam.seh208.middleware.common.exception;
 
 import android.os.RemoteException;
 

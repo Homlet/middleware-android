@@ -12,9 +12,9 @@ import java.util.HashMap;
 import uk.ac.cam.seh208.middleware.binder.EndpointBinder;
 import uk.ac.cam.seh208.middleware.binder.MiddlewareBinder;
 import uk.ac.cam.seh208.middleware.common.BinderType;
-import uk.ac.cam.seh208.middleware.common.EndpointCollisionException;
+import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
-import uk.ac.cam.seh208.middleware.common.EndpointNotFoundException;
+import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
 
 
 public class MiddlewareService extends Service {
@@ -84,7 +84,7 @@ public class MiddlewareService extends Service {
                 EndpointBinder binder = endpointBinders.get(name);
                 if (binder == null) {
                     // Construct a new binder if one does not already exist for this endpoint.
-                    binder = new EndpointBinder(this, name);
+                    binder = new EndpointBinder(this, endpointSet.getEndpointByName(name));
                     endpointBinders.put(name, binder);
                 }
                 return binder;
@@ -102,7 +102,7 @@ public class MiddlewareService extends Service {
             endpoint.initialise();
         } else {
             // An endpoint of this name already exists!
-            throw new EndpointCollisionException(details);
+            throw new EndpointCollisionException(details.getName());
         }
     }
 

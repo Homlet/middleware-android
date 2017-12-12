@@ -2,15 +2,15 @@ package uk.ac.cam.seh208.middleware.binder;
 
 import java.util.List;
 
-import uk.ac.cam.seh208.middleware.common.BadHostException;
-import uk.ac.cam.seh208.middleware.common.BadQueryException;
+import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
+import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
-import uk.ac.cam.seh208.middleware.common.ListenerNotFoundException;
-import uk.ac.cam.seh208.middleware.common.ProtocolException;
+import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
+import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
-import uk.ac.cam.seh208.middleware.common.SchemaMismatchException;
-import uk.ac.cam.seh208.middleware.common.WrongPolarityException;
+import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
+import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 import uk.ac.cam.seh208.middleware.core.Endpoint;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 
