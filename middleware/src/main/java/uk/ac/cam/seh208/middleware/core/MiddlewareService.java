@@ -15,6 +15,7 @@ import uk.ac.cam.seh208.middleware.common.BinderType;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
+import uk.ac.cam.seh208.middleware.common.exception.InvalidSchemaException;
 
 
 public class MiddlewareService extends Service {
@@ -94,12 +95,14 @@ public class MiddlewareService extends Service {
         }
     }
 
-    public void createEndpoint(EndpointDetails details, boolean exposed,
-                               boolean forceable) throws EndpointCollisionException {
+    public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
+            throws EndpointCollisionException, InvalidSchemaException {
         Endpoint endpoint = new Endpoint(details, exposed, forceable);
         if (endpointSet.add(endpoint)) {
             // Perform initialisation routines for the endpoint.
             endpoint.initialise();
+
+            // TODO: re-register with RDC.
         } else {
             // An endpoint of this name already exists!
             throw new EndpointCollisionException(details.getName());
@@ -108,9 +111,9 @@ public class MiddlewareService extends Service {
 
     public void destroyEndpoint(String name) throws EndpointNotFoundException {
         // Synchronise on the endpoint set to prevent interleaving endpoint
-        // destruction and creation. Note that similar interleaving is not
-        // done in `createEndpoint` as the add method itself is synchronised,
-        // and is the only interaction with the set in the method.
+        // destruction and creation/another destruction. Note that similar
+        // interleaving is not done in `createEndpoint` as the add method itself
+        // is synchronised, and is the only interaction with the set in the method.
         //noinspection SynchronizeOnNonFinalField
         synchronized (endpointSet) {
             Endpoint endpoint = endpointSet.getEndpointByName(name);
@@ -122,6 +125,8 @@ public class MiddlewareService extends Service {
             // Perform destruction routines for the endpoint.
             endpoint.destroy();
             endpointSet.remove(endpoint);
+
+            // TODO: re-register with RDC.
         }
     }
 

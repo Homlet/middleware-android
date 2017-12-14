@@ -1,5 +1,8 @@
 package uk.ac.cam.seh208.middleware.binder;
 
+import com.github.fge.jsonschema.core.exceptions.ProcessingException;
+
+import java.io.IOException;
 import java.util.List;
 
 import uk.ac.cam.seh208.middleware.common.Persistence;
@@ -65,7 +68,12 @@ public class EndpointBinder extends IEndpoint.Stub {
      */
     @Override
     public void send(String message) throws WrongPolarityException, SchemaMismatchException {
-        // TODO: implement.
+        try {
+            endpoint.send(message);
+        } catch (IOException | ProcessingException e) {
+            // TODO: remove once new exception type has been implemented (@see Endpoint#send).
+            e.printStackTrace();
+        }
     }
 
     /**
