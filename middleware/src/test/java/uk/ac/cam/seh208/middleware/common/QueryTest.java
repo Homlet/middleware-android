@@ -1,4 +1,4 @@
-package uk.ac.cam.seh208.middleware;
+package uk.ac.cam.seh208.middleware.common;
 
 import junit.framework.Assert;
 
@@ -9,10 +9,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import uk.ac.cam.seh208.middleware.common.EndpointDetails;
-import uk.ac.cam.seh208.middleware.common.Polarity;
-import uk.ac.cam.seh208.middleware.common.Query;
 
 
 /**
@@ -161,7 +157,7 @@ public class QueryTest {
 
 
     @Test
-    public void testNameRegex() throws Exception {
+    public void testNameRegex() {
         // Create some queries.
         Query[] queries = makeQueryArray(3);
         queries[0].setNameRegex(".*");
@@ -176,7 +172,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testDescRegex() throws Exception {
+    public void testDescRegex() {
         // Create some queries.
         Query[] queries = makeQueryArray(2);
         queries[0].setDescRegex(".*description.*");
@@ -189,7 +185,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testSchema() throws Exception {
+    public void testSchema() {
         // Create some queries.
         Query[] queries = makeQueryArray(2);
         queries[0].setSchema("{\n" +
@@ -209,7 +205,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testPolarity() throws Exception {
+    public void testPolarity() {
         // Create some polarity-specific queries.
         Query[] queries = makeQueryArray(3);
         queries[0].setPolarity(Polarity.SOURCE);
@@ -224,7 +220,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testIncludeTag() throws Exception {
+    public void testIncludeTag() {
         // Create some tag-including queries.
         Query[] queries = makeQueryArray(3);
         queries[0].includeTag(null);
@@ -239,7 +235,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testIncludeTags() throws Exception {
+    public void testIncludeTags() {
         // Create some tag-including queries.
         Query[] queries = makeQueryArray(5);
         queries[1].includeTags(Arrays.asList("green", "large"));
@@ -256,7 +252,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testExcludeTag() throws Exception {
+    public void testExcludeTag() {
         // Create some tag-excluding queries.
         Query[] queries = makeQueryArray(3);
         queries[0].excludeTag(null);
@@ -271,7 +267,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testExcludeTags() throws Exception {
+    public void testExcludeTags() {
         // Create some tag-excluding queries.
         Query[] queries = makeQueryArray(5);
         queries[1].excludeTags(Arrays.asList("green", "large"));
@@ -288,7 +284,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testIgnoreTag() throws Exception {
+    public void testIgnoreTag() {
         // Create some tag-ignoring queries.
         Query[] queries = makeQueryArray(2);
         queries[0].excludeTags(Arrays.asList("green", "large"));
@@ -304,7 +300,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testIgnoreTags() throws Exception {
+    public void testIgnoreTags() {
         // Create some tag-ignoring queries.
         Query[] queries = makeQueryArray(3);
         queries[0].ignoreTags(Collections.emptyList());
@@ -320,7 +316,7 @@ public class QueryTest {
     }
 
     @Test
-    public void testMatches() throws Exception {
+    public void testMatches() {
         // Create some tag-including queries.
         Query[] queries = makeQueryArray(3);
         queries[0].setMatches(Query.MATCH_INDEFINITELY);

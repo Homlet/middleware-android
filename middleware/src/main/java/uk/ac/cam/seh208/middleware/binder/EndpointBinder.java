@@ -2,6 +2,7 @@ package uk.ac.cam.seh208.middleware.binder;
 
 import java.util.List;
 
+import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
@@ -153,7 +154,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      * @throws ProtocolException if the RDC breaks protocol.
      */
     @Override
-    public List<RemoteEndpointDetails> map(Query query)
+    public List<RemoteEndpointDetails> map(Query query, Persistence persistence)
             throws BadQueryException, BadHostException, ProtocolException {
         // TODO: implement.
         return null;
@@ -183,7 +184,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      * @throws ProtocolException if the given host breaks protocol.
      */
     @Override
-    public List<RemoteEndpointDetails> mapTo(String host, Query query)
+    public List<RemoteEndpointDetails> mapTo(String host, Query query, Persistence persistence)
             throws BadQueryException, BadHostException, ProtocolException {
         // TODO: implement.
         return null;

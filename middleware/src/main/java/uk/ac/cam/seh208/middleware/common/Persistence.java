@@ -1,12 +1,15 @@
 package uk.ac.cam.seh208.middleware.common;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 /**
  * Enumeration of supported mapping persistence levels. These determine
  * the length the middleware will go in attempting to reestablish
  * endpoint mappings after failure (any process that destroys a mapping
  * other than a graceful unmap command).
  */
-public enum Persistence {
+public enum Persistence implements Parcelable {
     /**
      * Indicate that the middleware should make no attempt to
      * reestablish the mapping.
@@ -40,5 +43,31 @@ public enum Persistence {
      * reestablished as soon as possible with the same endpoint on the
      * same middleware instance.
      */
-    EXACT
+    EXACT;
+
+    /**
+     * This object is part of the Parcelable interface. It is used to instantiate
+     * new instances of enums from serialised parcels.
+     */
+    public static final Creator<Persistence> CREATOR = new Creator<Persistence>() {
+        @Override
+        public Persistence createFromParcel(Parcel in) {
+            return (Persistence) in.readSerializable();
+        }
+
+        @Override
+        public Persistence[] newArray(int size) {
+            return new Persistence[size];
+        }
+    };
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeSerializable(this);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
 }
