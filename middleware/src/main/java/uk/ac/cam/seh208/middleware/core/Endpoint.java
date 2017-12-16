@@ -75,6 +75,8 @@ public class Endpoint {
         } catch (IOException | ProcessingException e) {
             throw new BadSchemaException(details.getSchema());
         }
+
+        listeners = new ArrayList<>();
     }
 
     public Endpoint(EndpointDetails details) throws BadSchemaException {
