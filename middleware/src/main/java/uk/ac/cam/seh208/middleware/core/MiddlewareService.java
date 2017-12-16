@@ -85,7 +85,7 @@ public class MiddlewareService extends Service {
                 EndpointBinder binder = endpointBinders.get(name);
                 if (binder == null) {
                     // Construct a new binder if one does not already exist for this endpoint.
-                    binder = new EndpointBinder(this, endpointSet.getEndpointByName(name));
+                    binder = new EndpointBinder(endpointSet.getEndpointByName(name));
                     endpointBinders.put(name, binder);
                 }
                 return binder;
@@ -126,7 +126,7 @@ public class MiddlewareService extends Service {
             endpoint.destroy();
             endpointSet.remove(endpoint);
 
-            // TODO: re-register with RDC.
+            // TODO: re-register with RDC, destroy endpoint binder (if one exists).
         }
     }
 

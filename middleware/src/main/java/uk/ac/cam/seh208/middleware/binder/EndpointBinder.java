@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.binder;
 
+import android.os.RemoteException;
+
 import com.github.fge.jsonschema.core.exceptions.ProcessingException;
 
 import java.io.IOException;
@@ -16,7 +18,6 @@ import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 import uk.ac.cam.seh208.middleware.core.Endpoint;
-import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 
 
 /**
@@ -37,18 +38,12 @@ import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 public class EndpointBinder extends IEndpoint.Stub {
 
     /**
-     * Reference to the running instance of the middleware service.
-     */
-    private final MiddlewareService service;
-
-    /**
      * Reference to the endpoint object exposed by this binder.
      */
     private final Endpoint endpoint;
 
 
-    public EndpointBinder(MiddlewareService service, Endpoint endpoint) {
-        this.service = service;
+    public EndpointBinder(Endpoint endpoint) {
         this.endpoint = endpoint;
     }
 
@@ -90,10 +85,12 @@ public class EndpointBinder extends IEndpoint.Stub {
      *
      * @param listener Object implementing the IMessageListener interface, which will be
      *                 remoted by Android allowing the middleware to call its methods.
+     *
+     * @throws RemoteException when the linkToDeath procedure fails for the listener.
      */
     @Override
-    public void registerListener(IMessageListener listener) {
-        // TODO: implement.
+    public void registerListener(IMessageListener listener) throws RemoteException {
+        endpoint.registerListener(listener);
     }
 
     /**
@@ -107,7 +104,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      */
     @Override
     public void unregisterListener(IMessageListener listener) throws ListenerNotFoundException {
-        // TODO: implement.
+        endpoint.unregisterListener(listener);
     }
 
     /**
@@ -115,7 +112,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      */
     @Override
     public void clearListeners() {
-        // TODO: implement.
+        endpoint.clearListeners();
     }
 
     /**

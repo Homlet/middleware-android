@@ -45,6 +45,7 @@ public enum Persistence implements Parcelable {
      */
     EXACT;
 
+
     /**
      * This object is part of the Parcelable interface. It is used to instantiate
      * new instances of enums from serialised parcels.
@@ -60,6 +61,7 @@ public enum Persistence implements Parcelable {
             return new Persistence[size];
         }
     };
+
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
