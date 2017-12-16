@@ -6,7 +6,7 @@ import uk.ac.cam.seh208.middleware.common.Query;
 
 
 public class BadQueryException extends RemoteException {
-    public BadQueryException(Query query) {
-        super("Invalid query: " + query);
+    public BadQueryException() {
+        super("Bad query provided.");
     }
 }

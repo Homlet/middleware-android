@@ -8,6 +8,7 @@ import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
 import uk.ac.cam.seh208.middleware.core.Endpoint;
@@ -52,8 +53,8 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      *                                    already assigned to an active endpoint.
      */
     @Override
-    public void createEndpoint(EndpointDetails details, boolean exposed,
-                               boolean forceable) throws EndpointCollisionException {
+    public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
+            throws EndpointCollisionException, BadSchemaException {
         service.createEndpoint(details, exposed, forceable);
     }
 

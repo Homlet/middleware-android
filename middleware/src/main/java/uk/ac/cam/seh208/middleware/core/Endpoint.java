@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
 import uk.ac.cam.seh208.middleware.common.Polarity;
-import uk.ac.cam.seh208.middleware.common.exception.InvalidSchemaException;
+import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
@@ -63,7 +63,7 @@ public class Endpoint {
 
 
     public Endpoint(EndpointDetails details, boolean exposed, boolean forceable)
-            throws InvalidSchemaException {
+            throws BadSchemaException {
         this.details = details;
         this.exposed = exposed;
         this.forceable = forceable;
@@ -73,11 +73,11 @@ public class Endpoint {
             JsonNode schema = JsonLoader.fromString(details.getSchema());
             validator = JsonSchemaFactory.byDefault().getJsonSchema(schema);
         } catch (IOException | ProcessingException e) {
-            throw new InvalidSchemaException(details.getSchema());
+            throw new BadSchemaException(details.getSchema());
         }
     }
 
-    public Endpoint(EndpointDetails details) throws InvalidSchemaException {
+    public Endpoint(EndpointDetails details) throws BadSchemaException {
         this(details, true, true);
     }
 

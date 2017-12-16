@@ -15,7 +15,7 @@ import uk.ac.cam.seh208.middleware.common.BinderType;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
-import uk.ac.cam.seh208.middleware.common.exception.InvalidSchemaException;
+import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 
 
 public class MiddlewareService extends Service {
@@ -96,7 +96,7 @@ public class MiddlewareService extends Service {
     }
 
     public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
-            throws EndpointCollisionException, InvalidSchemaException {
+            throws EndpointCollisionException, BadSchemaException {
         Endpoint endpoint = new Endpoint(details, exposed, forceable);
         if (endpointSet.add(endpoint)) {
             // Perform initialisation routines for the endpoint.
