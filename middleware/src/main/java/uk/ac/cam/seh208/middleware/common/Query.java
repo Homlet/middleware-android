@@ -6,9 +6,16 @@ import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.support.annotation.NonNull;
+
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Predicate;
 
 
@@ -20,7 +27,158 @@ import java.util.function.Predicate;
  * from the available peer endpoints; unmap queries are applied
  * to locally held data on remote mappings.
  */
-public class Query implements Parcelable {
+public class Query implements Parcelable, Cloneable {
+
+    /**
+     * Builder object for immutable queries.
+     */
+    public static class Builder {
+
+        private String nameRegex;
+
+        private String descRegex;
+
+        private String schema;
+
+        private Polarity polarity;
+
+        private Set<String> tagsToInclude;
+
+        private Set<String> tagsToExclude;
+
+        private int matches = MATCH_INDEFINITELY;
+
+
+        public Builder() {
+            tagsToInclude = new TreeSet<>();
+            tagsToExclude = new TreeSet<>();
+        }
+
+        public Builder setNameRegex(String nameRegex) {
+            this.nameRegex = nameRegex;
+            return this;
+        }
+
+        public Builder setDescRegex(String descRegex) {
+            this.descRegex = descRegex;
+            return this;
+        }
+
+        public Builder setSchema(String schema) {
+            this.schema = schema;
+            return this;
+        }
+
+        public Builder setPolarity(Polarity polarity) {
+            this.polarity = polarity;
+            return this;
+        }
+
+        public Builder includeTag(String tag) {
+            if (tag == null) {
+                // Ignore null tags.
+                return this;
+            }
+
+            tagsToInclude.add(tag);
+
+            // Remove the tag from the exclude list.
+            if (tagsToExclude != null) {
+                tagsToExclude.remove(tag);
+            }
+            return this;
+        }
+
+        public Builder includeTags(List<String> tags) {
+            // Ignore null tags.
+            tags.remove(null);
+
+            tagsToInclude.addAll(tags);
+
+            // Remove the tags from the exclude list.
+            if (tagsToExclude != null) {
+                tagsToExclude.removeAll(tags);
+            }
+            return this;
+        }
+
+        public Builder excludeTag(String tag) {
+            if (tag == null) {
+                // Ignore null tags.
+                return this;
+            }
+
+            tagsToExclude.add(tag);
+
+            // Remove the tag from the include list.
+            if (tagsToInclude != null) {
+                tagsToInclude.remove(tag);
+            }
+            return this;
+        }
+
+        public Builder excludeTags(List<String> tags) {
+            // Ignore null tags.
+            tags.remove(null);
+
+            tagsToExclude.addAll(tags);
+
+            // Remove the tags from the include list.
+            if (tagsToInclude != null) {
+                tagsToInclude.removeAll(tags);
+            }
+            return this;
+        }
+
+        public void ignoreTag(String tag) {
+            // Remove the tag from both tag lists.
+            if (tagsToInclude != null) {
+                tagsToInclude.remove(tag);
+            }
+            if (tagsToExclude != null) {
+                tagsToExclude.remove(tag);
+            }
+        }
+
+        public void ignoreTags(List<String> tags) {
+            // Remove the tags from both tag lists.
+            if (tagsToInclude != null) {
+                tagsToInclude.removeAll(tags);
+            }
+            if (tagsToExclude != null) {
+                tagsToExclude.removeAll(tags);
+            }
+        }
+
+        public Builder setMatches(int matches) {
+            this.matches = matches;
+            return this;
+        }
+
+        public Builder copy(Query query) {
+            nameRegex = query.nameRegex;
+            descRegex = query.descRegex;
+            schema = query.schema;
+            polarity = query.polarity;
+            tagsToInclude.clear();
+            tagsToInclude.addAll(query.tagsToInclude);
+            tagsToExclude.clear();
+            tagsToExclude.addAll(query.tagsToExclude);
+            matches = query.matches;
+            return this;
+        }
+
+        public Query build() {
+            return new Query(
+                    nameRegex,
+                    descRegex,
+                    schema,
+                    polarity,
+                    tagsToInclude,
+                    tagsToExclude,
+                    matches);
+        }
+    }
 
     /**
      * Value for matches indicating that the query should accept
@@ -68,12 +226,12 @@ public class Query implements Parcelable {
     /**
      * List of tags to require present in the endpoint.
      */
-    private ArrayList<String> tagsToInclude;
+    private Set<String> tagsToInclude;
 
     /**
      * List of tags to require not present in the endpoint.
      */
-    private ArrayList<String> tagsToExclude;
+    private Set<String> tagsToExclude;
 
     /**
      * Number of endpoints to match before rejecting others.
@@ -81,9 +239,16 @@ public class Query implements Parcelable {
     private int matches = MATCH_INDEFINITELY;
 
 
-    public Query() {
-        tagsToInclude = new ArrayList<>();
-        tagsToExclude = new ArrayList<>();
+    private Query(String nameRegex, String descRegex, String schema, Polarity polarity,
+                  @NonNull Set<String> tagsToInclude, @NonNull Set<String> tagsToExclude,
+                  int matches) {
+        this.nameRegex = nameRegex;
+        this.descRegex = descRegex;
+        this.schema = schema;
+        this.polarity = polarity;
+        this.tagsToInclude = tagsToInclude;
+        this.tagsToExclude = tagsToExclude;
+        this.matches = matches;
     }
 
     @SuppressLint("ParcelClassLoader")
@@ -95,123 +260,19 @@ public class Query implements Parcelable {
         nameRegex = bundle.getString(NAME_REGEX);
         descRegex = bundle.getString(DESC_REGEX);
         schema = bundle.getString(SCHEMA);
-        tagsToInclude = bundle.getStringArrayList(TAGS_TO_INCLUDE);
-        if (tagsToInclude == null) {
-            tagsToInclude = new ArrayList<>();
+        ArrayList<String> includes = bundle.getStringArrayList(TAGS_TO_INCLUDE);
+        if (includes == null) {
+            tagsToInclude = new TreeSet<>();
+        } else {
+            tagsToInclude = new TreeSet<>(includes);
         }
-        tagsToExclude = bundle.getStringArrayList(TAGS_TO_EXCLUDE);
-        if (tagsToExclude == null) {
-            tagsToExclude = new ArrayList<>();
+        ArrayList<String> excludes = bundle.getStringArrayList(TAGS_TO_EXCLUDE);
+        if (excludes == null) {
+            tagsToExclude = new TreeSet<>();
+        } else {
+            tagsToExclude = new TreeSet<>(excludes);
         }
         matches = bundle.getInt(MATCHES, MATCH_INDEFINITELY);
-    }
-
-    public void setNameRegex(String regex) {
-        nameRegex = regex;
-    }
-
-    public void unsetNameRegex() {
-        nameRegex = null;
-    }
-
-    public void setDescRegex(String regex) {
-        descRegex = regex;
-    }
-
-    public void unsetDescRegex() {
-        descRegex = null;
-    }
-
-    public void setSchema(String schema) {
-        this.schema = schema;
-    }
-
-    public void unsetSchema() {
-        schema = null;
-    }
-
-    public void setPolarity(Polarity polarity) {
-        this.polarity = polarity;
-    }
-
-    public void unsetPolarity() {
-        polarity = null;
-    }
-
-    public void includeTag(String tag) {
-        if (tag == null) {
-            // Ignore null tags.
-            return;
-        }
-
-        tagsToInclude.add(tag);
-
-        // Remove the tag from the exclude list.
-        if (tagsToExclude != null) {
-            tagsToExclude.remove(tag);
-        }
-    }
-
-    public void includeTags(List<String> tags) {
-        // Ignore null tags.
-        tags.remove(null);
-
-        tagsToInclude.addAll(tags);
-
-        // Remove the tags from the exclude list.
-        if (tagsToExclude != null) {
-            tagsToExclude.removeAll(tags);
-        }
-    }
-
-    public void excludeTag(String tag) {
-        if (tag == null) {
-            // Ignore null tags.
-            return;
-        }
-
-        tagsToExclude.add(tag);
-
-        // Remove the tag from the include list.
-        if (tagsToInclude != null) {
-            tagsToInclude.remove(tag);
-        }
-    }
-
-    public void excludeTags(List<String> tags) {
-        // Ignore null tags.
-        tags.remove(null);
-
-        tagsToExclude.addAll(tags);
-
-        // Remove the tags from the include list.
-        if (tagsToInclude != null) {
-            tagsToInclude.removeAll(tags);
-        }
-    }
-
-    public void ignoreTag(String tag) {
-        // Remove the tag from both tag lists.
-        if (tagsToInclude != null) {
-            tagsToInclude.remove(tag);
-        }
-        if (tagsToExclude != null) {
-            tagsToExclude.remove(tag);
-        }
-    }
-
-    public void ignoreTags(List<String> tags) {
-        // Remove the tags from both tag lists.
-        if (tagsToInclude != null) {
-            tagsToInclude.removeAll(tags);
-        }
-        if (tagsToExclude != null) {
-            tagsToExclude.removeAll(tags);
-        }
-    }
-
-    public void setMatches(int matches) {
-        this.matches = matches;
     }
 
     /**
@@ -289,6 +350,38 @@ public class Query implements Parcelable {
     }
 
     @Override
+    public Object clone() {
+        try {
+            return super.clone();
+        } catch (CloneNotSupportedException e) {
+            // This should never happen.
+            return null;
+        }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (!(obj instanceof Query)) {
+            return false;
+        }
+
+        final Query other = (Query) obj;
+        return (Objects.equals(nameRegex, other.nameRegex)
+             && Objects.equals(descRegex, other.descRegex)
+             && Objects.equals(schema, other.schema)
+             && polarity == other.polarity
+             && Objects.equals(tagsToInclude, other.tagsToInclude)
+             && Objects.equals(tagsToExclude, other.tagsToExclude)
+             && matches == other.matches);
+    }
+
+    @Override
     public int describeContents() {
         return 0;
     }
@@ -301,8 +394,8 @@ public class Query implements Parcelable {
         bundle.putString(DESC_REGEX, descRegex);
         bundle.putString(SCHEMA, schema);
         bundle.putSerializable(POLARITY, polarity);
-        bundle.putStringArrayList(TAGS_TO_INCLUDE, tagsToInclude);
-        bundle.putStringArrayList(TAGS_TO_EXCLUDE, tagsToExclude);
+        bundle.putStringArrayList(TAGS_TO_INCLUDE, Lists.newArrayList(tagsToInclude));
+        bundle.putStringArrayList(TAGS_TO_EXCLUDE, Lists.newArrayList(tagsToExclude));
         bundle.putInt(MATCHES, matches);
 
         // Serialise the bundle into the parcel.

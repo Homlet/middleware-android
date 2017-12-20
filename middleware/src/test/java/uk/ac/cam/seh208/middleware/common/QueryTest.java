@@ -140,193 +140,141 @@ public class QueryTest {
         return new HashSet<>(Arrays.asList(endpoints));
     }
 
-    /**
-     * Convenience function to create an array of blank initialised queries.
-     *
-     * @param size The size of the array.
-     *
-     * @return an array of blank initialised queries.
-     */
-    private static Query[] makeQueryArray(int size) {
-        Query[] queries = new Query[size];
-        for (int i = 0; i < size; i++) {
-            queries[i] = new Query();
-        }
-        return queries;
-    }
-
 
     @Test
     public void testNameRegex() {
         // Create some queries.
-        Query[] queries = makeQueryArray(3);
-        queries[0].setNameRegex(".*");
-        queries[1].setNameRegex("epTags[0-9]*");
-        queries[2].setNameRegex("");
-        queries[2].unsetNameRegex();
+        Query q1 = new Query.Builder().setNameRegex(".*").build();
+        Query q2 = new Query.Builder().setNameRegex("epTags[0-9]*").build();
 
         // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsAll, queries[0], epsAll);
-        assertFilter(epsAll, queries[1], epsTags);
-        assertFilter(epsAll, queries[2], epsAll);
+        assertFilter(epsAll, q1, epsAll);
+        assertFilter(epsAll, q2, epsTags);
     }
 
     @Test
     public void testDescRegex() {
         // Create some queries.
-        Query[] queries = makeQueryArray(2);
-        queries[0].setDescRegex(".*description.*");
-        queries[1].setDescRegex("");
-        queries[1].unsetDescRegex();
+        Query q1 = new Query.Builder().setDescRegex(".*description.*").build();
 
         // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsAll, queries[0], epsDesc);
-        assertFilter(epsAll, queries[1], epsAll);
+        assertFilter(epsAll, q1, epsDesc);
     }
 
     @Test
     public void testSchema() {
         // Create some queries.
-        Query[] queries = makeQueryArray(2);
-        queries[0].setSchema("{\n" +
+        Query q1 = new Query.Builder().setSchema("{\n" +
                 "    \"description\": \"A geographical coordinate\",\n" +
                 "    \"type\": \"object\",\n" +
                 "    \"properties\": {\n" +
                 "        \"latitude\": { \"type\": \"number\" },\n" +
                 "        \"longitude\": { \"type\": \"number\" }\n" +
                 "    }\n" +
-                "}");
-        queries[1].setSchema("");
-        queries[1].unsetSchema();
+                "}").build();
 
         // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsAll, queries[0], epSet(epSchema));
-        assertFilter(epsAll, queries[1], epsAll);
+        assertFilter(epsAll, q1, epSet(epSchema));
     }
 
     @Test
     public void testPolarity() {
         // Create some polarity-specific queries.
-        Query[] queries = makeQueryArray(3);
-        queries[0].setPolarity(Polarity.SOURCE);
-        queries[1].setPolarity(Polarity.SINK);
-        queries[2].setPolarity(Polarity.SINK);
-        queries[2].unsetPolarity();
+        Query q1 = new Query.Builder().setPolarity(Polarity.SOURCE).build();
+        Query q2 = new Query.Builder().setPolarity(Polarity.SINK).build();
 
         // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsPolarity, queries[0], epSet(epSource));
-        assertFilter(epsPolarity, queries[1], epSet(epSink));
-        assertFilter(epsAll, queries[2], epsAll);
+        assertFilter(epsPolarity, q1, epSet(epSource));
+        assertFilter(epsPolarity, q2, epSet(epSink));
     }
 
     @Test
     public void testIncludeTag() {
         // Create some tag-including queries.
-        Query[] queries = makeQueryArray(3);
-        queries[0].includeTag(null);
-        queries[1].includeTag("green");
-        queries[1].includeTag("large");
-        queries[2].includeTag("infrequent");
+        Query q1 = new Query.Builder().includeTag(null).build();
+        Query q2 = new Query.Builder().includeTag("green").includeTag("large").build();
+        Query q3 = new Query.Builder().includeTag("infrequent").build();
 
         // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsTags, queries[0], epsTags);
-        assertFilter(epsTags, queries[1], epSet(epTags1));
-        assertFilter(epsTags, queries[2], epSet(epTags3));
+        assertFilter(epsTags, q1, epsTags);
+        assertFilter(epsTags, q2, epSet(epTags1));
+        assertFilter(epsTags, q3, epSet(epTags3));
     }
 
     @Test
     public void testIncludeTags() {
         // Create some tag-including queries.
-        Query[] queries = makeQueryArray(5);
-        queries[1].includeTags(Arrays.asList("green", "large"));
-        queries[2].includeTags(Arrays.asList("green", "large", "frequent"));
-        queries[3].includeTags(Arrays.asList("green", "infrequent"));
-        queries[4].includeTags(Arrays.asList("infrequent", "green"));
+        Query q1 = new Query.Builder()
+                .includeTags(Arrays.asList("green", "large")).build();
+        Query q2 = new Query.Builder()
+                .includeTags(Arrays.asList("green", "large", "frequent")).build();
+        Query q3 = new Query.Builder()
+                .includeTags(Arrays.asList("green", "infrequent")).build();
+        Query q4 = new Query.Builder()
+                .includeTags(Arrays.asList("infrequent", "green")).build();
 
         // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsTags, queries[0], epsTags);
-        assertFilter(epsTags, queries[1], epSet(epTags1));
-        assertFilter(epsTags, queries[2], epSet(epTags1));
-        assertFilter(epsTags, queries[3], epSet());
-        assertFilter(epsTags, queries[4], epSet());
+        assertFilter(epsTags, q1, epSet(epTags1));
+        assertFilter(epsTags, q2, epSet(epTags1));
+        assertFilter(epsTags, q3, epSet());
+        assertFilter(epsTags, q4, epSet());
     }
 
     @Test
     public void testExcludeTag() {
         // Create some tag-excluding queries.
-        Query[] queries = makeQueryArray(3);
-        queries[0].excludeTag(null);
-        queries[1].excludeTag("green");
-        queries[1].excludeTag("large");
-        queries[2].excludeTag("infrequent");
+        Query q1 = new Query.Builder().excludeTag(null).build();
+        Query q2 = new Query.Builder().excludeTag("green").excludeTag("large").build();
+        Query q3 = new Query.Builder().excludeTag("infrequent").build();
 
         // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsTags, queries[0], epsTags);
-        assertFilter(epsTags, queries[1], epSet(epTags2, epTags3));
-        assertFilter(epsTags, queries[2], epSet(epTags1, epTags2));
+        assertFilter(epsTags, q1, epsTags);
+        assertFilter(epsTags, q2, epSet(epTags2, epTags3));
+        assertFilter(epsTags, q3, epSet(epTags1, epTags2));
     }
 
     @Test
     public void testExcludeTags() {
         // Create some tag-excluding queries.
-        Query[] queries = makeQueryArray(5);
-        queries[1].excludeTags(Arrays.asList("green", "large"));
-        queries[2].excludeTags(Arrays.asList("green", "large", "frequent"));
-        queries[3].excludeTags(Arrays.asList("green", "infrequent"));
-        queries[4].excludeTags(Arrays.asList("infrequent", "green"));
+        Query q1 = new Query.Builder()
+                .excludeTags(Arrays.asList("green", "large")).build();
+        Query q2 = new Query.Builder()
+                .excludeTags(Arrays.asList("green", "large", "frequent")).build();
+        Query q3 = new Query.Builder()
+                .excludeTags(Arrays.asList("green", "infrequent")).build();
+        Query q4 = new Query.Builder()
+                .excludeTags(Arrays.asList("infrequent", "green")).build();
 
         // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsTags, queries[0], epsTags);
-        assertFilter(epsTags, queries[1], epSet(epTags2, epTags3));
-        assertFilter(epsTags, queries[2], epSet(epTags2, epTags3));
-        assertFilter(epsTags, queries[3], epSet(epTags2));
-        assertFilter(epsTags, queries[4], epSet(epTags2));
-    }
-
-    @Test
-    public void testIgnoreTag() {
-        // Create some tag-ignoring queries.
-        Query[] queries = makeQueryArray(2);
-        queries[0].excludeTags(Arrays.asList("green", "large"));
-        queries[0].ignoreTag("green");
-        queries[0].ignoreTag("large");
-        queries[1].includeTags(Arrays.asList("green", "large"));
-        queries[1].ignoreTag("green");
-        queries[1].ignoreTag("large");
-
-        // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsTags, queries[0], epsTags);
-        assertFilter(epsTags, queries[1], epsTags);
-    }
-
-    @Test
-    public void testIgnoreTags() {
-        // Create some tag-ignoring queries.
-        Query[] queries = makeQueryArray(3);
-        queries[0].ignoreTags(Collections.emptyList());
-        queries[1].excludeTags(Arrays.asList("green", "large"));
-        queries[1].ignoreTags(Arrays.asList("green", "large"));
-        queries[2].includeTags(Arrays.asList("green", "large"));
-        queries[2].ignoreTags(Arrays.asList("green", "large"));
-
-        // Test that the queries filter out the correct endpoints from the set.
-        assertFilter(epsTags, queries[0], epsTags);
-        assertFilter(epsTags, queries[1], epsTags);
-        assertFilter(epsTags, queries[2], epsTags);
+        assertFilter(epsTags, q1, epSet(epTags2, epTags3));
+        assertFilter(epsTags, q2, epSet(epTags2, epTags3));
+        assertFilter(epsTags, q3, epSet(epTags2));
+        assertFilter(epsTags, q4, epSet(epTags2));
     }
 
     @Test
     public void testMatches() {
         // Create some tag-including queries.
-        Query[] queries = makeQueryArray(3);
-        queries[0].setMatches(Query.MATCH_INDEFINITELY);
-        queries[1].setMatches(0);
-        queries[2].setMatches(1);
+        Query q1 = new Query.Builder().setMatches(Query.MATCH_INDEFINITELY).build();
+        Query q2 = new Query.Builder().setMatches(0).build();
+        Query q3 = new Query.Builder().setMatches(1).build();
 
         // Test that the queries filter out the correct endpoints from the set.
-        assertCount(epsAll, queries[0], epsAll.size());
-        assertCount(epsAll, queries[1], 0);
-        assertCount(epsAll, queries[2], 1);
-        assertCount(epsAll, queries[2], 1);  // Test the the count is reset.
+        assertCount(epsAll, q1, epsAll.size());
+        assertCount(epsAll, q2, 0);
+        assertCount(epsAll, q3, 1);
+        assertCount(epsAll, q3, 1);  // Test the the count is reset.
+    }
+
+    @Test
+    public void testCopy() {
+        // Create a query.
+        Query q = new Query.Builder().setNameRegex("test").setMatches(1).build();
+
+        // Create a copy of that query using the builder.
+        Query qc = new Query.Builder().copy(q).build();
+
+        // Test that the two queries are equal.
+        Assert.assertEquals(q, qc);
     }
 }
