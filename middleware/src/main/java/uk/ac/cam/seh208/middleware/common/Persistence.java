@@ -6,42 +6,42 @@ import android.os.Parcelable;
 /**
  * Enumeration of supported mapping persistence levels. These determine
  * the length the middleware will go in attempting to reestablish
- * endpoint mappings after failure (any process that destroys a mapping
- * other than a graceful unmap command).
+ * endpoint mappings after partial or complete failure.
+ *
+ * Partial failure refers to individual channels within a mapping being
+ * closed. Complete failure refers to all channels being closed,
+ * specifically when the last channel does so.
  */
 public enum Persistence implements Parcelable {
     /**
      * Indicate that the middleware should make no attempt to
-     * reestablish the mapping.
+     * reestablish the mapping on failure.
      */
     NONE,
 
     /**
-     * Indicate that, in the case that all remaining mappings resulting
-     * from an initial command fail, the mapping should be reestablished
-     * by repeating the initial command, with the original query.
+     * Indicate that, in the case of complete failure, the mapping should
+     * be reestablished by resending the original query. The query is
+     * resent using the original method; i.e. if the original mapping
+     * was established indirectly using the RDC, this is repeated.
      */
     RESEND_QUERY,
 
     /**
-     * Indicate that, in the case that any individual mapping resulting
-     * from an initial command fails, the initial command should be
-     * repeated to reestablish that mapping, with a minimally modified query.
+     * Indicate that, in the case of partial failure, the mapping should
+     * be reestablished by sending a minimally modified query. The query
+     * is modified in order to ensure the maximum number of open channels
+     * in the mapping is constant. For example, if a single channel fails,
+     * the modified query will only accept a single new remote endpoint.
      *
-     * The modifications to the query prevent an exponential explosion of
-     * mappings when the original query artificially limited this number.
-     * Whenever the original query specified a hard limit on the number of
-     * mappings, the modified query will specify that limit, minus the
-     * number of remaining mappings. This ensures that the maximum number
-     * of mappings stemming from the initial command remains constant.
+     * Again, if the the query is resent using the original method.
      */
     RESEND_QUERY_INDIVIDUAL,
 
     /**
-     * EXPERIMENTAL: Indicate that, in the case that any individual mapping
-     * resulting from an initial command fails, that mapping should be
-     * reestablished as soon as possible with the same endpoint on the
-     * same middleware instance.
+     * EXPERIMENTAL: Indicate that, in the case of partial failure, closed
+     * channels should be reopened as soon as possible with the same remote
+     * endpoint on the same remote middleware instance.
      */
     EXACT;
 
