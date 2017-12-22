@@ -13,12 +13,20 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
+import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Polarity;
+import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
+import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
+import uk.ac.cam.seh208.middleware.common.exception.IncompleteBuildException;
 import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
+import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 
@@ -27,6 +35,11 @@ import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
  * Object encapsulating the state of an active endpoint within the middleware.
  */
 public class Endpoint {
+    /**
+     * Reference to the containing instance of the middleware service.
+     */
+    private final MiddlewareService service;
+
     /**
      * The defining details associated with this endpoint. Once set, these cannot
      * be modified (EndpointDetails objects are immutable), nor can this reference
@@ -59,11 +72,18 @@ public class Endpoint {
     /**
      * Collection of listeners used to respond to messages.
      */
-    private ArrayList<IMessageListener> listeners;
+    private List<IMessageListener> listeners;
+
+    /**
+     * Collection of mappings established from this endpoint.
+     */
+    private List<Mapping> mappings;
 
 
-    public Endpoint(EndpointDetails details, boolean exposed, boolean forceable)
+    public Endpoint(MiddlewareService service, EndpointDetails details,
+                    boolean exposed, boolean forceable)
             throws BadSchemaException {
+        this.service = service;
         this.details = details;
         this.exposed = exposed;
         this.forceable = forceable;
@@ -77,10 +97,11 @@ public class Endpoint {
         }
 
         listeners = new ArrayList<>();
+        mappings = new ArrayList<>();
     }
 
-    public Endpoint(EndpointDetails details) throws BadSchemaException {
-        this(details, true, true);
+    public Endpoint(MiddlewareService service, EndpointDetails details) throws BadSchemaException {
+        this(service, details, true, true);
     }
 
     /**
@@ -113,7 +134,7 @@ public class Endpoint {
             throw new WrongPolarityException(getPolarity());
         }
 
-        // TODO: forward message along JeroMQ socket(s).
+        // TODO: forward message along channels.
     }
 
     /**
@@ -168,6 +189,139 @@ public class Endpoint {
      */
     public synchronized void clearListeners() {
         listeners.clear();
+    }
+
+    /**
+     * Perform an indirect mapping from this endpoint. This consists of two stages:
+     *
+     *   1. use the registered RDC to discover the locations of peers exposing endpoints
+     *      matching the given query;
+     *   2. establish channels with one or more endpoints from one or more of these
+     *      peers, by sending queries to each in turn.
+     *
+     * The schema and polarity fields in the given query must be left empty; these are
+     * determined by the endpoint schema and polarity.
+     *
+     * The return value is a list of the endpoints that were successfully mapped to.
+     *
+     * @param query An endpoint query object for resource discovery and filtering
+     *              remote endpoints.
+     * @param persistence Persistence level to use for the resultant mapping.
+     *
+     * @return a list of RemoteEndpointDetails objects representing the endpoints that were
+     *         successfully mapped to during the operation.
+     *
+     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
+     * @throws BadHostException when the set RDC host is invalid.
+     * @throws ProtocolException if the RDC breaks protocol.
+     */
+    public synchronized Mapping map(Query query, Persistence persistence)
+        throws BadQueryException, BadHostException, ProtocolException {
+        List<String> hosts = service.discover(query);
+        return establishMapping(hosts, query, persistence);
+    }
+
+    /**
+     * Perform a direct mapping on the bound endpoint. This is similar to the second stage
+     * of an indirect mapping: the query is sent to a given peer in order to establish
+     * mappings with remote endpoints.
+     *
+     * The schema and polarity fields in the given query must be left empty; these are
+     * determined by the schema and polarity of the bound endpoint.
+     *
+     * The return value is a list of the endpoints that were successfully mapped to.
+     *
+     * @param host Hostname or address of the peer.
+     * @param query An endpoint query object for filtering remote endpoints.
+     * @param persistence Persistence level to use for the resultant mapping.
+     *
+     * @return a list of RemoteEndpointDetails objects representing the endpoints that were
+     *         successfully mapped to during the operation.
+     *
+     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
+     */
+    public synchronized Mapping mapTo(String host, Query query, Persistence persistence)
+            throws BadQueryException {
+        return establishMapping(Collections.singletonList(host), query, persistence);
+    }
+
+    /**
+     * Internal function for establishing a mapping with a number of remote hosts. A given
+     * query is sent to each host in turn in order to establish channels, up to a maximum
+     * number given in the query.
+     *
+     * The schema and polarity fields in the given query must be left empty; these are
+     * determined by the schema and polarity of the bound endpoint.
+     *
+     * The return value is a list of the endpoints that were successfully mapped to.
+     *
+     * @param hosts List of hostnames on which remote middleware instances reside.
+     * @param query An endpoint query object for filtering remote endpoints.
+     * @param persistence Persistence level to use for the resultant mapping.
+     *
+     * @return a list of RemoteEndpointDetails objects representing the endpoints that were
+     *         successfully mapped to during the operation.
+     *
+     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
+     */
+    private Mapping establishMapping(List<String> hosts, Query query, Persistence persistence)
+        throws BadQueryException {
+        // Check that the query is properly formed.
+        if (query.schema != null || query.polarity != null) {
+            throw new BadQueryException();
+        }
+
+        // Set the schema and polarity fields in the query.
+        // TODO: more elegant solution to finding polarity complement.
+        Polarity complement = (details.getPolarity() == Polarity.SOURCE) ? Polarity.SINK
+                                                                         : Polarity.SOURCE;
+        query = new Query.Builder()
+                .copy(query)
+                .setSchema(details.getSchema())
+                .setPolarity(complement)
+                .build();
+
+        // Keep track of the currently established channels.
+        List<Channel> channels = new ArrayList<>();
+
+        // Establish channels with each host in turn.
+        for (String host : hosts) {
+            // If we have accepted the maximum number of channels, we need not
+            // contact the remaining remote hosts.
+            if (channels.size() == query.matches) {
+                break;
+            }
+
+            // Modify the sent query to only accept the remaining number of channels.
+            Query modifiedQuery = new Query.Builder()
+                    .copy(query)
+                    .setMatches(query.matches - channels.size())
+                    .build();
+
+            // Establish channels to endpoints on the remote host, and add them to our list.
+            channels.addAll(establishChannels(host, modifiedQuery));
+        }
+
+        try {
+            // Build the mapping object, keeping internal record of it before returning.
+            Mapping mapping = new Mapping.Builder()
+                    .setQuery(query)
+                    .setPersistence(persistence)
+                    .addChannels(channels)
+                    .build();
+            mappings.add(mapping);
+            return mapping;
+        } catch (IncompleteBuildException ignored) {
+            // This should not be reachable.
+            return null;
+        }
+    }
+
+    /**
+     * TODO: document (pull some stuff out of the map and mapTo documentation).
+     */
+    private List<Channel> establishChannels(String host, Query query) {
+        return null;
     }
 
     /**
@@ -227,19 +381,19 @@ public class Endpoint {
     }
 
     /**
-     * Callback to be registered as a message handler with JeroMQ mapping
-     * sockets. This will be called whenever a message is received over any
-     * remote endpoint mapping to this endpoint.
+     * Callback to be registered as a message handler with channels.
+     *
+     * Distributes newly received messages to all registered listeners.
      *
      * @param message The newly received message string.
      */
-    private synchronized void onMessage(String message /* TODO: include mapping. */) {
+    public synchronized void onMessage(String message, Channel channel) {
         if (!validate(message)) {
             // The message does not match the schema; the remote endpoint has broken
-            // protocol, and the mapping must be torn down.
+            // protocol, and the channel must be closed.
             Log.e(getTag(), "Incoming message schema mismatch.");
 
-            // TODO: tear down the mapping.
+            channel.close();
             return;
         }
 

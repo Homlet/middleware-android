@@ -8,10 +8,12 @@ import android.os.IBinder;
 import android.support.annotation.Nullable;
 
 import java.util.HashMap;
+import java.util.List;
 
 import uk.ac.cam.seh208.middleware.binder.EndpointBinder;
 import uk.ac.cam.seh208.middleware.binder.MiddlewareBinder;
 import uk.ac.cam.seh208.middleware.common.BinderType;
+import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
@@ -97,7 +99,7 @@ public class MiddlewareService extends Service {
 
     public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
             throws EndpointCollisionException, BadSchemaException {
-        Endpoint endpoint = new Endpoint(details, exposed, forceable);
+        Endpoint endpoint = new Endpoint(this, details, exposed, forceable);
         if (endpointSet.add(endpoint)) {
             // Perform initialisation routines for the endpoint.
             endpoint.initialise();
@@ -128,6 +130,11 @@ public class MiddlewareService extends Service {
 
             // TODO: re-register with RDC, destroy endpoint binder (if one exists).
         }
+    }
+
+    public List<String> discover(Query query) {
+        // TODO: implement.
+        return null;
     }
 
     public EndpointSet getEndpointSet() {
