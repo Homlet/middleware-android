@@ -27,7 +27,7 @@ import java.util.function.Predicate;
  * from the available peer endpoints; unmap queries are applied
  * to locally held data on remote mappings.
  */
-public class Query implements Parcelable, Cloneable {
+public class Query implements Parcelable {
 
     /**
      * Builder object for immutable queries.
@@ -206,37 +206,43 @@ public class Query implements Parcelable, Cloneable {
     /**
      * Regular expression to test against the endpoint name.
      */
-    private String nameRegex;
+    public final String nameRegex;
 
     /**
      * Regular expression to test against the endpoint description.
      */
-    private String descRegex;
+    public final String descRegex;
 
     /**
      * Message schema to require the endpoint matches.
      */
-    private String schema;
+    public final String schema;
 
     /**
      * Polarity to require the endpoint has.
      */
-    private Polarity polarity;
+    public final Polarity polarity;
 
     /**
      * List of tags to require present in the endpoint.
+     *
+     * Note: this is initialised with an unmodifiable set in the constructor,
+     *       so it may safely be made public without harming immutability.
      */
-    private Set<String> tagsToInclude;
+    public final Set<String> tagsToInclude;
 
     /**
      * List of tags to require not present in the endpoint.
+     *
+     * Note: this is initialised with an unmodifiable set in the constructor,
+     *       so it may safely be made public without harming immutability.
      */
-    private Set<String> tagsToExclude;
+    public final Set<String> tagsToExclude;
 
     /**
      * Number of endpoints to match before rejecting others.
      */
-    private int matches = MATCH_INDEFINITELY;
+    public final int matches;
 
 
     private Query(String nameRegex, String descRegex, String schema, Polarity polarity,
@@ -246,8 +252,14 @@ public class Query implements Parcelable, Cloneable {
         this.descRegex = descRegex;
         this.schema = schema;
         this.polarity = polarity;
-        this.tagsToInclude = tagsToInclude;
-        this.tagsToExclude = tagsToExclude;
+        // Copy the input tag sets into intermediate sets, and store only
+        // an unmodifiable view on these to ensure immutability.
+        TreeSet<String> includes = new TreeSet<>();
+        includes.addAll(tagsToInclude);
+        this.tagsToInclude = Collections.unmodifiableSet(includes);
+        TreeSet<String> excludes = new TreeSet<>();
+        excludes.addAll(tagsToExclude);
+        this.tagsToExclude = Collections.unmodifiableSet(excludes);
         this.matches = matches;
     }
 
@@ -260,6 +272,7 @@ public class Query implements Parcelable, Cloneable {
         nameRegex = bundle.getString(NAME_REGEX);
         descRegex = bundle.getString(DESC_REGEX);
         schema = bundle.getString(SCHEMA);
+        polarity = (Polarity) bundle.getSerializable(POLARITY);
         ArrayList<String> includes = bundle.getStringArrayList(TAGS_TO_INCLUDE);
         if (includes == null) {
             tagsToInclude = new TreeSet<>();
@@ -347,16 +360,6 @@ public class Query implements Parcelable, Cloneable {
             matched[0]++;
             return true;
         };
-    }
-
-    @Override
-    public Object clone() {
-        try {
-            return super.clone();
-        } catch (CloneNotSupportedException e) {
-            // This should never happen.
-            return null;
-        }
     }
 
     @Override
