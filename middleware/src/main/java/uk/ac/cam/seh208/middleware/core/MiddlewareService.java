@@ -6,8 +6,8 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.util.ArrayMap;
 
-import java.util.HashMap;
 import java.util.List;
 
 import uk.ac.cam.seh208.middleware.binder.EndpointBinder;
@@ -31,7 +31,7 @@ public class MiddlewareService extends Service {
      * Collection of binder objects for handling endpoint-specific
      * IPC calls on a particular endpoint. Indexed by endpoint name.
      */
-    private HashMap<String, EndpointBinder> endpointBinders;
+    private ArrayMap<String, EndpointBinder> endpointBinders;
 
     /**
      * Set of endpoints currently active in the middleware.
@@ -59,7 +59,7 @@ public class MiddlewareService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Initialise object parameters.
-        endpointBinders = new HashMap<>();
+        endpointBinders = new ArrayMap<>();
         endpointSet = new EndpointSet();
 
         // Attempt to restart this service if the scheduler kills it for resources.

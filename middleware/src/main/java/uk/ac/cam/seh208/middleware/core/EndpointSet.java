@@ -1,11 +1,11 @@
 package uk.ac.cam.seh208.middleware.core;
 
 import android.support.annotation.NonNull;
+import android.util.ArrayMap;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -21,14 +21,14 @@ import uk.ac.cam.seh208.middleware.common.Polarity;
  */
 public class EndpointSet implements Set<Endpoint> {
 
-    private HashMap<String, Endpoint> endpointsByName;
-    private HashMap<Polarity, ArrayList<Endpoint>> endpointsByPolarity;
+    private ArrayMap<String, Endpoint> endpointsByName;
+    private ArrayMap<Polarity, ArrayList<Endpoint>> endpointsByPolarity;
     private Set<String> names;
 
 
     public EndpointSet() {
-        endpointsByName = new HashMap<>();
-        endpointsByPolarity = new HashMap<>();
+        endpointsByName = new ArrayMap<>();
+        endpointsByPolarity = new ArrayMap<>();
         for (Polarity polarity : Polarity.values()) {
             endpointsByPolarity.put(polarity, new ArrayList<>());
         }
