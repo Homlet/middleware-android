@@ -1,8 +1,5 @@
 package uk.ac.cam.seh208.middleware.core;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 
 
@@ -35,15 +32,11 @@ import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
  *     - the far middleware indicates that a channel was locally closed in the past,
  *       but it was not able to perform the graceful tear-down.
  */
-public abstract class Channel {
+public class Channel extends CloseableSubject<Channel> {
 
     private Endpoint near;
 
     private RemoteEndpointDetails far;
-
-    private List<ChannelObserver> observers;
-
-    private boolean open;  // TODO: change to state enum.
 
 
     /**
@@ -55,50 +48,6 @@ public abstract class Channel {
     public Channel(Endpoint near, RemoteEndpointDetails far) {
         this.near = near;
         this.far = far;
-        this.observers = new ArrayList<>();
-        open = true;
-    }
-
-    /**
-     * Subscribe a ChannelObserver to channel events.
-     */
-    public synchronized void subscribe(ChannelObserver observer) {
-        observers.add(observer);
-    }
-
-    /**
-     * Atomically subscribe a ChannelObserver to channel events only if the
-     * channel is currently open.
-     *
-     * @return whether subscription took place.
-     */
-    public synchronized boolean subscribeIfOpen(ChannelObserver observer) {
-        if (open) {
-            subscribe(observer);
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Permanently close the channel, notifying the change to observers.
-     */
-    public synchronized void close() {
-        if (!open) {
-            return;
-        }
-
-        // Notify all observers of the channel closure.
-        for (ChannelObserver observer : observers) {
-            observer.onClose(this);
-        }
-
-        // Allow observers and channels to be efficiently garbage collected by
-        // explicitly closing the reference loop now no more events can be observed.
-        observers.clear();
-
-        open = false;
     }
 
     public Endpoint getNear() {
@@ -107,9 +56,5 @@ public abstract class Channel {
 
     public RemoteEndpointDetails getFar() {
         return far;
-    }
-
-    public boolean isOpen() {
-        return open;
     }
 }

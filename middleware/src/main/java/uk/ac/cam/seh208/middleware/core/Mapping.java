@@ -17,7 +17,7 @@ import uk.ac.cam.seh208.middleware.common.Query;
  * failure is the closure of all channels, or the local middleware instance
  * being killed by the scheduler.
  */
-public class Mapping implements ChannelObserver {
+public class Mapping implements CloseableObserver<Channel> {
 
     /**
      * Back-reference to the owning local endpoint object.
