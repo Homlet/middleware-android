@@ -32,9 +32,20 @@ public abstract class CloseableSubject<T extends Closeable> implements Closeable
 
     /**
      * Subscribe a CloseableObserver to channel events.
+     *
+     * @return whether subscription took place.
      */
-    public synchronized void subscribe(CloseableObserver<T> observer) {
+    public synchronized boolean subscribe(CloseableObserver<T> observer) {
+        if (observer == null) {
+            return false;
+        }
+
+        if (observers.contains(observer)) {
+            return false;
+        }
+
         observers.add(observer);
+        return true;
     }
 
     /**
@@ -45,8 +56,7 @@ public abstract class CloseableSubject<T extends Closeable> implements Closeable
      */
     public synchronized boolean subscribeIfOpen(CloseableObserver<T> observer) {
         if (!closed) {
-            subscribe(observer);
-            return true;
+            return subscribe(observer);
         }
 
         return false;
