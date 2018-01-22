@@ -24,7 +24,6 @@ import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
-import uk.ac.cam.seh208.middleware.common.exception.IncompleteBuildException;
 import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
@@ -70,16 +69,30 @@ public class Endpoint {
     private JsonSchema validator;
 
     /**
-     * Collection of listeners used to respond to messages.
+     * Collection of application listeners used to respond to messages.
      */
     private List<IMessageListener> listeners;
+
+    /**
+     * Collection of channels owned by the endpoint; i.e. having the
+     * endpoint at their near end.
+     */
+    private List<Channel> channels;
 
     /**
      * Collection of mappings established from this endpoint.
      */
     private List<Mapping> mappings;
 
+    /**
+     * Collection of connections serving channels from this endpoint.
+     */
+    private List<Connection> connections;
 
+
+    /**
+     * TODO: document.
+     */
     public Endpoint(MiddlewareService service, EndpointDetails details,
                     boolean exposed, boolean forceable)
             throws BadSchemaException {
@@ -134,7 +147,7 @@ public class Endpoint {
             throw new WrongPolarityException(getPolarity());
         }
 
-        // TODO: forward message along channels.
+        // TODO: forward message along connections.
     }
 
     /**
@@ -302,19 +315,10 @@ public class Endpoint {
             channels.addAll(establishChannels(host, modifiedQuery));
         }
 
-        try {
-            // Build the mapping object, keeping internal record of it before returning.
-            Mapping mapping = new Mapping.Builder()
-                    .setQuery(query)
-                    .setPersistence(persistence)
-                    .addChannels(channels)
-                    .build();
-            mappings.add(mapping);
-            return mapping;
-        } catch (IncompleteBuildException ignored) {
-            // This should not be reachable.
-            return null;
-        }
+        // Build the mapping object, keeping internal record of it before returning.
+        Mapping mapping = new Mapping(this, query, persistence, channels);
+        mappings.add(mapping);
+        return mapping;
     }
 
     /**

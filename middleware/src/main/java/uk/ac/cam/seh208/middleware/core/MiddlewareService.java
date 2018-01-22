@@ -39,6 +39,11 @@ public class MiddlewareService extends Service {
     private EndpointSet endpointSet;
 
     /**
+     * Pool of open connections within the middleware.
+     */
+    private ConnectionPool connectionPool;
+
+    /**
      * Indicates whether it should be possible for remote instances of the
      * middleware to force commands to run on this instance.
      */
@@ -56,6 +61,9 @@ public class MiddlewareService extends Service {
     private boolean discoverable;
 
 
+    /**
+     * TODO: document.
+     */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Initialise object parameters.
@@ -66,6 +74,9 @@ public class MiddlewareService extends Service {
         return START_STICKY;
     }
 
+    /**
+     * TODO: document.
+     */
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -97,6 +108,9 @@ public class MiddlewareService extends Service {
         }
     }
 
+    /**
+     * TODO: document.
+     */
     public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
             throws EndpointCollisionException, BadSchemaException {
         Endpoint endpoint = new Endpoint(this, details, exposed, forceable);
@@ -111,6 +125,9 @@ public class MiddlewareService extends Service {
         }
     }
 
+    /**
+     * TODO: document.
+     */
     public void destroyEndpoint(String name) throws EndpointNotFoundException {
         // Synchronise on the endpoint set to prevent interleaving endpoint
         // destruction and creation/another destruction. Note that similar
@@ -132,9 +149,19 @@ public class MiddlewareService extends Service {
         }
     }
 
+    /**
+     * TODO: document.
+     */
     public List<String> discover(Query query) {
         // TODO: implement.
         return null;
+    }
+
+    /**
+     * TODO: document.
+     */
+    public void openSocket() {
+
     }
 
     public EndpointSet getEndpointSet() {
