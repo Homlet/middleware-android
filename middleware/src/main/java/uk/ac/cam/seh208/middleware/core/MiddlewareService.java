@@ -44,6 +44,11 @@ public class MiddlewareService extends Service {
     private ConnectionPool connectionPool;
 
     /**
+     * Context encapsulating message streams to other middleware instances.
+     */
+    private MessageContext messageContext;
+
+    /**
      * Indicates whether it should be possible for remote instances of the
      * middleware to force commands to run on this instance.
      */

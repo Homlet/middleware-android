@@ -2,6 +2,7 @@ package uk.ac.cam.seh208.middleware.core;
 
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.util.ArrayMap;
 import android.util.Log;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,7 +34,7 @@ import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 /**
  * Object encapsulating the state of an active endpoint within the middleware.
  */
-public class Endpoint {
+public class Endpoint implements MessageListener {
     /**
      * Reference to the containing instance of the middleware service.
      */
@@ -74,10 +75,10 @@ public class Endpoint {
     private List<IMessageListener> listeners;
 
     /**
-     * Collection of channels owned by the endpoint; i.e. having the
-     * endpoint at their near end.
+     * Map of channels owned by the endpoint; i.e. having the
+     * endpoint at their near end, addressed by their unique identifier.
      */
-    private List<Channel> channels;
+    private ArrayMap<Long, Channel> channels;
 
     /**
      * Collection of mappings established from this endpoint.
@@ -390,14 +391,22 @@ public class Endpoint {
      * Distributes newly received messages to all registered listeners.
      *
      * @param message The newly received message string.
+     * @param channelId Unique identifier of the channel
      */
-    public synchronized void onMessage(String message, Channel channel) {
+    public synchronized void onMessage(String message, long channelId) {
+        if (!channels.keySet().contains(channelId)) {
+            // If the channel identifier is not in the channel set, this
+            Log.e(getTag(), "Received message from unknown channel ID (" +
+                    channelId + ").");
+            return;
+        }
+
         if (!validate(message)) {
             // The message does not match the schema; the remote endpoint has broken
             // protocol, and the channel must be closed.
             Log.e(getTag(), "Incoming message schema mismatch.");
 
-            channel.close();
+            channels.get(channelId).close();
             return;
         }
 
