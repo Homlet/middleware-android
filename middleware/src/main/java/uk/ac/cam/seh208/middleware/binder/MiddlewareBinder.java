@@ -11,7 +11,7 @@ import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
-import uk.ac.cam.seh208.middleware.core.Endpoint;
+import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 
 

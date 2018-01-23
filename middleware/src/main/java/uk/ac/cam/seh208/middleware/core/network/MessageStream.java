@@ -1,8 +1,10 @@
-package uk.ac.cam.seh208.middleware.core;
+package uk.ac.cam.seh208.middleware.core.network;
 
+
+import uk.ac.cam.seh208.middleware.core.Closeable;
 
 /**
- * Simple interface for a generic message-oriented stream socket.
+ * Simple interface for an asynchronous, first-in-first-out, message delimited stream socket.
  */
 public interface MessageStream extends Closeable {
     /**

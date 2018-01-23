@@ -1,4 +1,4 @@
-package uk.ac.cam.seh208.middleware.core;
+package uk.ac.cam.seh208.middleware.core.comms;
 
 import android.support.annotation.NonNull;
 import android.util.ArrayMap;

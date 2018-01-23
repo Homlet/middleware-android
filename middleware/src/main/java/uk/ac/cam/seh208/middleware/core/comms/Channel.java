@@ -1,6 +1,7 @@
-package uk.ac.cam.seh208.middleware.core;
+package uk.ac.cam.seh208.middleware.core.comms;
 
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
+import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 
 
 /**

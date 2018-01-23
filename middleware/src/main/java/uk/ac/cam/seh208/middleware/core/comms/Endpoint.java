@@ -1,4 +1,4 @@
-package uk.ac.cam.seh208.middleware.core;
+package uk.ac.cam.seh208.middleware.core.comms;
 
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -29,6 +29,8 @@ import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
+import uk.ac.cam.seh208.middleware.core.MiddlewareService;
+import uk.ac.cam.seh208.middleware.core.network.MessageListener;
 
 
 /**

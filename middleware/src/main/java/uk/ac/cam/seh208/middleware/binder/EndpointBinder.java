@@ -17,7 +17,7 @@ import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
-import uk.ac.cam.seh208.middleware.core.Endpoint;
+import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 
 
 /**

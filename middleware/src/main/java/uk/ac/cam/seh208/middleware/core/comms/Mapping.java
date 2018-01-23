@@ -1,9 +1,10 @@
-package uk.ac.cam.seh208.middleware.core;
+package uk.ac.cam.seh208.middleware.core.comms;
 
 import java.util.List;
 
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.core.CloseableObserver;
 
 
 /**
