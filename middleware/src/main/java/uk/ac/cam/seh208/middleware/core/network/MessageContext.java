@@ -19,5 +19,5 @@ public interface MessageContext {
      *
      * @return a reference to a MessageStream object.
      */
-    MessageStream getStream(String host);
+    MessageStream getMessageStream(String host);
 }
