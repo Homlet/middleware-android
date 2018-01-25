@@ -4,6 +4,9 @@ import android.util.ArrayMap;
 
 import org.zeromq.ZMQ;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 
 /**
  * Stores an overarching ZMQ connection context.
@@ -24,6 +27,17 @@ import org.zeromq.ZMQ;
 public class ZMQContext implements MessageContext, RequestContext {
 
     /**
+     * Return the public IP of the local host.
+     *
+     * @return a String formatted IP address.
+     *
+     * @throws UnknownHostException if the host has no bound IP address.
+     */
+    public static String getLocalHost() throws UnknownHostException {
+        return InetAddress.getLocalHost().getHostAddress();
+    }
+
+    /**
      * The port on which the incoming message socket resides.
      */
     public static final int PORT_MESSAGE = 4800;
@@ -36,7 +50,7 @@ public class ZMQContext implements MessageContext, RequestContext {
     /**
      * The number of I/O threads used by ZMQ to handle middleware communication.
      */
-    private static final int IO_THREADS = 8;
+    private static final int IO_THREADS = 2;
 
 
     /**
@@ -45,19 +59,24 @@ public class ZMQContext implements MessageContext, RequestContext {
     private ZMQ.Context context;
 
     /**
-     * ZMQ socket for receiving and responding to requests.
+     * Store of Harmony state.
      */
-    private ZMQ.Socket responder;
+    private HarmonyState harmonyState;
 
     /**
-     * ZMQ socket for handling incoming messages between middleware instances.
+     * Listener thread for the Harmony message context.
      */
-    private ZMQ.Socket router;
+    private Thread harmonyServer;
 
     /**
      * ZMQ sockets for sending messages to remote middleware instances.
      */
     private ArrayMap<String, ZMQ.Socket> dealers;
+
+    /**
+     * ZMQ socket for receiving and responding to requests.
+     */
+    private ZMQ.Socket responder;
 
 
     /**
@@ -67,7 +86,10 @@ public class ZMQContext implements MessageContext, RequestContext {
     public ZMQContext(int portMessage, int portRequest) {
         context = ZMQ.context(IO_THREADS);
 
-        // TODO: set up state.
+        // Set-up Harmony context.
+        harmonyState = new HarmonyState();
+        harmonyServer = HarmonyServer.makeThread(context, portMessage, harmonyState);
+        harmonyServer.start();
     }
 
     /**
@@ -98,8 +120,15 @@ public class ZMQContext implements MessageContext, RequestContext {
      */
     @Override
     public MessageStream getMessageStream(String host) {
-        // TODO: implement.
-        return null;
+        // Retrieve the stream associated with this remote host from the state.
+        HarmonyMessageStream stream = harmonyState.getStreamByHost(host);
+
+        if (stream == null) {
+            // Instantiate a new stream in the state.
+            return new HarmonyMessageStream(context, host);
+        }
+
+        return stream;
     }
 
     /**
