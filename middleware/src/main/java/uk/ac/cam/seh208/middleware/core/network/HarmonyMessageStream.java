@@ -3,8 +3,6 @@ package uk.ac.cam.seh208.middleware.core.network;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
-import java.net.UnknownHostException;
-
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 
 
@@ -25,14 +23,21 @@ public class HarmonyMessageStream extends CloseableSubject<HarmonyMessageStream>
     private ZMQ.Context context;
 
     /**
-     * The remote host with which this stream communicates.
+     * The ZeroMQ address on which the Harmony ROUTER socket resides.
      */
-    private String host;
+    private Address localAddress;
+
+    /**
+     * The ZeroMQ address with which this stream communicates.
+     */
+    private Address remoteAddress;
 
 
-    public HarmonyMessageStream(ZMQ.Context context, String host) {
+    public HarmonyMessageStream(ZMQ.Context context, ZMQAddress localAddress,
+                                ZMQAddress remoteAddress) {
         this.context = context;
-        this.host = host;
+        this.localAddress = localAddress;
+        this.remoteAddress = remoteAddress;
     }
 
     @Override
@@ -104,12 +109,12 @@ public class HarmonyMessageStream extends CloseableSubject<HarmonyMessageStream>
             dealer = context.socket(ZMQ.DEALER);
 
             // Attempt to connect the socket to the peer.
-            dealer.connect("tcp://" + host);
+            dealer.connect("tcp://" + remoteAddress.toCanonicalString());
 
             // Attempt to send the initial message to the peer.
-            // TODO: proper initial message specification with multiple address spaces.
-            dealer.send(ZMQContext.getLocalHost());
-        } catch (ZMQException | UnknownHostException e) {
+            // TODO: send complete location string rather than address.
+            dealer.send(localAddress.toCanonicalString());
+        } catch (ZMQException e) {
             // The attempt failed. Close and release the new socket.
             if (dealer != null) {
                 dealer.close();

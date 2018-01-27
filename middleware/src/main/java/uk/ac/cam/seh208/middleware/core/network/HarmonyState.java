@@ -7,6 +7,7 @@ import java.util.HashMap;
  * Stores state associated with the Harmony context.
  */
 public class HarmonyState {
+
     /**
      * Map of all currently maintained streams indexed by their unique
      * identity on the ROUTER socket.
@@ -14,17 +15,25 @@ public class HarmonyState {
     private HashMap<String, HarmonyMessageStream> streamsByIdentity;
 
     /**
-     * Map of all currently maintained streams indexed by their host name.
+     * Map of all currently maintained streams indexed by their ZeroMQ address.
      */
-    private HashMap<String, HarmonyMessageStream> streamsByHost;
+    private HashMap<String, HarmonyMessageStream> streamsByAddress;
+
+    /**
+     * ZMQ address on which the ROUTER socket is bound.
+     *
+     * TODO: reference full location instead.
+     */
+    private ZMQAddress localAddress;
 
 
     /**
      * Instantiate the stream maps.
      */
-    public HarmonyState() {
+    public HarmonyState(ZMQAddress localAddress) {
         streamsByIdentity = new HashMap<>();
-        streamsByHost = new HashMap<>();
+        streamsByAddress = new HashMap<>();
+        this.localAddress = localAddress;
     }
 
     /**
@@ -33,21 +42,22 @@ public class HarmonyState {
      * other, BadHarmonyStateException is thrown.
      *
      * @param identity ROUTER identity of the stream to insert.
-     * @param host Remote host of the stream to insert.
+     * @param address ZeroMQ address of the stream to insert.
      * @param stream Reference to the stream to insert.
      *
      * @return whether the message stream was inserted.
      *
      * @throws BadHarmonyStateException if the operation finds the object in a bad state.
      */
-    public synchronized boolean insertStream(String identity, String host,
+    public synchronized boolean insertStream(String identity, ZMQAddress address,
                                              HarmonyMessageStream stream)
             throws BadHarmonyStateException {
         boolean keyPresent = streamsByIdentity.containsKey(identity);
+        String addressString = address.toCanonicalString();
 
-        if (keyPresent ^ streamsByHost.containsKey(host)) {
+        if (keyPresent ^ streamsByAddress.containsKey(addressString)) {
             // One list contains the key already. Since we cannot have a stream which
-            // shares a ROUTER identity but not a remote host (or vice-verse) with
+            // shares a ROUTER identity but not an address (or vice-verse) with
             // another this case should be unreachable.
             throw new BadHarmonyStateException();
         }
@@ -59,7 +69,7 @@ public class HarmonyState {
 
         // The stream is not present in either map; insert it into both.
         streamsByIdentity.put(identity, stream);
-        streamsByHost.put(host, stream);
+        streamsByAddress.put(addressString, stream);
 
         return true;
     }
@@ -69,27 +79,29 @@ public class HarmonyState {
      * by both identity and host.
      *
      * @param identity ROUTER identity of the stream to remove.
-     * @param host Remote host of the stream to remove.
+     * @param address ZeroMQ address of the stream to remove.
      *
      * @throws BadHarmonyStateException if the operation finds the object in a bad state.
      */
-    public synchronized void removeStream(String identity, String host)
+    public synchronized void removeStream(String identity, ZMQAddress address)
             throws BadHarmonyStateException {
-        if (streamsByIdentity.containsKey(identity) ^ streamsByHost.containsKey(host)) {
+        String addressString = address.toCanonicalString();
+
+        if (streamsByIdentity.containsKey(identity) ^ streamsByAddress.containsKey(addressString)) {
             // One list contains the key already. Since we cannot have a stream which
-            // shares a ROUTER identity but not a remote host (or vice-verse) with
+            // shares a ROUTER identity but not an address (or vice-verse) with
             // another this case should be unreachable.
             throw new BadHarmonyStateException();
         }
 
-        if (streamsByIdentity.get(identity) != streamsByHost.get(host)) {
+        if (streamsByIdentity.get(identity) != streamsByAddress.get(addressString)) {
             throw new IllegalArgumentException(
                     "Objects referenced by identity and host must match.");
         }
 
         // Remove the stream from both lists.
         streamsByIdentity.remove(identity);
-        streamsByHost.remove(host);
+        streamsByAddress.remove(addressString);
     }
 
     /**
@@ -107,14 +119,18 @@ public class HarmonyState {
 
     /**
      * Return a reference to the message stream associated with a particular
-     * remote host.
+     * ZeroMQ address.
      *
-     * @param host Remote host of the stream to return.
+     * @param address The ZeroMQ address of the stream to return.
      *
      * @return a reference to a HarmonyMessageStream object, or null if no such
-     *         object exists for the given host.
+     *         object exists for the given address.
      */
-    public synchronized HarmonyMessageStream getStreamByHost(String host) {
-        return streamsByHost.get(host);
+    public synchronized HarmonyMessageStream getStreamByAddress(ZMQAddress address) {
+        return streamsByAddress.get(address.toCanonicalString());
+    }
+
+    public ZMQAddress getLocalAddress() {
+        return localAddress;
     }
 }

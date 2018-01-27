@@ -13,11 +13,11 @@ public interface RequestContext {
      * Return a request stream to a remote instance of the middleware. The stream
      * must be ready for sending asynchronous requests to the remote host.
      *
-     * @param host Host on which the remote middleware instance resides.
+     * @param address Address on which the remote middleware instance resides.
      *
      * @return a reference to a RequestStream object.
      */
-    RequestStream getRequestStream(String host);
+    RequestStream getRequestStream(Address address);
 
     /**
      * Return the responder handling requests received via this context. The responder

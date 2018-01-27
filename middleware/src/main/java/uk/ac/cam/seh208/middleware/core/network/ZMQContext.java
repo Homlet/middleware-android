@@ -1,7 +1,5 @@
 package uk.ac.cam.seh208.middleware.core.network;
 
-import android.util.ArrayMap;
-
 import org.zeromq.ZMQ;
 
 import java.net.InetAddress;
@@ -54,6 +52,16 @@ public class ZMQContext implements MessageContext, RequestContext {
 
 
     /**
+     * Port to which the Harmony ROUTER socket should bind.
+     */
+    private int portMessage;
+
+    /**
+     * Port to which the request server socket should bind.
+     */
+    private int portRequest;
+
+    /**
      * ZMQ context encapsulating all sockets.
      */
     private ZMQ.Context context;
@@ -69,11 +77,6 @@ public class ZMQContext implements MessageContext, RequestContext {
     private Thread harmonyServer;
 
     /**
-     * ZMQ sockets for sending messages to remote middleware instances.
-     */
-    private ArrayMap<String, ZMQ.Socket> dealers;
-
-    /**
      * ZMQ socket for receiving and responding to requests.
      */
     private ZMQ.Socket responder;
@@ -84,11 +87,22 @@ public class ZMQContext implements MessageContext, RequestContext {
      * request receiving server sockets.
      */
     public ZMQContext(int portMessage, int portRequest) {
+        this.portMessage = portMessage;
+        this.portRequest = portRequest;
+
+        // Create a new ZMQ context.
         context = ZMQ.context(IO_THREADS);
 
-        // Set-up Harmony context.
-        harmonyState = new HarmonyState();
-        harmonyServer = HarmonyServer.makeThread(context, portMessage, harmonyState);
+        // Set-up the Harmony context.
+        ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder().setPort(portMessage);
+        try {
+            addressBuilder.setHost(getLocalHost());
+        } catch (UnknownHostException e) {
+            // Default to all interfaces.
+            addressBuilder.setHost("*");
+        }
+        harmonyState = new HarmonyState(addressBuilder.build());
+        harmonyServer = HarmonyServer.makeThread(context, harmonyState);
         harmonyServer.start();
     }
 
@@ -113,19 +127,25 @@ public class ZMQContext implements MessageContext, RequestContext {
      * it will be returned instead of opening a new stream.
      * TODO: use a shim to cache streams across different contexts for the same remote.
      *
-     * @param host Host on which the remote middleware instance resides.
+     * @param address ZeroMQ address on which the remote middleware instance is accessible.
      *
      * @return a reference to a ZMQMessageStream for sending messages to a
      *         remote instance of the middleware, or null in the case of error.
      */
     @Override
-    public MessageStream getMessageStream(String host) {
+    public MessageStream getMessageStream(Address address) {
+        if (!(address instanceof ZMQAddress)) {
+            return null;
+        }
+
+        ZMQAddress zmqAddress = (ZMQAddress) address;
+
         // Retrieve the stream associated with this remote host from the state.
-        HarmonyMessageStream stream = harmonyState.getStreamByHost(host);
+        HarmonyMessageStream stream = harmonyState.getStreamByAddress(zmqAddress);
 
         if (stream == null) {
             // Instantiate a new stream in the state.
-            return new HarmonyMessageStream(context, host);
+            return new HarmonyMessageStream(context, harmonyState.getLocalAddress(), zmqAddress);
         }
 
         return stream;
@@ -142,13 +162,13 @@ public class ZMQContext implements MessageContext, RequestContext {
      * If a request stream to the remote host already exists, a cached reference
      * to it will be returned instead of opening a new stream.
      *
-     * @param host Host on which the remote middleware instance resides.
+     * @param address ZeroMQ address on which the remote middleware instance resides.
      *
      * @return a reference to a ZMQRequestStream for sending requests to the
      *         remote host, or null in the case of error.
      */
     @Override
-    public RequestStream getRequestStream(String host) {
+    public RequestStream getRequestStream(Address address) {
         // TODO: implement.
         return null;
     }

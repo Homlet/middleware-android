@@ -16,13 +16,12 @@ public class HarmonyServer implements Runnable {
      * a new Thread using its behaviour.
      *
      * @param context Context in which to open the ROUTER socket.
-     * @param port Port to which the ROUTER socket should bind.
      * @param state Store of associated state.
      *
      * @return a newly instantiated Thread object.
      */
-    public static Thread makeThread(ZMQ.Context context, int port, HarmonyState state) {
-        return new Thread(new HarmonyServer(context, port, state));
+    public static Thread makeThread(ZMQ.Context context, HarmonyState state) {
+        return new Thread(new HarmonyServer(context, state));
     }
 
 
@@ -30,11 +29,6 @@ public class HarmonyServer implements Runnable {
      * ZeroMQ context in which to open the ROUTER socket.
      */
     private ZMQ.Context context;
-
-    /**
-     * Port to which the ROUTER socket should bind.
-     */
-    private int port;
 
     /**
      * Store of state associated with the Harmony context.
@@ -46,12 +40,10 @@ public class HarmonyServer implements Runnable {
      * Store the passed parameters in preparation for operation.
      *
      * @param context Context in which to open the ROUTER socket.
-     * @param port Port to which the ROUTER socket should bind.
      * @param state Store of associated state.
      */
-    protected HarmonyServer(ZMQ.Context context, int port, HarmonyState state) {
+    protected HarmonyServer(ZMQ.Context context, HarmonyState state) {
         this.context = context;
-        this.port = port;
         this.state = state;
     }
 
@@ -64,7 +56,7 @@ public class HarmonyServer implements Runnable {
         // and bind it on the stored port.
         try (ZMQ.Socket router = context.socket(ZMQ.ROUTER)) {
             router.setRouterMandatory(true);
-            router.bind("tcp://*:" + port);
+            router.bind("tcp://" + state.getLocalAddress());
 
             // NOTE: This loop is a hot spot of the middleware, as all incoming
             //       messages (over TCP) pass through it on the same thread.
@@ -86,12 +78,16 @@ public class HarmonyServer implements Runnable {
                 HarmonyMessageStream stream = state.getStreamByIdentity(peer.toString());
 
                 if (stream == null) {
+                    // TODO: use full location instead of just address.
                     // If the peer is not tracked in the peer table, this
                     // must be an initial message: create a new MessageStream
                     // in the peer table for it.
-                    // TODO: proper initial message specification with multiple address spaces.
-                    stream = new HarmonyMessageStream(context, data.toString());
-                    state.insertStream(peer.toString(), data.toString(), stream);
+                    ZMQAddress remoteAddress = new ZMQAddress.Builder()
+                            .fromString(data.toString())
+                            .build();
+                    stream = new HarmonyMessageStream(
+                            context, state.getLocalAddress(), remoteAddress);
+                    state.insertStream(peer.toString(), remoteAddress, stream);
                 } else {
                     // Otherwise, direct the message to the listeners of the relevant
                     // message stream, according to the identity of the peer.
@@ -103,6 +99,9 @@ public class HarmonyServer implements Runnable {
             e.printStackTrace();  // TODO: logging without Android dependencies.
         } catch (ZMQException e) {
             // This is some kind of network error.
+            e.printStackTrace();
+        } catch (MalformedAddressException e) {
+            // The address received in the initial message was malformed.
             e.printStackTrace();
         }
     }

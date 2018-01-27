@@ -15,9 +15,9 @@ public interface MessageContext {
      * on the first message in either direction. Multiple calls for the same host
      * must return a reference to the same socket.
      *
-     * @param host Host on which the remote middleware instance resides.
+     * @param address Address on which the remote middleware instance resides.
      *
      * @return a reference to a MessageStream object.
      */
-    MessageStream getMessageStream(String host);
+    MessageStream getMessageStream(Address address);
 }
