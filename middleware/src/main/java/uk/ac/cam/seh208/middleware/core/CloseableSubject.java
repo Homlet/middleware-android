@@ -4,12 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-// TODO: change (open->close) to a file-descriptor like state machine.
 /**
  * An implementation of a closeable subject, which keeps track of
  * observers and notifies them on closure.
  */
-public abstract class CloseableSubject<T extends Closeable> implements Closeable {
+public abstract class CloseableSubject<T extends CloseableSubject<T>> implements Closeable {
 
     /**
      * Stores the current state of the object. Objects begin in the open state.
