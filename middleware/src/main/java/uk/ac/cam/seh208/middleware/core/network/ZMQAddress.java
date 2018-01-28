@@ -1,5 +1,6 @@
 package uk.ac.cam.seh208.middleware.core.network;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -124,5 +125,17 @@ public class ZMQAddress extends Address {
         }
 
         return host + ":" + port;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (!(obj instanceof ZMQAddress)) {
+            return false;
+        }
+        ZMQAddress other = (ZMQAddress) obj;
+        return Objects.equals(toCanonicalString(), other.toCanonicalString());
     }
 }

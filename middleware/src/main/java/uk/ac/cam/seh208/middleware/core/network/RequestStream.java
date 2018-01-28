@@ -13,7 +13,9 @@ public interface RequestStream extends Closeable {
      * is received. Should the stream be closed, or the remote host respond
      * with an error, null is returned immediately.
      *
+     * @param request String request to send to the remote middleware instance.
+     *
      * @return the response string, or null in the case of an error.
      */
-    String sendRequest(String message);
+    String request(String request);
 }

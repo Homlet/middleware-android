@@ -52,7 +52,7 @@ public class HarmonyServer implements Runnable {
      */
     @Override
     public void run() {
-        // Instantiate the router socket within the stored context,
+        // Instantiate the ROUTER socket within the stored context,
         // and bind it on the stored port.
         try (ZMQ.Socket router = context.socket(ZMQ.ROUTER)) {
             router.setRouterMandatory(true);
@@ -60,8 +60,8 @@ public class HarmonyServer implements Runnable {
 
             // NOTE: This loop is a hot spot of the middleware, as all incoming
             //       messages (over TCP) pass through it on the same thread.
-            while (Thread.currentThread().isInterrupted()) {
-                // Block to receive a message on the router socket.
+            while (!Thread.currentThread().isInterrupted()) {
+                // Block to receive a message on the ROUTER socket.
                 ZMsg message = ZMsg.recvMsg(router);
                 if (message == null) {
                     // recvMsg returns null when interrupted.
@@ -94,12 +94,9 @@ public class HarmonyServer implements Runnable {
                     // TODO: implement.
                 }
             }
-        } catch (BadHarmonyStateException e) {
-            // This is likely a bug in the implementation.
-            e.printStackTrace();  // TODO: logging without Android dependencies.
         } catch (ZMQException e) {
             // This is some kind of network error.
-            e.printStackTrace();
+            e.printStackTrace();  // TODO: logging without Android dependencies.
         } catch (MalformedAddressException e) {
             // The address received in the initial message was malformed.
             e.printStackTrace();

@@ -3,11 +3,13 @@ package uk.ac.cam.seh208.middleware.core.network;
 import java.util.HashMap;
 
 
+// TODO: share superclass with ZMQRequestState.
 /**
  * Stores state associated with the Harmony context.
  */
 public class HarmonyState {
 
+    // TODO: allow storage of streams without associated identity.
     /**
      * Map of all currently maintained streams indexed by their unique
      * identity on the ROUTER socket.
@@ -46,12 +48,9 @@ public class HarmonyState {
      * @param stream Reference to the stream to insert.
      *
      * @return whether the message stream was inserted.
-     *
-     * @throws BadHarmonyStateException if the operation finds the object in a bad state.
      */
     public synchronized boolean insertStream(String identity, ZMQAddress address,
-                                             HarmonyMessageStream stream)
-            throws BadHarmonyStateException {
+                                             HarmonyMessageStream stream) {
         boolean keyPresent = streamsByIdentity.containsKey(identity);
         String addressString = address.toCanonicalString();
 
@@ -59,7 +58,7 @@ public class HarmonyState {
             // One list contains the key already. Since we cannot have a stream which
             // shares a ROUTER identity but not an address (or vice-verse) with
             // another this case should be unreachable.
-            throw new BadHarmonyStateException();
+            throw new BadStateException();
         }
 
         if (keyPresent) {
@@ -80,18 +79,15 @@ public class HarmonyState {
      *
      * @param identity ROUTER identity of the stream to remove.
      * @param address ZeroMQ address of the stream to remove.
-     *
-     * @throws BadHarmonyStateException if the operation finds the object in a bad state.
      */
-    public synchronized void removeStream(String identity, ZMQAddress address)
-            throws BadHarmonyStateException {
+    public synchronized void removeStream(String identity, ZMQAddress address) {
         String addressString = address.toCanonicalString();
 
         if (streamsByIdentity.containsKey(identity) ^ streamsByAddress.containsKey(addressString)) {
             // One list contains the key already. Since we cannot have a stream which
             // shares a ROUTER identity but not an address (or vice-verse) with
             // another this case should be unreachable.
-            throw new BadHarmonyStateException();
+            throw new BadStateException();
         }
 
         if (streamsByIdentity.get(identity) != streamsByAddress.get(addressString)) {

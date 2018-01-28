@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 
+// TODO: split this in two; why on earth did I make this one big class to do two things!?
 /**
  * Stores an overarching ZMQ connection context.
  *
@@ -52,16 +53,6 @@ public class ZMQContext implements MessageContext, RequestContext {
 
 
     /**
-     * Port to which the Harmony ROUTER socket should bind.
-     */
-    private int portMessage;
-
-    /**
-     * Port to which the request server socket should bind.
-     */
-    private int portRequest;
-
-    /**
      * ZMQ context encapsulating all sockets.
      */
     private ZMQ.Context context;
@@ -77,9 +68,14 @@ public class ZMQContext implements MessageContext, RequestContext {
     private Thread harmonyServer;
 
     /**
-     * ZMQ socket for receiving and responding to requests.
+     * Store of request/response state.
      */
-    private ZMQ.Socket responder;
+    private ZMQRequestState requestState;
+
+    /**
+     * Listener thread for the request context.
+     */
+    private Thread requestServer;
 
 
     /**
@@ -87,13 +83,11 @@ public class ZMQContext implements MessageContext, RequestContext {
      * request receiving server sockets.
      */
     public ZMQContext(int portMessage, int portRequest) {
-        this.portMessage = portMessage;
-        this.portRequest = portRequest;
-
         // Create a new ZMQ context.
         context = ZMQ.context(IO_THREADS);
 
-        // Set-up the Harmony context.
+        // Compute the local address.
+        // TODO: determine all local interface addresses, and use a location.
         ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder().setPort(portMessage);
         try {
             addressBuilder.setHost(getLocalHost());
@@ -101,9 +95,17 @@ public class ZMQContext implements MessageContext, RequestContext {
             // Default to all interfaces.
             addressBuilder.setHost("*");
         }
-        harmonyState = new HarmonyState(addressBuilder.build());
+        ZMQAddress localAddress = addressBuilder.build();
+
+        // Set-up the Harmony context.
+        harmonyState = new HarmonyState(localAddress);
         harmonyServer = HarmonyServer.makeThread(context, harmonyState);
         harmonyServer.start();
+
+        // Set-up the request/response context.
+        requestState = new ZMQRequestState(new ZMQResponder(), localAddress);
+        requestServer = ZMQRequestServer.makeThread(context, requestState);
+        requestServer.start();
     }
 
     /**
@@ -144,8 +146,9 @@ public class ZMQContext implements MessageContext, RequestContext {
         HarmonyMessageStream stream = harmonyState.getStreamByAddress(zmqAddress);
 
         if (stream == null) {
-            // Instantiate a new stream in the state.
-            return new HarmonyMessageStream(context, harmonyState.getLocalAddress(), zmqAddress);
+            // Instantiate a new stream.
+            // TODO: mark as unknown identity in the state, allowing the gap to be filled in later.
+            stream = new HarmonyMessageStream(context, harmonyState.getLocalAddress(), zmqAddress);
         }
 
         return stream;
@@ -161,6 +164,7 @@ public class ZMQContext implements MessageContext, RequestContext {
      *
      * If a request stream to the remote host already exists, a cached reference
      * to it will be returned instead of opening a new stream.
+     * TODO: consider how to do asynchronous requests since the stream has blocking semantics.
      *
      * @param address ZeroMQ address on which the remote middleware instance resides.
      *
@@ -169,8 +173,21 @@ public class ZMQContext implements MessageContext, RequestContext {
      */
     @Override
     public RequestStream getRequestStream(Address address) {
-        // TODO: implement.
-        return null;
+        if (!(address instanceof ZMQAddress)) {
+            return null;
+        }
+        ZMQAddress zmqAddress = (ZMQAddress) address;
+
+        // Open a new request stream to the given remote host.
+        ZMQRequestStream stream = requestState.getStreamByAddress(zmqAddress);
+
+        if (stream == null) {
+            // Instantiate a new stream in the state.
+            stream = new ZMQRequestStream(context, requestState.getLocalAddress(), zmqAddress);
+            requestState.insertStream(zmqAddress, stream);
+        }
+
+        return stream;
     }
 
     /**
@@ -185,7 +202,6 @@ public class ZMQContext implements MessageContext, RequestContext {
      */
     @Override
     public Responder getResponder() {
-        // TODO: implement.
-        return null;
+        return requestState.getResponder();
     }
 }

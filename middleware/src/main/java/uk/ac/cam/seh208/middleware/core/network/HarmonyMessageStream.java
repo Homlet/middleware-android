@@ -22,6 +22,7 @@ public class HarmonyMessageStream extends CloseableSubject<HarmonyMessageStream>
      */
     private ZMQ.Context context;
 
+    // TODO: store a full location.
     /**
      * The ZeroMQ address on which the Harmony ROUTER socket resides.
      */
@@ -42,6 +43,8 @@ public class HarmonyMessageStream extends CloseableSubject<HarmonyMessageStream>
 
     @Override
     public synchronized void close() {
+        // TODO: send FIN message to remote host.
+
         // If the DEALER socket was already created, close and release it.
         if (dealer != null) {
             dealer.close();
