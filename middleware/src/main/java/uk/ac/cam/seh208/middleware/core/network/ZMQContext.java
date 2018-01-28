@@ -55,27 +55,27 @@ public class ZMQContext implements MessageContext, RequestContext {
     /**
      * ZMQ context encapsulating all sockets.
      */
-    private ZMQ.Context context;
+    private final ZMQ.Context context;
 
     /**
      * Store of Harmony state.
      */
-    private HarmonyState harmonyState;
+    private final HarmonyState harmonyState;
 
     /**
      * Listener thread for the Harmony message context.
      */
-    private Thread harmonyServer;
+    private final Thread harmonyServer;
 
     /**
      * Store of request/response state.
      */
-    private ZMQRequestState requestState;
+    private final ZMQRequestState requestState;
 
     /**
      * Listener thread for the request context.
      */
-    private Thread requestServer;
+    private final Thread requestServer;
 
 
     /**
@@ -143,15 +143,24 @@ public class ZMQContext implements MessageContext, RequestContext {
         ZMQAddress zmqAddress = (ZMQAddress) address;
 
         // Retrieve the stream associated with this remote host from the state.
-        HarmonyMessageStream stream = harmonyState.getStreamByAddress(zmqAddress);
+        // Use synchronization to prevent interleaving with the Harmony server code
+        // that creates new streams when they do not already exist for incoming messages.
+        synchronized (harmonyState) {
+            HarmonyMessageStream stream = harmonyState.getStreamByAddress(zmqAddress);
 
-        if (stream == null) {
-            // Instantiate a new stream.
-            // TODO: mark as unknown identity in the state, allowing the gap to be filled in later.
-            stream = new HarmonyMessageStream(context, harmonyState.getLocalAddress(), zmqAddress);
+            // Without synchronization, the Harmony server could create a new stream in
+            // the state here, which would then be overwritten by the stream in the
+            // null case below.
+
+            if (stream == null) {
+                // Instantiate a new stream in Harmony state.
+                stream = new HarmonyMessageStream(
+                        context, harmonyState.getLocalAddress(), zmqAddress);
+                harmonyState.insertStream(zmqAddress, stream);
+            }
+
+            return stream;
         }
-
-        return stream;
     }
 
     /**

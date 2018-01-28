@@ -3,7 +3,6 @@ package uk.ac.cam.seh208.middleware.core.network;
 import java.util.HashMap;
 
 
-// TODO: share superclass with HarmonyState.
 /**
  * Stores state associated with a ZMQ context.
  */

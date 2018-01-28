@@ -74,20 +74,32 @@ public class HarmonyServer implements Runnable {
                 ZFrame data = message.pop();
                 message.destroy();
 
-                // Retrieve the stream associated with this peer from the state.
+                // Retrieve the stream associated with this peer identity from the state.
                 HarmonyMessageStream stream = state.getStreamByIdentity(peer.toString());
 
                 if (stream == null) {
                     // TODO: use full location instead of just address.
-                    // If the peer is not tracked in the peer table, this
-                    // must be an initial message: create a new MessageStream
-                    // in the peer table for it.
+                    // If the peer identity is not tracked in the state, this
+                    // must be an initial message: extract the remote address
+                    // from it.
                     ZMQAddress remoteAddress = new ZMQAddress.Builder()
                             .fromString(data.toString())
                             .build();
-                    stream = new HarmonyMessageStream(
-                            context, state.getLocalAddress(), remoteAddress);
-                    state.insertStream(peer.toString(), remoteAddress, stream);
+                    // See if we've already created a stream for this address.
+                    stream = state.getStreamByAddress(remoteAddress);
+                    if (stream == null) {
+                        // This is the first time we've communicated with this address.
+                        // Create a new stream in the state and immediately associate
+                        // the identity with it.
+                        stream = new HarmonyMessageStream(
+                                context, state.getLocalAddress(), remoteAddress);
+                        state.insertStream(remoteAddress, peer.toString(), stream);
+                    } else {
+                        // We've already created a stream to this address, but we didn't
+                        // previously have a ROUTER identity for it. Track this in the
+                        // state.
+                        state.trackIdentity(remoteAddress, peer.toString());
+                    }
                 } else {
                     // Otherwise, direct the message to the listeners of the relevant
                     // message stream, according to the identity of the peer.
