@@ -88,22 +88,23 @@ public class ZMQContext implements MessageContext, RequestContext {
 
         // Compute the local address.
         // TODO: determine all local interface addresses, and use a location.
-        ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder().setPort(portMessage);
+        ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
         try {
             addressBuilder.setHost(getLocalHost());
         } catch (UnknownHostException e) {
             // Default to all interfaces.
             addressBuilder.setHost("*");
         }
-        ZMQAddress localAddress = addressBuilder.build();
+        ZMQAddress harmonyAddress = addressBuilder.setPort(portMessage).build();
+        ZMQAddress requestAddress = addressBuilder.setPort(portRequest).build();
 
         // Set-up the Harmony context.
-        harmonyState = new HarmonyState(localAddress);
+        harmonyState = new HarmonyState(harmonyAddress);
         harmonyServer = HarmonyServer.makeThread(context, harmonyState);
         harmonyServer.start();
 
         // Set-up the request/response context.
-        requestState = new ZMQRequestState(new ZMQResponder(), localAddress);
+        requestState = new ZMQRequestState(new ZMQResponder(), requestAddress);
         requestServer = ZMQRequestServer.makeThread(context, requestState);
         requestServer.start();
     }
