@@ -8,6 +8,8 @@ import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.ArrayMap;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import uk.ac.cam.seh208.middleware.binder.EndpointBinder;
@@ -21,7 +23,11 @@ import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.core.comms.ConnectionPool;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.comms.EndpointSet;
+import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.MessageContext;
+import uk.ac.cam.seh208.middleware.core.network.RequestContext;
+import uk.ac.cam.seh208.middleware.core.network.impl.Switch;
+import uk.ac.cam.seh208.middleware.core.network.impl.ZMQContext;
 
 
 public class MiddlewareService extends Service {
@@ -48,9 +54,9 @@ public class MiddlewareService extends Service {
     private ConnectionPool connectionPool;
 
     /**
-     * Context encapsulating message streams to other middleware instances.
+     * Switch handling communications at the transport and network layers.
      */
-    private MessageContext messageContext;
+    private Switch commsSwitch;
 
     /**
      * Indicates whether it should be possible for remote instances of the
@@ -59,9 +65,10 @@ public class MiddlewareService extends Service {
     private boolean forceable;
 
     /**
-     * Stores the host on which the resource discovery component (RDC) is accessible.
+     * Stores the address of the remote host on which the resource discovery component
+     * (RDC) is accessible.
      */
-    private String rdcHost;
+    private Address rdcAddress;
 
     /**
      * Indicates whether the middleware instance should be discoverable
@@ -71,13 +78,18 @@ public class MiddlewareService extends Service {
 
 
     /**
-     * TODO: document.
+     * Called by Android when the service is started, either from an intent or
+     * after a restart attempt.
+     *
+     * @return START_STICKY to indicate the OS should attempt to restart this
+     *         process if it is killed to free resources.
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Initialise object parameters.
         endpointBinders = new ArrayMap<>();
         endpointSet = new EndpointSet();
+        commsSwitch = new Switch(Arrays.asList(Switch.SCHEME_ZMQ));
 
         // Attempt to restart this service if the scheduler kills it for resources.
         return START_STICKY;
@@ -166,16 +178,13 @@ public class MiddlewareService extends Service {
         return null;
     }
 
-    /**
-     * TODO: document.
-     */
-    public void openSocket() {
-
-    }
-
     public EndpointSet getEndpointSet() {
         // TODO: return unmodifiable view on the endpoint set.
         return endpointSet;
+    }
+
+    public Switch getCommsSwitch() {
+        return commsSwitch;
     }
 
     public boolean isForceable() {
@@ -186,12 +195,12 @@ public class MiddlewareService extends Service {
         this.forceable = forceable;
     }
 
-    public String getRDCHost() {
-        return rdcHost;
+    public Address getRDCAddress() {
+        return rdcAddress;
     }
 
-    public synchronized void setRDCHost(String host) {
-        this.rdcHost = host;
+    public synchronized void setRDCAddress(Address address) {
+        this.rdcAddress = address;
     }
 
     public boolean isDiscoverable() {

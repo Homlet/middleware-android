@@ -156,7 +156,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      */
     @Override
     public void setRDCHost(String host) throws BadHostException {
-        service.setRDCHost(host);
+        service.setRDCAddress(host);
     }
 
     /**

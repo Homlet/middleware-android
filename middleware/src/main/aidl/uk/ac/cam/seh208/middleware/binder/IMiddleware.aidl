@@ -24,8 +24,8 @@ interface IMiddleware {
     // @see MiddlewareBinder#setForceable
     void setForceable(boolean forceable);
 
-    // @see MiddlewareBinder#setRDCHost
-    void setRDCHost(String host);
+    // @see MiddlewareBinder#setRDCAddress
+    void setRDCAddress(String address);
     // @see MiddlewareBinder#setDiscoverable
     void setDiscoverable(boolean discoverable);
     // @see MiddlewareBinder#discover
