@@ -1,10 +1,12 @@
 package uk.ac.cam.seh208.middleware.core.network;
 
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
+
 
 /**
  * Interface for builders of addresses that can be serialised to strings.
  */
-public abstract class AddressBuilder {
+public interface AddressBuilder {
 
     /**
      * Build the address from a string in the associated address language.
@@ -13,12 +15,12 @@ public abstract class AddressBuilder {
      *
      * @return a reference to this.
      */
-    public abstract AddressBuilder fromString(String string) throws MalformedAddressException;
+    AddressBuilder fromString(String string) throws MalformedAddressException;
 
     /**
      * Return the immutable address.
      *
      * @return reference to a newly constructed Address object.
      */
-    public abstract Address build();
+    Address build();
 }

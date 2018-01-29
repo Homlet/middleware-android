@@ -1,9 +1,16 @@
-package uk.ac.cam.seh208.middleware.core.network;
+package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import org.zeromq.ZMQ;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
+import uk.ac.cam.seh208.middleware.core.network.Address;
+import uk.ac.cam.seh208.middleware.core.network.MessageContext;
+import uk.ac.cam.seh208.middleware.core.network.MessageStream;
+import uk.ac.cam.seh208.middleware.core.network.RequestContext;
+import uk.ac.cam.seh208.middleware.core.network.RequestStream;
+import uk.ac.cam.seh208.middleware.core.network.Responder;
 
 
 // TODO: split this in two; why on earth did I make this one big class to do two things!?
@@ -60,7 +67,7 @@ public class ZMQContext implements MessageContext, RequestContext {
     /**
      * Store of Harmony state.
      */
-    private final HarmonyState harmonyState;
+    private final ZMQMessageState messageState;
 
     /**
      * Listener thread for the Harmony message context.
@@ -99,8 +106,8 @@ public class ZMQContext implements MessageContext, RequestContext {
         ZMQAddress requestAddress = addressBuilder.setPort(portRequest).build();
 
         // Set-up the Harmony context.
-        harmonyState = new HarmonyState(harmonyAddress);
-        harmonyServer = HarmonyServer.makeThread(context, harmonyState);
+        messageState = new ZMQMessageState(harmonyAddress);
+        harmonyServer = ZMQMessageServer.makeThread(context, messageState);
         harmonyServer.start();
 
         // Set-up the request/response context.
@@ -146,8 +153,8 @@ public class ZMQContext implements MessageContext, RequestContext {
         // Retrieve the stream associated with this remote host from the state.
         // Use synchronization to prevent interleaving with the Harmony server code
         // that creates new streams when they do not already exist for incoming messages.
-        synchronized (harmonyState) {
-            HarmonyMessageStream stream = harmonyState.getStreamByAddress(zmqAddress);
+        synchronized (messageState) {
+            ZMQMessageStream stream = messageState.getStreamByAddress(zmqAddress);
 
             // Without synchronization, the Harmony server could create a new stream in
             // the state here, which would then be overwritten by the stream in the
@@ -155,9 +162,9 @@ public class ZMQContext implements MessageContext, RequestContext {
 
             if (stream == null) {
                 // Instantiate a new stream in Harmony state.
-                stream = new HarmonyMessageStream(
-                        context, harmonyState.getLocalAddress(), zmqAddress);
-                harmonyState.insertStream(zmqAddress, stream);
+                stream = new ZMQMessageStream(
+                        context, messageState.getLocalAddress(), zmqAddress);
+                messageState.insertStream(zmqAddress, stream);
             }
 
             return stream;

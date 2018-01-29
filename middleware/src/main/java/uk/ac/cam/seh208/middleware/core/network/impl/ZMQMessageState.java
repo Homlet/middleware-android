@@ -1,4 +1,4 @@
-package uk.ac.cam.seh208.middleware.core.network;
+package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  * Stores state associated with the Harmony context.
  */
-public class HarmonyState {
+public class ZMQMessageState {
 
     /**
      * Map of all currently maintained stream addresses indexed by their unique
@@ -19,7 +19,7 @@ public class HarmonyState {
     /**
      * Map of all currently maintained streams indexed by their ZeroMQ address.
      */
-    private HashMap<String, HarmonyMessageStream> streamsByAddress;
+    private HashMap<String, ZMQMessageStream> streamsByAddress;
 
     /**
      * ZMQ address on which the ROUTER socket is bound.
@@ -32,7 +32,7 @@ public class HarmonyState {
     /**
      * Instantiate the address and stream maps.
      */
-    public HarmonyState(ZMQAddress localAddress) {
+    public ZMQMessageState(ZMQAddress localAddress) {
         addressesByIdentity = new HashMap<>();
         streamsByAddress = new HashMap<>();
         this.localAddress = localAddress;
@@ -47,7 +47,7 @@ public class HarmonyState {
      *
      * @return whether the message stream was inserted.
      */
-    public synchronized boolean insertStream(ZMQAddress address, HarmonyMessageStream stream) {
+    public synchronized boolean insertStream(ZMQAddress address, ZMQMessageStream stream) {
         String addressString = address.toCanonicalString();
 
         if (streamsByAddress.containsKey(addressString)) {
@@ -71,7 +71,7 @@ public class HarmonyState {
      * @return whether the state was updated.
      */
     public synchronized boolean insertStream(ZMQAddress address, String identity,
-                                             HarmonyMessageStream stream) {
+                                             ZMQMessageStream stream) {
         // Insert the stream object into the map against the given address.
         if (!insertStream(address, stream)) {
             return false;
@@ -135,10 +135,10 @@ public class HarmonyState {
      *
      * @param identity ROUTER identity of the stream to return.
      *
-     * @return a reference to a HarmonyMessageStream object, or null if no such
+     * @return a reference to a ZMQMessageStream object, or null if no such
      *         object exists for the given identity.
      */
-    public synchronized HarmonyMessageStream getStreamByIdentity(String identity) {
+    public synchronized ZMQMessageStream getStreamByIdentity(String identity) {
         // Return the address tracked by the identity.
         ZMQAddress address = addressesByIdentity.get(identity);
         if (address == null) {
@@ -156,10 +156,10 @@ public class HarmonyState {
      *
      * @param address The ZeroMQ address of the stream to return.
      *
-     * @return a reference to a HarmonyMessageStream object, or null if no such
+     * @return a reference to a ZMQMessageStream object, or null if no such
      *         object exists for the given address.
      */
-    public synchronized HarmonyMessageStream getStreamByAddress(ZMQAddress address) {
+    public synchronized ZMQMessageStream getStreamByAddress(ZMQAddress address) {
         return streamsByAddress.get(address.toCanonicalString());
     }
 

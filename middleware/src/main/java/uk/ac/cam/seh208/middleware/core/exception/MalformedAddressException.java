@@ -1,7 +1,7 @@
-package uk.ac.cam.seh208.middleware.core.network;
+package uk.ac.cam.seh208.middleware.core.exception;
 
 
-class MalformedAddressException extends Exception {
+public class MalformedAddressException extends Exception {
     public MalformedAddressException(String string) {
         super("Malformed address string: \"" + string + "\"");
     }

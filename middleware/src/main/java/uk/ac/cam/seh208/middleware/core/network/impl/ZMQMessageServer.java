@@ -1,18 +1,20 @@
-package uk.ac.cam.seh208.middleware.core.network;
+package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import org.zeromq.ZFrame;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import org.zeromq.ZMsg;
 
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
+
 
 /**
  * Implementation of the server component of the Harmony pattern.
  */
-public class HarmonyServer implements Runnable {
+public class ZMQMessageServer implements Runnable {
 
     /**
-     * Instantiate a new HarmonyServer object with the given parameters, and return
+     * Instantiate a new ZMQMessageServer object with the given parameters, and return
      * a new Thread using its behaviour.
      *
      * @param context Context in which to open the ROUTER socket.
@@ -20,8 +22,8 @@ public class HarmonyServer implements Runnable {
      *
      * @return a newly instantiated Thread object.
      */
-    public static Thread makeThread(ZMQ.Context context, HarmonyState state) {
-        return new Thread(new HarmonyServer(context, state));
+    public static Thread makeThread(ZMQ.Context context, ZMQMessageState state) {
+        return new Thread(new ZMQMessageServer(context, state));
     }
 
 
@@ -33,7 +35,7 @@ public class HarmonyServer implements Runnable {
     /**
      * Store of state associated with the Harmony context.
      */
-    private HarmonyState state;
+    private ZMQMessageState state;
 
 
     /**
@@ -42,7 +44,7 @@ public class HarmonyServer implements Runnable {
      * @param context Context in which to open the ROUTER socket.
      * @param state Store of associated state.
      */
-    protected HarmonyServer(ZMQ.Context context, HarmonyState state) {
+    protected ZMQMessageServer(ZMQ.Context context, ZMQMessageState state) {
         this.context = context;
         this.state = state;
     }
@@ -75,7 +77,7 @@ public class HarmonyServer implements Runnable {
                 message.destroy();
 
                 // Retrieve the stream associated with this peer identity from the state.
-                HarmonyMessageStream stream = state.getStreamByIdentity(peer.toString());
+                ZMQMessageStream stream = state.getStreamByIdentity(peer.toString());
 
                 if (stream == null) {
                     // TODO: use full location instead of just address.
@@ -91,7 +93,7 @@ public class HarmonyServer implements Runnable {
                         // This is the first time we've communicated with this address.
                         // Create a new stream in the state and immediately associate
                         // the identity with it.
-                        stream = new HarmonyMessageStream(
+                        stream = new ZMQMessageStream(
                                 context, state.getLocalAddress(), remoteAddress);
                         state.insertStream(remoteAddress, peer.toString(), stream);
                     } else {

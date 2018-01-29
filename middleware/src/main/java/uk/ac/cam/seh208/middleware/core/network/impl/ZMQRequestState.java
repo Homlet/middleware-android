@@ -1,4 +1,4 @@
-package uk.ac.cam.seh208.middleware.core.network;
+package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import java.util.HashMap;
 

@@ -1,15 +1,18 @@
-package uk.ac.cam.seh208.middleware.core.network;
+package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
+import uk.ac.cam.seh208.middleware.core.network.Address;
+import uk.ac.cam.seh208.middleware.core.network.MessageListener;
+import uk.ac.cam.seh208.middleware.core.network.MessageStream;
 
 
 /**
  * ZeroMQ Harmony-pattern implementor of the message stream interface.
  */
-public class HarmonyMessageStream extends CloseableSubject<HarmonyMessageStream>
+public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
         implements MessageStream {
 
     /**
@@ -34,8 +37,8 @@ public class HarmonyMessageStream extends CloseableSubject<HarmonyMessageStream>
     private Address remoteAddress;
 
 
-    public HarmonyMessageStream(ZMQ.Context context, ZMQAddress localAddress,
-                                ZMQAddress remoteAddress) {
+    public ZMQMessageStream(ZMQ.Context context, ZMQAddress localAddress,
+                            ZMQAddress remoteAddress) {
         this.context = context;
         this.localAddress = localAddress;
         this.remoteAddress = remoteAddress;

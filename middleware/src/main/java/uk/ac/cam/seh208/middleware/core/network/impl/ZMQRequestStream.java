@@ -1,4 +1,4 @@
-package uk.ac.cam.seh208.middleware.core.network;
+package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
@@ -6,12 +6,15 @@ import org.zeromq.ZMQException;
 import java.util.Objects;
 
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
+import uk.ac.cam.seh208.middleware.core.network.Address;
+import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
 
 /**
  * ZeroMQ implementor of the request stream interface.
  */
-class ZMQRequestStream extends CloseableSubject<ZMQRequestStream> implements RequestStream {
+public class ZMQRequestStream extends CloseableSubject<ZMQRequestStream> implements RequestStream {
 
     /**
      * REQ socket over which to send new requests.

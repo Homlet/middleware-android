@@ -1,8 +1,12 @@
-package uk.ac.cam.seh208.middleware.core.network;
+package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
+import uk.ac.cam.seh208.middleware.core.network.Address;
+import uk.ac.cam.seh208.middleware.core.network.AddressBuilder;
 
 
 /**

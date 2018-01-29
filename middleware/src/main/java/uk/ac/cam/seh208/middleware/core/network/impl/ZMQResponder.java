@@ -1,4 +1,7 @@
-package uk.ac.cam.seh208.middleware.core.network;
+package uk.ac.cam.seh208.middleware.core.network.impl;
+
+import uk.ac.cam.seh208.middleware.core.network.RequestHandler;
+import uk.ac.cam.seh208.middleware.core.network.Responder;
 
 /**
  * ZMQ implementor of the responder interface.
