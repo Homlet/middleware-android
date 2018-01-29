@@ -1,7 +1,7 @@
 package uk.ac.cam.seh208.middleware.core.network;
 
-
 import uk.ac.cam.seh208.middleware.core.Closeable;
+
 
 /**
  * Simple interface for an asynchronous, first-in-first-out, message delimited stream socket.

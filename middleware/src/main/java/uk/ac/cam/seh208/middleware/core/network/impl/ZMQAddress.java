@@ -14,7 +14,7 @@ import uk.ac.cam.seh208.middleware.core.network.AddressBuilder;
  */
 public class ZMQAddress extends Address {
 
-    public static class Builder extends AddressBuilder {
+    public static class Builder implements AddressBuilder {
 
         private String host;
 
