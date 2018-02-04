@@ -3,6 +3,9 @@ package uk.ac.cam.seh208.middleware.core.network.impl;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.MessageListener;
@@ -13,7 +16,7 @@ import uk.ac.cam.seh208.middleware.core.network.MessageStream;
  * ZeroMQ Harmony-pattern implementor of the message stream interface.
  */
 public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
-        implements MessageStream {
+        implements MessageStream, MessageListener {
 
     /**
      * DEALER socket over which to send new messages.
@@ -36,12 +39,18 @@ public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
      */
     private Address remoteAddress;
 
+    /**
+     * Collection of listeners used to respond to messages.
+     */
+    private List<MessageListener> listeners;
+
 
     public ZMQMessageStream(ZMQ.Context context, ZMQAddress localAddress,
                             ZMQAddress remoteAddress) {
         this.context = context;
         this.localAddress = localAddress;
         this.remoteAddress = remoteAddress;
+        listeners = new ArrayList<>();
     }
 
     @Override
@@ -77,19 +86,52 @@ public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
         dealer.send(message);
     }
 
+    /**
+     * Register a new message listener with the message stream. Messages received
+     * after registering will be passed to this new listener along will all others
+     * registered.
+     *
+     * @param listener A MessageListener implementor to be registered.
+     */
     @Override
     public synchronized void registerListener(MessageListener listener) {
-        // TODO: implement.
+        if (listener == this) {
+            // Don't let the object listen to itself; this would create a feedback loop.
+            return;
+        }
+        listeners.add(listener);
     }
 
+    /**
+     * Remove an existing message listener from the message stream. Messages
+     * received after unregistering will no longer be passing to this listener,
+     * but will continue to be dispatched to all others registered.
+     *
+     * @param listener A MessageListener implementor to be unregistered.
+     */
     @Override
     public synchronized void unregisterListener(MessageListener listener) {
-        // TODO: implement.
+        listeners.remove(listener);
     }
 
+    /**
+     * Remove all existing message listeners from the message stream. Messages
+     * received after clearing will be dropped.
+     */
     @Override
     public synchronized void clearListeners() {
-        // TODO: implement.
+        listeners.clear();
+    }
+
+    /**
+     * Dispatch a received message to all currently registered listeners.
+     *
+     * @param message The newly received string message.
+     */
+    public synchronized void onMessage(String message) {
+        for (MessageListener listener : listeners) {
+            listener.onMessage(message);
+        }
     }
 
     /**

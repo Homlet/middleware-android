@@ -105,7 +105,7 @@ public class ZMQMessageServer implements Runnable {
                 } else {
                     // Otherwise, direct the message to the listeners of the relevant
                     // message stream, according to the identity of the peer.
-                    // TODO: implement.
+                    stream.onMessage(data.toString());
                 }
             }
         } catch (ZMQException e) {

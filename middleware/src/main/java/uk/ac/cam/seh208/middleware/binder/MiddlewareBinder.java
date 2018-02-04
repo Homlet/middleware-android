@@ -13,6 +13,8 @@ import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
+import uk.ac.cam.seh208.middleware.core.network.impl.Switch;
 
 
 /**
@@ -150,13 +152,18 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     /**
      * Set the host on which the resource discovery component (RDC) is accessible.
      *
-     * @param host The hostname of the device the RDC is accessible on.
+     * @param address The scheme://address form string locating the remote host on
+     *                which the RDC is accessible.
      *
      * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public void setRDCHost(String host) throws BadHostException {
-        service.setRDCAddress(host);
+    public void setRDCAddress(String address) throws BadHostException {
+        try {
+            service.setRDCAddress(Switch.makeAddress(address));
+        } catch (MalformedAddressException ignored) {
+            // TODO: logging.
+        }
     }
 
     /**

@@ -20,7 +20,6 @@ import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
-import uk.ac.cam.seh208.middleware.core.comms.ConnectionPool;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.comms.EndpointSet;
 import uk.ac.cam.seh208.middleware.core.network.Address;
@@ -51,7 +50,7 @@ public class MiddlewareService extends Service {
     /**
      * Pool of open connections within the middleware.
      */
-    private ConnectionPool connectionPool;
+//    private ConnectionPool connectionPool;
 
     /**
      * Switch handling communications at the transport and network layers.

@@ -91,7 +91,7 @@ public class Endpoint implements MessageListener {
     /**
      * Collection of connections serving channels from this endpoint.
      */
-    private List<Connection> connections;
+//    private List<Connection> connections;
 
 
     /**
@@ -396,21 +396,21 @@ public class Endpoint implements MessageListener {
      * @param message The newly received message string.
      */
     public synchronized void onMessage(String message) {
-        if (!channels.keySet().contains(channelId)) {
-            // If the channel identifier is not in the channel set, this
-            Log.e(getTag(), "Received message from unknown channel ID (" +
-                    channelId + ").");
-            return;
-        }
-
-        if (!validate(message)) {
-            // The message does not match the schema; the remote endpoint has broken
-            // protocol, and the channel must be closed.
-            Log.e(getTag(), "Incoming message schema mismatch.");
-
-            channels.get(channelId).close();
-            return;
-        }
+//        if (!channels.keySet().contains(channelId)) {
+//            // If the channel identifier is not in the channel set, this
+//            Log.e(getTag(), "Received message from unknown channel ID (" +
+//                    channelId + ").");
+//            return;
+//        }
+//
+//        if (!validate(message)) {
+//            // The message does not match the schema; the remote endpoint has broken
+//            // protocol, and the channel must be closed.
+//            Log.e(getTag(), "Incoming message schema mismatch.");
+//
+//            channels.get(channelId).close();
+//            return;
+//        }
 
         Log.v(getTag(), "Received new message: \"" + message + "\"");
 
