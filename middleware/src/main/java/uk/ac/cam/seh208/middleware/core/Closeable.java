@@ -6,4 +6,5 @@ package uk.ac.cam.seh208.middleware.core;
  */
 public interface Closeable {
     void close();
+    boolean isClosed();
 }

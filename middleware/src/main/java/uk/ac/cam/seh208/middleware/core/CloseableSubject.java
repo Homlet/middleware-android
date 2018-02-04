@@ -71,6 +71,7 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
     /**
      * Permanently close the channel, notifying the change to observers.
      */
+    @Override
     public synchronized void close() {
         if (closed) {
             return;
@@ -92,6 +93,7 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
         closed = true;
     }
 
+    @Override
     public synchronized boolean isClosed() {
         return closed;
     }
