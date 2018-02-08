@@ -1,20 +1,18 @@
 package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
 
 
 /**
  * Stores state associated with the Harmony context.
  */
-public class ZMQMessageState {
+class ZMQMessageState {
 
     /**
      * Map of all currently maintained stream addresses indexed by their unique
      * identity on the ROUTER socket.
      */
-    private HashMap<String, ZMQAddress> addressesByIdentity;
+    private HashMap<String, ZMQMessageStream> streamsByIdentity;
 
     /**
      * Map of all currently maintained streams indexed by their ZeroMQ address.
@@ -24,7 +22,7 @@ public class ZMQMessageState {
     /**
      * ZMQ address on which the ROUTER socket is bound.
      *
-     * TODO: reference full location instead.
+     * TODO: reference tcp://0.0.0.0:port sub-location instead.
      */
     private ZMQAddress localAddress;
 
@@ -32,8 +30,8 @@ public class ZMQMessageState {
     /**
      * Instantiate the address and stream maps.
      */
-    public ZMQMessageState(ZMQAddress localAddress) {
-        addressesByIdentity = new HashMap<>();
+    ZMQMessageState(ZMQAddress localAddress) {
+        streamsByIdentity = new HashMap<>();
         streamsByAddress = new HashMap<>();
         this.localAddress = localAddress;
     }
@@ -42,12 +40,12 @@ public class ZMQMessageState {
      * Insert a new message stream into the state. If the stream already exists in the
      * state, return false.
      *
-     * @param address ZeroMQ address of the stream to insert.
+     * @param address ZeroMQ address of the stream.
      * @param stream Reference to the stream to insert.
      *
      * @return whether the message stream was inserted.
      */
-    public synchronized boolean insertStream(ZMQAddress address, ZMQMessageStream stream) {
+    synchronized boolean insertStreamByAddress(ZMQAddress address, ZMQMessageStream stream) {
         String addressString = address.toCanonicalString();
 
         if (streamsByAddress.containsKey(addressString)) {
@@ -58,96 +56,51 @@ public class ZMQMessageState {
         // Put the stream in the address map.
         streamsByAddress.put(addressString, stream);
 
+        // Subscribe to stream closure, removing the stream by address.
+        stream.subscribe(s -> removeStreamByAddress(s.getRemoteAddress()));
+
         return true;
     }
 
     /**
-     * Atomically insert a stream for an address, and track a given identity against the address.
+     * Insert a new message stream into the state, associating it with a particular ROUTER
+     * identity. If that identity already has an associated stream,
      *
-     * @param address ZeroMQ address of the stream to insert.
-     * @param identity ROUTER identity of the address.
+     * @param identity ROUTER identity of the stream.
      * @param stream Reference to the stream to insert.
      *
-     * @return whether the state was updated.
+     * @return whether the message stream was inserted.
      */
-    public synchronized boolean insertStream(ZMQAddress address, String identity,
-                                             ZMQMessageStream stream) {
-        // Insert the stream object into the map against the given address.
-        if (!insertStream(address, stream)) {
+    synchronized boolean insertStreamByIdentity(String identity, ZMQMessageStream stream) {
+        if (streamsByIdentity.containsKey(identity)) {
+            // The stream is present in the identity map already.
             return false;
         }
 
-        // Track the specified ROUTER identity for the address.
-        if (!trackIdentity(address, identity)) {
-            removeStream(address);
-            return false;
-        }
+        // Put the stream in the identity map.
+        streamsByIdentity.put(identity, stream);
 
         return true;
     }
 
     /**
-     * Track a particular ROUTER identity for a stream already added to the state.
-     *
-     * @param identity ROUTER identity of the address.
-     * @param address ZeroMQ address to associate with the identity.
-     *
-     * @return whether the pair was inserted.
-     */
-    public synchronized boolean trackIdentity(ZMQAddress address, String identity) {
-        if (addressesByIdentity.containsKey(identity)) {
-            // The address is already present in the map.
-            return false;
-        }
-
-        // The stream is not present in either map; insert it into both.
-        addressesByIdentity.put(identity, address);
-
-        return true;
-    }
-
-    /**
-     * Remove a message stream from the state, referenced by its address. If present,
-     * the identity associated with this address is also removed.
+     * Remove a message stream from the state, referenced by its address.
      *
      * @param address ZeroMQ address of the stream to remove.
      */
-    public synchronized void removeStream(ZMQAddress address) {
-        if (addressesByIdentity.containsValue(address)) {
-            // The address has an associated identity; remove it from the map.
-            String toRemove = null;
-            for (Map.Entry<String, ZMQAddress> entry : addressesByIdentity.entrySet()) {
-                if (Objects.equals(entry.getValue(), address)) {
-                    toRemove = entry.getKey();
-                    break;
-                }
-            }
-            addressesByIdentity.remove(toRemove);
-        }
-
+    synchronized void removeStreamByAddress(ZMQAddress address) {
         // Remove the stream from the map.
         streamsByAddress.remove(address.toCanonicalString());
     }
 
     /**
-     * Return a reference to the message stream associated with a particular
-     * ROUTER identity.
+     * Remove a message stream from the state, references by its ROUTER identity.
      *
-     * @param identity ROUTER identity of the stream to return.
-     *
-     * @return a reference to a ZMQMessageStream object, or null if no such
-     *         object exists for the given identity.
+     * @param identity ROUTER identity of the stream to remove.
      */
-    public synchronized ZMQMessageStream getStreamByIdentity(String identity) {
-        // Return the address tracked by the identity.
-        ZMQAddress address = addressesByIdentity.get(identity);
-        if (address == null) {
-            // The identity does not yet have an associated address.
-            return null;
-        }
-
-        // Return the stream associated with the address.
-        return streamsByAddress.get(address.toCanonicalString());
+    synchronized void removeStreamByIdentity(String identity) {
+        // Remove the stream from the map.
+        streamsByIdentity.remove(identity);
     }
 
     /**
@@ -159,11 +112,27 @@ public class ZMQMessageState {
      * @return a reference to a ZMQMessageStream object, or null if no such
      *         object exists for the given address.
      */
-    public synchronized ZMQMessageStream getStreamByAddress(ZMQAddress address) {
+    synchronized ZMQMessageStream getStreamByAddress(ZMQAddress address) {
         return streamsByAddress.get(address.toCanonicalString());
     }
 
-    public ZMQAddress getLocalAddress() {
+    /**
+     * Return a reference to the message stream associated with a particular
+     * ROUTER identity.
+     *
+     * @param identity ROUTER identity of the stream to return.
+     *
+     * @return a reference to a ZMQMessageStream object, or null if no such
+     *         object exists for the given identity.
+     */
+    synchronized ZMQMessageStream getStreamByIdentity(String identity) {
+        return streamsByIdentity.get(identity);
+    }
+
+    /**
+     * @return the local ZMQAddress associated with the ROUTER socket.
+     */
+    ZMQAddress getLocalAddress() {
         return localAddress;
     }
 }

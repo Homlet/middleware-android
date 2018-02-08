@@ -164,7 +164,7 @@ public class ZMQContext implements MessageContext, RequestContext {
                 // Instantiate a new stream in Harmony state.
                 stream = new ZMQMessageStream(
                         context, messageState.getLocalAddress(), zmqAddress);
-                messageState.insertStream(zmqAddress, stream);
+                messageState.insertStreamByAddress(zmqAddress, stream);
             }
 
             return stream;

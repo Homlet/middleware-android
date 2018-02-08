@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.core.network.impl;
 
+import android.util.Log;
+
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
@@ -7,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
-import uk.ac.cam.seh208.middleware.core.network.Address;
+import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 import uk.ac.cam.seh208.middleware.core.network.MessageListener;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
 
@@ -15,8 +17,8 @@ import uk.ac.cam.seh208.middleware.core.network.MessageStream;
 /**
  * ZeroMQ Harmony-pattern implementor of the message stream interface.
  */
-public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
-        implements MessageStream, MessageListener {
+public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream> implements MessageStream {
+
 
     /**
      * DEALER socket over which to send new messages.
@@ -32,12 +34,12 @@ public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
     /**
      * The ZeroMQ address on which the Harmony ROUTER socket resides.
      */
-    private Address localAddress;
+    private ZMQAddress localAddress;
 
     /**
      * The ZeroMQ address with which this stream communicates.
      */
-    private Address remoteAddress;
+    private ZMQAddress remoteAddress;
 
     /**
      * Collection of listeners used to respond to messages.
@@ -55,19 +57,27 @@ public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
 
     @Override
     public synchronized void close() {
-        // TODO: send FIN message to remote host.
-
-        // If the DEALER socket was already created, close and release it.
-        if (dealer != null) {
-            dealer.close();
-            dealer = null;
+        // Don't resend the FIN message if we're already closed.
+        if (isClosed()) {
+            return;
         }
 
+        try {
+            // Connect to the peer (if not already) to send the FIN message.
+            connect();
+            dealer.send("");
+            disconnect();
+        } catch (ConnectionFailedException ignored) {
+            // This is very unlikely to happen due to the way ZeroMQ
+            // defers TCP connections.
+        }
+
+        // Signal the server to stop tracking this stream for the remote address.
         super.close();
     }
 
     @Override
-    public synchronized void send(String message) {
+    public synchronized void send(String message) throws ConnectionFailedException {
         // We cannot send from a closed stream.
         if (isClosed()) {
             return;
@@ -75,11 +85,7 @@ public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
 
         // If the DEALER socket has not been opened, do so now.
         if (dealer == null) {
-            if (!connect()) {
-                return;
-            }
-
-            // The new socket has been created and connected successfully.
+            connect();
         }
 
         // Send the message over the DEALER socket.
@@ -95,10 +101,16 @@ public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
      */
     @Override
     public synchronized void registerListener(MessageListener listener) {
-        if (listener == this) {
-            // Don't let the object listen to itself; this would create a feedback loop.
+        // Don't allow registering of listeners after the stream has closed.
+        if (isClosed()) {
             return;
         }
+
+        // Don't let the object listen to itself; this would create a feedback loop.
+        if (listener == this) {
+            return;
+        }
+
         listeners.add(listener);
     }
 
@@ -129,27 +141,42 @@ public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
      * @param message The newly received string message.
      */
     public synchronized void onMessage(String message) {
+        // If we are closed, all messages should be ignored. Eventually
+        // FIN will be received and we can release this object.
+        if (isClosed()) {
+            Log.d(getTag(), "DROP: \"" + message + "\"");
+            return;
+        }
+
+        Log.d(getTag(), "MSG: \"" + message + "\"");
+
+        // Dispatch the message to all registered listeners.
         for (MessageListener listener : listeners) {
             listener.onMessage(message);
         }
     }
 
+    public ZMQAddress getLocalAddress() {
+        return localAddress;
+    }
+
+    public ZMQAddress getRemoteAddress() {
+        return remoteAddress;
+    }
+
     /**
      * Open the DEALER socket to the peer if this has not already been done. After
      * opening, an initialisation message is sent containing the local host.
-     *
-     * @return whether the DEALER socket exists and is connected to the peer. If not,
-     *         the dealer field will remain null.
      */
-    private synchronized boolean connect() {
+    private synchronized void connect() throws ConnectionFailedException {
         // We cannot re-establish a DEALER after the stream has been closed.
         if (isClosed()) {
-            return false;
+            return; //throw new ConnectionFailedException(remoteAddress);
         }
 
         // If the DEALER socket has already been opened, do not open another.
         if (dealer != null) {
-            return true;
+            return;
         }
 
         try {
@@ -163,14 +190,32 @@ public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream>
             // TODO: send complete location string rather than address.
             dealer.send(localAddress.toCanonicalString());
         } catch (ZMQException e) {
-            // The attempt failed. Close and release the new socket.
+            // The attempt failed. Close and release the new socket if open.
             if (dealer != null) {
                 dealer.close();
                 dealer = null;
             }
-            return false;
+
+            throw new ConnectionFailedException(remoteAddress);
+        }
+    }
+
+    /**
+     * Close the DEALER socket to the peer if it is currently open, breaking
+     * the connection to the peer.
+     */
+    private synchronized void disconnect() {
+        // If the DEALER does not exist, there's nothing to close.
+        if (dealer == null) {
+            return;
         }
 
-        return true;
+        // Close and release the socket.
+        dealer.close();
+        dealer = null;
+    }
+
+    String getTag() {
+        return "STREAM[" + localAddress + " | " + remoteAddress + "]";
     }
 }

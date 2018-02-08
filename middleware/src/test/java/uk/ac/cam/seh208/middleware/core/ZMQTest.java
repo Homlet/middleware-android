@@ -7,6 +7,7 @@ import org.junit.Test;
 import java.net.UnknownHostException;
 import java.util.HashSet;
 
+import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 import uk.ac.cam.seh208.middleware.core.network.MessageContext;
 import uk.ac.cam.seh208.middleware.core.network.MessageListener;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
@@ -116,11 +117,22 @@ public class ZMQTest {
         Assert.assertTrue(closure.expectMessage(message, timeoutMillis));
     }
 
+    /**
+     * Attempt to send a message, failing silently if an exception is thrown.
+     */
+    public static void failsafeSend(MessageStream stream, String message) {
+        try {
+            stream.send(message);
+        } catch (ConnectionFailedException ignored) {
+            // Do nothing.
+        }
+    }
+
     @Test
-    public void testSimpleMessageComms() throws InterruptedException, UnknownHostException {
+    public void testSimpleMessageComms() throws InterruptedException, UnknownHostException, ConnectionFailedException {
         // Create two ZMQContext objects, with different message ports.
-        int port1 = ZMQContext.PORT_MESSAGE;
-        int port2 = ZMQContext.PORT_MESSAGE + 1;
+        int port1 = 8000;
+        int port2 = 8001;
         MessageContext context1 = new ZMQContext(port1, 0);
         MessageContext context2 = new ZMQContext(port2, 0);
 
@@ -148,12 +160,16 @@ public class ZMQTest {
         streamClearup(closure1);
         stream1.close();
         streamClearup(closure2);
-        stream2.close();
+
+        // Check that stream 2 was closed by stream 1's FIN message.
+        Thread.sleep(500);
+        Assert.assertTrue(stream2.isClosed());
+
         // TODO: terminate contexts.
     }
 
     @Test
-    public void testComplexMessageComms() throws InterruptedException, UnknownHostException {
+    public void testComplexMessageComms() throws InterruptedException, UnknownHostException, ConnectionFailedException {
         // Create a number of ZMQContext objects, with different message ports.
         int basePort = 9000;
         MessageContext[] contexts = new MessageContext[4];
@@ -176,10 +192,10 @@ public class ZMQTest {
 
         // Set up message listeners and closures.
         MessageStreamClosure closure0 = streamSetup(streams[0]);
-        streams[1].registerListener(message -> streams[2].send(message));
-        streams[2].registerListener(message -> streams[1].send(message));
-        streams[3].registerListener(message -> streams[4].send(message));
-        streams[4].registerListener(message -> streams[3].send(message));
+        streams[1].registerListener(message -> failsafeSend(streams[2], message));
+        streams[2].registerListener(message -> failsafeSend(streams[1], message));
+        streams[3].registerListener(message -> failsafeSend(streams[4], message));
+        streams[4].registerListener(message -> failsafeSend(streams[3], message));
         MessageStreamClosure closure5 = streamSetup(streams[5]);
 
         // Send messages from the endpoints.
@@ -193,9 +209,15 @@ public class ZMQTest {
         assertRecv(closure5, message0To5, 2000);
 
         // Close the message streams and terminate the contexts.
+        streamClearup(closure0);
+        streamClearup(closure5);
         for (MessageStream stream : streams) {
             stream.close();
         }
+
+        // Let logging catch up.
+        Thread.sleep(500);
+
         // TODO: terminate contexts.
     }
 }

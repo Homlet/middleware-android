@@ -1,12 +1,13 @@
 package uk.ac.cam.seh208.middleware.core.network;
 
 import uk.ac.cam.seh208.middleware.core.Closeable;
+import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 
 
 /**
  * Simple interface for an asynchronous, first-in-first-out, message delimited stream socket.
  */
-public interface MessageStream extends Closeable {
+public interface MessageStream extends Closeable, MessageListener{
     /**
      * Queue a string message to be sent from the socket asynchronously.
      *
@@ -14,7 +15,7 @@ public interface MessageStream extends Closeable {
      *
      * @param message Complete string message to send over the socket.
      */
-    void send(String message);
+    void send(String message) throws ConnectionFailedException;
 
     /**
      * Register a listener to be run on receipt of a new message.
