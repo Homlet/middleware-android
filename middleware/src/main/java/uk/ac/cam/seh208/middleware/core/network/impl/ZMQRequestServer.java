@@ -1,10 +1,16 @@
 package uk.ac.cam.seh208.middleware.core.network.impl;
 
+import android.util.Log;
+
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
+import java.io.IOException;
+import java.nio.channels.ClosedByInterruptException;
 import java.util.ArrayList;
 import java.util.Random;
+
+import uk.ac.cam.seh208.middleware.core.network.Responder;
 
 
 /**
@@ -15,7 +21,7 @@ public class ZMQRequestServer implements Runnable {
     /**
      * The size of the thread pool created for responding to incoming requests.
      */
-    public static final int RESPONDER_THREADS = 8;
+    private static final int RESPONDER_THREADS = 8;
 
 
     /**
@@ -23,12 +29,13 @@ public class ZMQRequestServer implements Runnable {
      * a new Thread using its behaviour.
      *
      * @param context Context in which to open the ROUTER socket.
-     * @param state Store of associated state.
+     * @param localAddress Address on which the ROUTER socket should bind.
+     * @param responder Responder used to handle incoming requests.
      *
      * @return a newly instantiated Thread object.
      */
-    public static Thread makeThread(ZMQ.Context context, ZMQRequestState state) {
-        return new Thread(new ZMQRequestServer(context, state));
+    static Thread makeThread(ZMQ.Context context, ZMQAddress localAddress, Responder responder) {
+        return new Thread(new ZMQRequestServer(context, localAddress, responder));
     }
 
 
@@ -38,20 +45,25 @@ public class ZMQRequestServer implements Runnable {
     private ZMQ.Context context;
 
     /**
-     * Store of state associated with the request context.
+     * Responder used for handling requests in the middleware layer.
      */
-    private ZMQRequestState state;
+    private Responder responder;
+
+    /**
+     * Interface address on which the ROUTER should be bound.
+     */
+    private ZMQAddress localAddress;
 
 
     /**
      * Store the passed parameters in preparation for operation.
      *
      * @param context Context in which to open the ROUTER socket.
-     * @param state Store of associated state.
      */
-    protected ZMQRequestServer(ZMQ.Context context, ZMQRequestState state) {
+    private ZMQRequestServer(ZMQ.Context context, ZMQAddress localAddress, Responder responder) {
         this.context = context;
-        this.state = state;
+        this.responder = responder;
+        this.localAddress = localAddress;
     }
 
     /**
@@ -63,7 +75,6 @@ public class ZMQRequestServer implements Runnable {
      */
     @Override
     public void run() {
-        ZMQResponder responder = state.getResponder();
         ArrayList<Thread> workers = new ArrayList<>();
 
         // Open the two ZeroMQ sockets.
@@ -71,7 +82,7 @@ public class ZMQRequestServer implements Runnable {
              ZMQ.Socket dealer = context.socket(ZMQ.DEALER)) {
             // Set up the outward facing ROUTER socket.
             router.setRouterMandatory(true);
-            router.bind("tcp://" + state.getLocalAddress());
+            router.bind("tcp://" + localAddress);
 
             // Set up the inward facing DEALER socket.
             Random random = new Random(System.nanoTime());
@@ -79,7 +90,6 @@ public class ZMQRequestServer implements Runnable {
             dealer.bind("inproc://req_" + internalId);
 
             // Spin up a number of worker threads to respond to dealt requests.
-            // TODO: make these reliable in face of application code (request handler) failure.
             for (int i = 0; i < RESPONDER_THREADS; i++) {
                 Thread worker = new Thread(() -> {
                     // Open a new reply socket for receiving requests from the dealer.
@@ -88,9 +98,12 @@ public class ZMQRequestServer implements Runnable {
 
                         // Loop, handling requests.
                         while (!Thread.currentThread().isInterrupted()) {
-                            socket.send(responder.respond(socket.recvStr()));
+                            String request = socket.recvStr();
+                            Log.d(getTag() + ".T" + Thread.currentThread().getId(),
+                                    "REQ: \"" + request + "\"");
+                            socket.send(responder.respond(request));
                         }
-                    } catch (ZMQException ignore) {
+                    } catch (ZMQException ignored) {
                         // Either we were interrupted, or some network error occurred.
                     }
                 });
@@ -102,19 +115,24 @@ public class ZMQRequestServer implements Runnable {
             ZMQ.proxy(router, dealer, null);
         } catch (ZMQException e) {
             // This is some kind of network error.
-            e.printStackTrace();  // TODO: logging without Android dependencies.
+            Log.e(getTag(), "Network error occurred.");
         } finally {
+            Log.i(getTag(), "Terminating request server...");
             try {
                 // Interrupt and join all worker threads.
                 for (Thread worker : workers) {
                     if (worker != null) {
-                        worker.interrupt();
                         worker.join();
                     }
                 }
             } catch (InterruptedException ignored) {
                 // Give up on joining threads.
+                Log.e(getTag(), "Could not join threads terminating request server.");
             }
         }
+    }
+
+    private String getTag() {
+        return "REQ_SERVER[" + localAddress + "]";
     }
 }

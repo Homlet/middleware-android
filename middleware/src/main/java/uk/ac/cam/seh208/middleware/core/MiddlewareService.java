@@ -9,7 +9,6 @@ import android.support.annotation.Nullable;
 import android.util.ArrayMap;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 
 import uk.ac.cam.seh208.middleware.binder.EndpointBinder;
@@ -23,10 +22,7 @@ import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.comms.EndpointSet;
 import uk.ac.cam.seh208.middleware.core.network.Address;
-import uk.ac.cam.seh208.middleware.core.network.MessageContext;
-import uk.ac.cam.seh208.middleware.core.network.RequestContext;
 import uk.ac.cam.seh208.middleware.core.network.impl.Switch;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQContext;
 
 
 public class MiddlewareService extends Service {

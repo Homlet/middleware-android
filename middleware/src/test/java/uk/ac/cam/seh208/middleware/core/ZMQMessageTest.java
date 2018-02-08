@@ -12,13 +12,13 @@ import uk.ac.cam.seh208.middleware.core.network.MessageContext;
 import uk.ac.cam.seh208.middleware.core.network.MessageListener;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
 import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQContext;
+import uk.ac.cam.seh208.middleware.core.network.impl.ZMQMessageContext;
 
 
 /**
  * Local test for operation of the ZeroMQ transport classes.
  */
-public class ZMQTest {
+public class ZMQMessageTest {
 
     /**
      * Simple data object storing a closure of a message stream set up
@@ -31,17 +31,17 @@ public class ZMQTest {
         private boolean notified;
 
 
-        public MessageStreamClosure(MessageStream stream) {
+        private MessageStreamClosure(MessageStream stream) {
             this.stream = stream;
             seen = new HashSet<>();
             listener = this::seeMessage;
         }
 
-        public MessageStream getStream() {
+        private MessageStream getStream() {
             return stream;
         }
 
-        public MessageListener getListener() {
+        private MessageListener getListener() {
             return listener;
         }
 
@@ -51,7 +51,7 @@ public class ZMQTest {
          *
          * @return whether the message was seen before the timeout.
          */
-        public synchronized boolean expectMessage(String message, int timeoutMillis) {
+        private synchronized boolean expectMessage(String message, int timeoutMillis) {
             if (message == null) {
                 // We won't see null messages.
                 return false;
@@ -84,7 +84,7 @@ public class ZMQTest {
         /**
          * Notify the waiting thread of a seen message.
          */
-        public synchronized void seeMessage(String message) {
+        private synchronized void seeMessage(String message) {
             seen.add(message);
             notified = true;
             notify();
@@ -96,7 +96,7 @@ public class ZMQTest {
      * Prepare a stream object for assertion, returning the closure object
      * that should be passed to future assertion calls.
      */
-    public static MessageStreamClosure streamSetup(MessageStream stream) {
+    private static MessageStreamClosure streamSetup(MessageStream stream) {
         MessageStreamClosure closure = new MessageStreamClosure(stream);
         stream.registerListener(closure.getListener());
         return closure;
@@ -105,7 +105,7 @@ public class ZMQTest {
     /**
      * Remove the assertion listener from a set-up stream object.
      */
-    public static void streamClearup(MessageStreamClosure closure) {
+    private static void streamClearup(MessageStreamClosure closure) {
         closure.getStream().unregisterListener(closure.getListener());
     }
 
@@ -113,14 +113,14 @@ public class ZMQTest {
      * Block until the specified message is received over a stream. Throw an
      * AssertionFailedError if the message is not received.
      */
-    public static void assertRecv(MessageStreamClosure closure, String message, int timeoutMillis) {
+    private static void assertRecv(MessageStreamClosure closure, String message, int timeoutMillis) {
         Assert.assertTrue(closure.expectMessage(message, timeoutMillis));
     }
 
     /**
      * Attempt to send a message, failing silently if an exception is thrown.
      */
-    public static void failsafeSend(MessageStream stream, String message) {
+    private static void failsafeSend(MessageStream stream, String message) {
         try {
             stream.send(message);
         } catch (ConnectionFailedException ignored) {
@@ -129,16 +129,17 @@ public class ZMQTest {
     }
 
     @Test
-    public void testSimpleMessageComms() throws InterruptedException, UnknownHostException, ConnectionFailedException {
-        // Create two ZMQContext objects, with different message ports.
+    public void testSimpleMessageComms()
+            throws InterruptedException, UnknownHostException, ConnectionFailedException {
+        // Create two ZMQMessageContext objects, with different message ports.
         int port1 = 8000;
         int port2 = 8001;
-        MessageContext context1 = new ZMQContext(port1, 0);
-        MessageContext context2 = new ZMQContext(port2, 0);
+        MessageContext context1 = new ZMQMessageContext(port1);
+        MessageContext context2 = new ZMQMessageContext(port2);
 
         // Compute the local address.
         ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
-        addressBuilder.setHost(ZMQContext.getLocalHost());
+        addressBuilder.setHost(ZMQAddress.getLocalHost());
 
         // Create a message stream between the two contexts.
         MessageStream stream1 = context1.getMessageStream(addressBuilder.setPort(port2).build());
@@ -165,21 +166,24 @@ public class ZMQTest {
         Thread.sleep(500);
         Assert.assertTrue(stream2.isClosed());
 
-        // TODO: terminate contexts.
+        // Terminate the context.
+        context1.term();
+        context2.term();
     }
 
     @Test
-    public void testComplexMessageComms() throws InterruptedException, UnknownHostException, ConnectionFailedException {
-        // Create a number of ZMQContext objects, with different message ports.
+    public void testComplexMessageComms()
+            throws InterruptedException, UnknownHostException, ConnectionFailedException {
+        // Create a number of ZMQMessageContext objects, with different message ports.
         int basePort = 9000;
         MessageContext[] contexts = new MessageContext[4];
         for (int i = 0; i < contexts.length; i++) {
-            contexts[i] = new ZMQContext(basePort + i, 0);
+            contexts[i] = new ZMQMessageContext(basePort + i);
         }
 
         // Compute the local address.
         ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
-        addressBuilder.setHost(ZMQContext.getLocalHost());
+        addressBuilder.setHost(ZMQAddress.getLocalHost());
 
         // Create a forwarding network of message streams between the contexts.
         MessageStream[] streams = new MessageStream[6];
@@ -218,6 +222,9 @@ public class ZMQTest {
         // Let logging catch up.
         Thread.sleep(500);
 
-        // TODO: terminate contexts.
+        // Terminate the contexts.
+        for (MessageContext context : contexts) {
+            context.term();
+        }
     }
 }

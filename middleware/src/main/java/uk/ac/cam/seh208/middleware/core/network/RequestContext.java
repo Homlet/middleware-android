@@ -28,4 +28,10 @@ public interface RequestContext {
      * @return a reference to a Responder object.
      */
     Responder getResponder();
+
+    /**
+     * Terminate the context, closing all open streams and preventing new streams
+     * from being opened in the future.
+     */
+    void term();
 }

@@ -2,7 +2,6 @@ package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import android.util.Log;
 
-import org.zeromq.ZFrame;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import org.zeromq.ZMsg;
@@ -125,11 +124,21 @@ class ZMQMessageServer implements Runnable {
                 }
             }
         } catch (ZMQException e) {
+            if (e.getErrorCode() == ZMQ.Error.ETERM.getCode()) {
+                Log.i(getTag(), "Context was terminated.");
+                Log.i(getTag(), "Terminating request server...");
+                return;
+            }
+
             // This is some kind of network error.
-            e.printStackTrace();  // TODO: logging without Android dependencies.
+            Log.e(getTag(), "ZeroMQ error: " + e);
         } catch (MalformedAddressException e) {
             // The address received in the initial message was malformed.
-            e.printStackTrace();
+            Log.e(getTag(), e.getMessage());
         }
+    }
+
+    private String getTag() {
+        return "MSG_SERVER[" + state.getLocalAddress() + "]";
     }
 }

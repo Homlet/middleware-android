@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.core.network.impl;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -13,6 +15,18 @@ import uk.ac.cam.seh208.middleware.core.network.AddressBuilder;
  * Implementation of a ZeroMQ address.
  */
 public class ZMQAddress extends Address {
+
+    /**
+     * Return the public IP of the local host.
+     *
+     * @return a String formatted IP address.
+     *
+     * @throws UnknownHostException if the host has no bound IP address.
+     */
+    public static String getLocalHost() throws UnknownHostException {
+        return InetAddress.getLocalHost().getHostAddress();
+    }
+
 
     public static class Builder implements AddressBuilder {
 

@@ -2,6 +2,8 @@ package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import java.util.HashMap;
 
+import uk.ac.cam.seh208.middleware.core.network.MessageStream;
+
 
 /**
  * Stores state associated with the Harmony context.
@@ -127,6 +129,19 @@ class ZMQMessageState {
      */
     synchronized ZMQMessageStream getStreamByIdentity(String identity) {
         return streamsByIdentity.get(identity);
+    }
+
+    /**
+     * Close all message streams in the state.
+     */
+    synchronized void closeAll() {
+        for (MessageStream stream : streamsByIdentity.values()) {
+            stream.close();
+        }
+
+        for (MessageStream stream : streamsByAddress.values()) {
+            stream.close();
+        }
     }
 
     /**

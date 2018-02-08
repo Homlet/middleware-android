@@ -47,11 +47,13 @@ public class ZMQRequestStream extends CloseableSubject<ZMQRequestStream> impleme
 
     @Override
     public synchronized void close() {
-        // If the REQ socket was already created, close and release it.
-        if (socket != null) {
-            socket.close();
-            socket = null;
+        // We are already closed.
+        if (isClosed()) {
+            return;
         }
+
+        // Disconnect from the peer (if connected).
+        disconnect();
 
         super.close();
     }
@@ -117,29 +119,31 @@ public class ZMQRequestStream extends CloseableSubject<ZMQRequestStream> impleme
 
             // Attempt to connect the socket to the peer.
             socket.connect("tcp://" + remoteAddress.toCanonicalString());
-
-            // Attempt to send the initial request to the peer.
-            // TODO: send complete location string rather than address.
-            socket.send(localAddress.toCanonicalString());
-
-            // Validate the response against the expected remote address.
-            // TODO: validate uuid (not address), and update view on remote location.
-            String response = socket.recvStr();
-            ZMQAddress address = new ZMQAddress.Builder().fromString(response).build();
-            if (Objects.equals(address, remoteAddress)) {
-                // The address matches; our socket is ready for requests.
-                return true;
+        } catch (ZMQException e) {
+            // Close and release the new socket.
+            if (socket != null) {
+                socket.close();
+                socket = null;
             }
-        } catch (MalformedAddressException | ZMQException ignored) {
-            // The attempt failed. Continue for clean-up.
+
+            return false;
         }
 
-        // Close and release the new socket.
-        if (socket != null) {
-            socket.close();
-            socket = null;
+        return true;
+    }
+
+    /**
+     * Close the DEALER socket to the peer if it is currently open, breaking
+     * the connection to the peer.
+     */
+    private synchronized void disconnect() {
+        // If the DEALER does not exist, there's nothing to close.
+        if (socket == null) {
+            return;
         }
 
-        return false;
+        // Close and release the socket.
+        socket.close();
+        socket = null;
     }
 }

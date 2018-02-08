@@ -8,7 +8,6 @@ package uk.ac.cam.seh208.middleware.core.network;
  * and internally queued.
  */
 public interface MessageContext {
-    // TODO: use different addressing scheme for versatility.
     /**
      * Return a socket for communication with a particular remote middleware. The
      * socket must be ready for use, at least opaquely via set-up procedures run
@@ -20,4 +19,10 @@ public interface MessageContext {
      * @return a reference to a MessageStream object.
      */
     MessageStream getMessageStream(Address address);
+
+    /**
+     * Terminate the context, closing all open streams and preventing new streams
+     * from being opened in the future.
+     */
+    void term();
 }

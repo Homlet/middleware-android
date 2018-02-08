@@ -85,7 +85,7 @@ public class Switch {
         for (String scheme : schemes) {
             switch (scheme) {
                 case SCHEME_ZMQ:
-                    MessageContext context = new ZMQContext();
+                    MessageContext context = new ZMQMessageContext();
                     messageContextsByScheme.put(scheme, context);
                     requestContextsByScheme.put(scheme, (RequestContext) context);
                     break;
