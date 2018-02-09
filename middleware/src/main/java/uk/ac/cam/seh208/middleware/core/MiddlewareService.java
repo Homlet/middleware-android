@@ -22,6 +22,7 @@ import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.comms.EndpointSet;
 import uk.ac.cam.seh208.middleware.core.network.Address;
+import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.impl.Switch;
 
 
@@ -91,7 +92,9 @@ public class MiddlewareService extends Service {
     }
 
     /**
-     * TODO: document.
+     * Called by Android when a remote process requests to bind to this service. The
+     * intent is used to determine whether the process wants a general middleware API
+     * binder, or a binder exposing the API of a particular endpoint.
      */
     @Nullable
     @Override
@@ -125,30 +128,42 @@ public class MiddlewareService extends Service {
     }
 
     /**
-     * TODO: document.
+     * Create a new endpoint within the middleware, having the given details and settings.
+     * The endpoint will have a freshly generated endpoint identifier, and is initialised
+     * after creation.
      */
     public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
             throws EndpointCollisionException, BadSchemaException {
         Endpoint endpoint = new Endpoint(this, details, exposed, forceable);
-        if (endpointSet.add(endpoint)) {
+
+        // Synchronise on the endpoint set to prevent interleaving endpoint
+        // destruction and creation/another destruction.
+        //noinspection SynchronizeOnNonFinalField
+        synchronized (endpointSet) {
+            if (endpointSet.getEndpointByName(details.getName()) != null) {
+                // An endpoint of this name already exists!
+                throw new EndpointCollisionException(details.getName());
+            }
+
             // Perform initialisation routines for the endpoint.
             endpoint.initialise();
 
-            // TODO: re-register with RDC.
-        } else {
-            // An endpoint of this name already exists!
-            throw new EndpointCollisionException(details.getName());
+            // Add the endpoint to the set.
+            endpointSet.add(endpoint);
         }
+
+        // TODO: schedule update message to the RDC.
     }
 
     /**
-     * TODO: document.
+     * Destroy an existing endpoint and all associated mappings, closing any open
+     * channels having this endpoint at either end. This frees the endpoint name
+     * for use in newly created endpoints; however, the endpoint identifier will
+     * never be reused (modulo collisions).
      */
     public void destroyEndpoint(String name) throws EndpointNotFoundException {
         // Synchronise on the endpoint set to prevent interleaving endpoint
-        // destruction and creation/another destruction. Note that similar
-        // interleaving is not done in `createEndpoint` as the add method itself
-        // is synchronised, and is the only interaction with the set in the method.
+        // destruction and creation/another destruction.
         //noinspection SynchronizeOnNonFinalField
         synchronized (endpointSet) {
             Endpoint endpoint = endpointSet.getEndpointByName(name);
@@ -157,18 +172,25 @@ public class MiddlewareService extends Service {
                 throw new EndpointNotFoundException(name);
             }
 
+            // TODO: destroy endpoint binder (if one exists).
+
             // Perform destruction routines for the endpoint.
             endpoint.destroy();
             endpointSet.remove(endpoint);
-
-            // TODO: re-register with RDC, destroy endpoint binder (if one exists).
         }
+
+        // TODO: schedule update message to the RDC.
     }
 
     /**
-     * TODO: document.
+     * Send a QUERY_COARSE control message to the registered RDC, returning the resultant
+     * list of remote locations. If no locations match the query, an empty list is returned;
+     * if something went wrong contacting the RDC, null is returned.
+     *
+     * @return a list of locations exposing endpoints which match the query, or null if
+     *         the RDC could not be contacted.
      */
-    public List<String> discover(Query query) {
+    public List<Location> discover(Query query) {
         // TODO: implement.
         return null;
     }
@@ -176,10 +198,6 @@ public class MiddlewareService extends Service {
     public EndpointSet getEndpointSet() {
         // TODO: return unmodifiable view on the endpoint set.
         return endpointSet;
-    }
-
-    public Switch getCommsSwitch() {
-        return commsSwitch;
     }
 
     public boolean isForceable() {

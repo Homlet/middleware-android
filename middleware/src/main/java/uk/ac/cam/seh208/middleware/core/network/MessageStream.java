@@ -6,6 +6,11 @@ import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 
 /**
  * Simple interface for an asynchronous, first-in-first-out, message delimited stream socket.
+ *
+ * A simple implementation might maintain a single underlying connection to the remote host,
+ * but there is scope for establishing multiple connections to particular hosts for load
+ * balancing purposes; i.e. to leverage threading on the device when connections host channels
+ * to different endpoints.
  */
 public interface MessageStream extends Closeable, MessageListener{
     /**

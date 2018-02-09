@@ -85,9 +85,8 @@ public class Switch {
         for (String scheme : schemes) {
             switch (scheme) {
                 case SCHEME_ZMQ:
-                    MessageContext context = new ZMQMessageContext();
-                    messageContextsByScheme.put(scheme, context);
-                    requestContextsByScheme.put(scheme, (RequestContext) context);
+                    messageContextsByScheme.put(scheme, new ZMQMessageContext());
+                    requestContextsByScheme.put(scheme, new ZMQRequestContext());
                     break;
 
                 // case SCHEME_BLUETOOTH etc...
