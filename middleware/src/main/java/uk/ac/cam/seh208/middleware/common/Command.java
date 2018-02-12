@@ -16,6 +16,7 @@ import android.os.Parcelable;
  * different devices.
  */
 public abstract class Command implements Parcelable {
+
     public enum CommandType {
         MAP,
         MAP_TO,
@@ -122,13 +123,12 @@ public abstract class Command implements Parcelable {
         this.options = options;
     }
 
-    @SuppressLint("ParcelClassLoader")
     protected Command(Parcel in) {
         // Read the command type from the parcel.
         type = (CommandType) in.readSerializable();
 
         // Read the bundle from the parcel.
-        options = in.readBundle();
+        options = in.readBundle(getClass().getClassLoader());
     }
 
     @Override

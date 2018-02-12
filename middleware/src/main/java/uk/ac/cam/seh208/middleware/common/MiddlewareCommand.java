@@ -9,9 +9,10 @@ import android.os.Parcel;
  * those ran on specific endpoints.
  */
 public class MiddlewareCommand extends Command {
+
     /**
      * This object is part of the Parcelable interface. It is used to instantiate
-     * new instances of commands from serialised parcels.
+     * new instances of commands from serialized parcels.
      */
     public static final Creator<MiddlewareCommand> CREATOR = new Creator<MiddlewareCommand>() {
         @Override

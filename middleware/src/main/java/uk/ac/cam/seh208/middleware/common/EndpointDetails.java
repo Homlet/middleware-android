@@ -10,10 +10,11 @@ import android.support.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 
 
-// TODO: add member to select whether endpoint should persist.
 /**
  * Immutable class describing an endpoint. This class may refer to an
  * endpoint in general; a subclass exists for describing endpoints existing
@@ -82,7 +83,7 @@ public class EndpointDetails implements Parcelable {
         this.polarity = polarity;
         this.schema = schema;
         if (tags != null) {
-            this.tags = new ArrayList<>(tags);
+            this.tags = new ArrayList<>(new HashSet<>(tags));
         } else {
             this.tags = new ArrayList<>();
         }
@@ -143,5 +144,22 @@ public class EndpointDetails implements Parcelable {
 
         // Serialise the bundle into the parcel.
         dest.writeBundle(bundle);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        EndpointDetails other = (EndpointDetails) obj;
+
+        return (Objects.equals(name, other.name)
+             && Objects.equals(desc, other.desc)
+             && polarity == other.polarity
+             && Objects.equals(schema, other.schema)
+             && Objects.equals(new HashSet<>(tags), new HashSet<>(other.tags)));
     }
 }

@@ -5,7 +5,14 @@ import android.os.Bundle;
 import android.os.Parcel;
 import android.support.annotation.NonNull;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
+import java.util.Objects;
+
+import uk.ac.cam.seh208.middleware.core.network.Location;
+
+import static uk.ac.cam.seh208.middleware.common.Keys.EndpointDetails.LOCATION;
 
 
 /**
@@ -13,25 +20,7 @@ import java.util.List;
  * host. These are used within the middleware to keep track of peer mappings,
  * and allow the user to specify particular mappings should be torn down.
  */
-public class RemoteEndpointDetails extends EndpointDetails {
-
-    /**
-     * Key strings for storing fields within the serialisation bundle.
-     */
-    private static final String HOST = "HOST";
-    private static final String PORT = "PORT";
-
-
-    /**
-     * String representation of the remote host, as would be recognised
-     * by the Java sockets library.
-     */
-    private String host;
-
-    /**
-     * Port number of the peer middleware instance.
-     */
-    private int port;
+public class RemoteEndpointDetails extends EndpointDetails implements JSONSerializable {
 
     /**
      * This object is part of the Parcelable interface. It is used to instantiate
@@ -52,20 +41,24 @@ public class RemoteEndpointDetails extends EndpointDetails {
 
 
     /**
+     * Location on which the endpoint is accessible.
+     */
+    private Location location;
+
+
+    /**
      * Construct a new immutable remote endpoint details object with the given parameters.
      */
-    public RemoteEndpointDetails(@NonNull String name, String desc, Polarity polarity,
-                                 String schema, List<String> tags, String host) {
-        // TODO: move this magic number somewhere sensible.
-        this(name, desc, polarity, schema, tags, host, 1768);
-    }
-
-    public RemoteEndpointDetails(@NonNull String name, String desc, Polarity polarity,
-                                 String schema, List<String> tags, String host, int port) {
+    public RemoteEndpointDetails(
+            @JsonProperty("name") @NonNull String name,
+            @JsonProperty("desc") String desc,
+            @JsonProperty("polarity") Polarity polarity,
+            @JsonProperty("schema") String schema,
+            @JsonProperty("tags") List<String> tags,
+            @JsonProperty("location") Location location) {
         super(name, desc, polarity, schema, tags);
 
-        this.host = host;
-        this.port = port;
+        this.location = location;
     }
 
     protected RemoteEndpointDetails(Parcel in) {
@@ -77,22 +70,14 @@ public class RemoteEndpointDetails extends EndpointDetails {
         Bundle bundle = in.readBundle();
 
         // Extract the fields from the bundle.
-        host = bundle.getString(HOST);
-        port = bundle.getInt(PORT);
+        location = bundle.getParcelable(LOCATION);
     }
 
     /**
-     * @return the remote host string.
+     * @return the location on which the endpoint is accessible.
      */
-    public String getHost() {
-        return host;
-    }
-
-    /**
-     * @return the port number of the peer middleware instance.
-     */
-    public int getPort() {
-        return port;
+    public Location getLocation() {
+        return location;
     }
 
     @Override
@@ -102,10 +87,22 @@ public class RemoteEndpointDetails extends EndpointDetails {
 
         // Pack the additional details.
         Bundle bundle = new Bundle();
-        bundle.putString(HOST, host);
-        bundle.putInt(PORT, port);
+        bundle.putParcelable(LOCATION, location);
 
         // Serialise the bundle into the parcel.
         dest.writeBundle(bundle);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        RemoteEndpointDetails other = (RemoteEndpointDetails) obj;
+
+        return (super.equals(obj) && Objects.equals(location, other.location));
     }
 }

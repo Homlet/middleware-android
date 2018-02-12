@@ -134,7 +134,6 @@ public class EndpointSet implements Set<Endpoint> {
 
         Endpoint endpoint = (Endpoint) obj;
         endpointsByName.remove(endpoint.getName());
-        // TODO: make this more efficient.
         endpointsByPolarity.get(endpoint.getPolarity()).remove(endpoint);
         return true;
     }

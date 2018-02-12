@@ -13,7 +13,7 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
     /**
      * Stores the current state of the object. Objects begin in the open state.
      */
-    private boolean closed;  // TODO: change to state enum.
+    private boolean closed;
 
     /**
      * References all observers of the object.

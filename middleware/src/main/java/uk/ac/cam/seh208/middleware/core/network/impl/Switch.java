@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.core.network.impl;
 
+import android.util.Log;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -92,7 +94,7 @@ public class Switch {
                 // case SCHEME_BLUETOOTH etc...
 
                 default:
-                    // TODO: logging without Android dependencies.
+                    Log.w(getTag(), "Unknown context scheme given in constructor.");
                     break;
             }
         }
@@ -112,5 +114,9 @@ public class Switch {
      */
     public RequestContext getRequestContext(String scheme) {
         return requestContextsByScheme.get(scheme);
+    }
+
+    private static String getTag() {
+        return "SWITCH";
     }
 }

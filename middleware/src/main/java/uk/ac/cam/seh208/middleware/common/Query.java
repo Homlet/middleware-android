@@ -8,6 +8,8 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.NonNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
@@ -245,9 +247,14 @@ public class Query implements Parcelable {
     public final int matches;
 
 
-    private Query(String nameRegex, String descRegex, String schema, Polarity polarity,
-                  @NonNull Set<String> tagsToInclude, @NonNull Set<String> tagsToExclude,
-                  int matches) {
+    private Query(
+            @JsonProperty("nameRegex") String nameRegex,
+            @JsonProperty("descRegex") String descRegex,
+            @JsonProperty("schema") String schema,
+            @JsonProperty("polarity") Polarity polarity,
+            @JsonProperty("tagsToInclude") @NonNull Set<String> tagsToInclude,
+            @JsonProperty("tagsToExclude") @NonNull Set<String> tagsToExclude,
+            @JsonProperty("matches") int matches) {
         this.nameRegex = nameRegex;
         this.descRegex = descRegex;
         this.schema = schema;
@@ -263,10 +270,9 @@ public class Query implements Parcelable {
         this.matches = matches;
     }
 
-    @SuppressLint("ParcelClassLoader")
     protected Query(Parcel in) {
         // Read the bundle from the parcel.
-        Bundle bundle = in.readBundle();
+        Bundle bundle = in.readBundle(getClass().getClassLoader());
 
         // Extract the fields from the bundle.
         nameRegex = bundle.getString(NAME_REGEX);
@@ -300,6 +306,7 @@ public class Query implements Parcelable {
      *
      * @return an (EndpointDetails -> boolean) filter predicate.
      */
+    @JsonIgnore
     public Predicate<EndpointDetails> getFilter() {
         // Define closure variables for the current query state.
         final ArrayList<String> tagsToInclude = new ArrayList<>(this.tagsToInclude);

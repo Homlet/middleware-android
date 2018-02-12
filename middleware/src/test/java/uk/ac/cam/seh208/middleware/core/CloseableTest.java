@@ -6,9 +6,6 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 
-import uk.ac.cam.seh208.middleware.core.CloseableObserver;
-import uk.ac.cam.seh208.middleware.core.CloseableSubject;
-
 
 /**
  * Tests for objects implementing the Closeable interface.

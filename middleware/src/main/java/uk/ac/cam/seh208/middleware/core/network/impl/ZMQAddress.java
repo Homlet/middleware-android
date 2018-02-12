@@ -1,8 +1,9 @@
 package uk.ac.cam.seh208.middleware.core.network.impl;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -126,7 +127,9 @@ public class ZMQAddress extends Address {
      * @param host The host of the address (IPv4 address, IPv6 address, or hostname).
      * @param port The port of the address.
      */
-    protected ZMQAddress(String host, int port) {
+    protected ZMQAddress(
+            @JsonProperty("host") String host,
+            @JsonProperty("port") int port) {
         this.host = host;
         this.port = port;
     }
@@ -143,17 +146,5 @@ public class ZMQAddress extends Address {
         }
 
         return host + ":" + port;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (!(obj instanceof ZMQAddress)) {
-            return false;
-        }
-        ZMQAddress other = (ZMQAddress) obj;
-        return Objects.equals(toCanonicalString(), other.toCanonicalString());
     }
 }

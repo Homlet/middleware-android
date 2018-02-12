@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.binder;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -162,7 +164,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
         try {
             service.setRDCAddress(Switch.makeAddress(address));
         } catch (MalformedAddressException ignored) {
-            // TODO: logging.
+            Log.e(getTag(), "Malformed address string given when setting RDC address.");
         }
     }
 
@@ -196,5 +198,9 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     public List<String> discover(Query query) throws BadHostException {
         // TODO: implement.
         return null;
+    }
+
+    private static String getTag() {
+        return "MIDDLEWARE_BINDER";
     }
 }

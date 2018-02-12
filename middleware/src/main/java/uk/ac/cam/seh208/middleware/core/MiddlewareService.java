@@ -223,4 +223,8 @@ public class MiddlewareService extends Service {
     public synchronized void setDiscoverable(boolean discoverable) {
         this.discoverable = discoverable;
     }
+
+    public static String getStaticTag() {
+        return "STATIC";
+    }
 }

@@ -30,6 +30,7 @@ import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
+import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.MessageListener;
 
 
@@ -234,7 +235,7 @@ public class Endpoint implements MessageListener {
      */
     public synchronized Mapping map(Query query, Persistence persistence)
         throws BadQueryException, BadHostException, ProtocolException {
-        List<String> hosts = service.discover(query);
+        List<Location> hosts = service.discover(query);
         return establishMapping(hosts, query, persistence);
     }
 
@@ -248,7 +249,7 @@ public class Endpoint implements MessageListener {
      *
      * The return value is a list of the endpoints that were successfully mapped to.
      *
-     * @param host Hostname or address of the peer.
+     * @param host Location on which the peer is accessible.
      * @param query An endpoint query object for filtering remote endpoints.
      * @param persistence Persistence level to use for the resultant mapping.
      *
@@ -257,7 +258,7 @@ public class Endpoint implements MessageListener {
      *
      * @throws BadQueryException if either of the schema or polarity fields are set in the query.
      */
-    public synchronized Mapping mapTo(String host, Query query, Persistence persistence)
+    public synchronized Mapping mapTo(Location host, Query query, Persistence persistence)
             throws BadQueryException {
         return establishMapping(Collections.singletonList(host), query, persistence);
     }
@@ -281,7 +282,7 @@ public class Endpoint implements MessageListener {
      *
      * @throws BadQueryException if either of the schema or polarity fields are set in the query.
      */
-    private Mapping establishMapping(List<String> hosts, Query query, Persistence persistence)
+    private Mapping establishMapping(List<Location> hosts, Query query, Persistence persistence)
         throws BadQueryException {
         // Check that the query is properly formed.
         if (query.schema != null || query.polarity != null) {
@@ -302,7 +303,7 @@ public class Endpoint implements MessageListener {
         List<Channel> channels = new ArrayList<>();
 
         // Establish channels with each host in turn.
-        for (String host : hosts) {
+        for (Location host : hosts) {
             // If we have accepted the maximum number of channels, we need not
             // contact the remaining remote hosts.
             if (channels.size() == query.matches) {
@@ -328,7 +329,7 @@ public class Endpoint implements MessageListener {
     /**
      * TODO: document (pull some stuff out of the map and mapTo documentation).
      */
-    private List<Channel> establishChannels(String host, Query query) {
+    private List<Channel> establishChannels(Location host, Query query) {
         return null;
     }
 

@@ -9,9 +9,10 @@ import android.os.Parcel;
  * from more general commands.
  */
 public class EndpointCommand extends Command {
+
     /**
      * This object is part of the Parcelable interface. It is used to instantiate
-     * new instances of commands from serialised parcels.
+     * new instances of commands from serialized parcels.
      */
     public static final Creator<EndpointCommand> CREATOR = new Creator<EndpointCommand>() {
         @Override

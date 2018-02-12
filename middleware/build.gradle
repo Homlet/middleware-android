@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'de.mobilej.unmock'
 
 android {
     compileSdkVersion 26
@@ -26,6 +27,10 @@ android {
     }
 }
 
+unMock {
+    keepStartingWith "android.util."
+}
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
@@ -35,4 +40,6 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.1'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
+
+    unmock 'org.robolectric:android-all:4.3_r2-robolectric-0'
 }
