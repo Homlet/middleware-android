@@ -7,10 +7,10 @@ package uk.ac.cam.seh208.middleware.core.network;
  * only to service the request and return a response.
  */
 public interface RequestHandler {
+
     /**
      * Invoked by the responder when an incoming request is received,
-     * either returning a string response, or throwing an exception
-     * to indicate error.
+     * either returning a string response, or returning null to indicate error.
      *
      * @return the response to the request.
      */

@@ -4,26 +4,26 @@ import java.util.List;
 
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.core.CloseableObserver;
+import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 
 
 /**
  * Object storing the result of a mapping command called on an endpoint.
  *
- * Consists of a collections of channels from the local (near) endpoint
- * to other local/remote (far) endpoints.
+ * Consists of a collections of channels from the local endpoint
+ * to remote endpoints.
  *
  * The persistence level determines how the mapping handles failure; partial
  * failure is the closure of some channels within the mapping, while complete
  * failure is the closure of all channels, or the local middleware instance
  * being killed by the scheduler.
  */
-public class Mapping implements CloseableObserver<Channel> {
+public class Mapping extends CloseableSubject<Mapping> {
 
     /**
      * Back-reference to the owning local endpoint object.
      */
-    private Endpoint near;
+    private Endpoint local;
 
     /**
      * A copy of the query that was originally used to establish the mapping.
@@ -54,8 +54,8 @@ public class Mapping implements CloseableObserver<Channel> {
      * @param persistence Persistence level determining restoration strategy.
      * @param channels List of channels which should be included as part of the mapping.
      */
-    public Mapping(Endpoint near, Query query, Persistence persistence, List<Channel> channels) {
-        this.near = near;
+    public Mapping(Endpoint local, Query query, Persistence persistence, List<Channel> channels) {
+        this.local = local;
         this.query = query;
         this.persistence = persistence;
 
@@ -82,10 +82,18 @@ public class Mapping implements CloseableObserver<Channel> {
 
         // Attempt to subscribe to the channel. If the channel was closed
         // prior to this point, continue with no action.
-        if (channel.subscribeIfOpen(this)) {
+        if (channel.subscribeIfOpen(this::onChannelClose)) {
             // Subscription was successful; increase the open channel count.
             open++;
         }
+    }
+
+    @Override
+    public void close() {
+        // Drop the endpoint reference to speed up garbage collection.
+        local = null;
+
+        super.close();
     }
 
     /**
@@ -96,8 +104,7 @@ public class Mapping implements CloseableObserver<Channel> {
      *
      * @param channel Reference to the channel which closed.
      */
-    @Override
-    public synchronized void onClose(Channel channel) {
+    private synchronized void onChannelClose(Channel channel) {
         open--;
         restore();
     }

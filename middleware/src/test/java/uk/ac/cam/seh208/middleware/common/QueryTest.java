@@ -8,7 +8,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import java8.util.stream.Collectors;
+import java8.util.stream.StreamSupport;
 
 
 /**
@@ -108,7 +110,7 @@ public class QueryTest {
                                      Set<EndpointDetails> hypothesis) {
         Assert.assertEquals(
                 hypothesis,
-                base.stream()
+                StreamSupport.stream(base)
                         .filter(query.getFilter())
                         .collect(Collectors.toSet())
         );
@@ -126,7 +128,7 @@ public class QueryTest {
                                     int hypothesis) {
         Assert.assertEquals(
                 hypothesis,
-                base.stream()
+                StreamSupport.stream(base)
                         .filter(query.getFilter())
                         .collect(Collectors.toSet())
                         .size()

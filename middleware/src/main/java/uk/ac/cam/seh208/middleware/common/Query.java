@@ -2,7 +2,6 @@ package uk.ac.cam.seh208.middleware.common;
 
 import static uk.ac.cam.seh208.middleware.common.Keys.Query.*;
 
-import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -18,7 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Predicate;
+import java8.util.function.Predicate;
 
 
 /**

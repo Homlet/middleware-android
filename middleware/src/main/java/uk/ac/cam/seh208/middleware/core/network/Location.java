@@ -5,16 +5,16 @@ import android.os.Parcelable;
 import android.util.Log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
-import uk.ac.cam.seh208.middleware.core.network.impl.Switch;
 
 
 /**

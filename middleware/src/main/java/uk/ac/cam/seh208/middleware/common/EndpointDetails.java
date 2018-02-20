@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
 
 /**
@@ -23,6 +24,11 @@ import java.util.Objects;
  * @see RemoteEndpointDetails
  */
 public class EndpointDetails implements Parcelable {
+
+    /**
+     * The universally unique endpoint identifier.
+     */
+    private long endpointId;
 
     /**
      * The name of the endpoint. This is used to uniquely identify the endpoint
@@ -74,10 +80,11 @@ public class EndpointDetails implements Parcelable {
     /**
      * Construct a new immutable endpoint details object with the given parameters.
      */
-    public EndpointDetails(@NonNull String name, String desc, Polarity polarity,
-                           String schema, List<String> tags) {
+    public EndpointDetails(long endpointId, @NonNull String name, String desc,
+                           Polarity polarity, String schema, List<String> tags) {
         // TODO: validate schema string.
 
+        this.endpointId = endpointId;
         this.name = name;
         this.desc = desc;
         this.polarity = polarity;
@@ -87,6 +94,12 @@ public class EndpointDetails implements Parcelable {
         } else {
             this.tags = new ArrayList<>();
         }
+    }
+
+    public EndpointDetails(@NonNull String name, String desc, Polarity polarity,
+                           String schema, List<String> tags) {
+        this(new Random(System.nanoTime()).nextLong(),
+             name, desc, polarity, schema, tags);
     }
 
     protected EndpointDetails(Parcel in) {
@@ -104,6 +117,10 @@ public class EndpointDetails implements Parcelable {
         if (tags == null) {
             tags = new ArrayList<>();
         }
+    }
+
+    public long getEndpointId() {
+        return endpointId;
     }
 
     @NonNull

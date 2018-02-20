@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.core;
 
+import android.util.Pair;
+
 import junit.framework.Assert;
 
 import org.junit.Test;
@@ -55,22 +57,22 @@ public class ControlMessageTest {
         Random random = new Random();
         ControlMessage.Response response = new OpenChannelsControlMessage.Response(
                 Arrays.asList(
-                        new RemoteEndpointDetails(
+                        new Pair<>(0L, new RemoteEndpointDetails(
                                 "test1",
                                 "desc a",
                                 Polarity.SOURCE,
                                 "{}",
                                 Collections.emptyList(),
                                 new Location(random.nextInt())
-                        ),
-                        new RemoteEndpointDetails(
+                        )),
+                        new Pair<>(1L, new RemoteEndpointDetails(
                                 "test2",
                                 "desc b",
                                 Polarity.SINK,
                                 "{}",
                                 Arrays.asList("tag1", "tag2"),
                                 new Location(random.nextInt())
-                        )
+                        ))
                 )
         );
 

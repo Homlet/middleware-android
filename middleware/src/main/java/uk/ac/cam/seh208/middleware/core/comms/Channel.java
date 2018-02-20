@@ -1,12 +1,13 @@
 package uk.ac.cam.seh208.middleware.core.comms;
 
+import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 
 
 /**
- * An active channel for data to flow from one local endpoint (near) to
- * another (far), usually residing on a remote instance of the middleware.
+ * An active channel for data to flow from one local endpoint to
+ * another (remote), usually residing on a remote instance of the middleware.
  *
  * Channels will always exist in pairs, like socket endpoints.
  *
@@ -15,47 +16,79 @@ import uk.ac.cam.seh208.middleware.core.CloseableSubject;
  * channels in order to implement multiplexing.
  *
  * Once closed, a channel cannot be re-opened. Gracefully closing a channel sends
- * a tear-down control message to the far middleware, so consensus is maintained
+ * a tear-down control message to the remote middleware, so consensus is maintained
  * about the state of the channel. Channels are closed in the following situations:
  *     - (for channels maintained by a mapping) the channel's mapping is removed;
- *     - either (far or near) endpoint is removed from its host middleware;
- *     - the near middleware is gracefully killed.
+ *     - either (remote or local) endpoint is removed from its host middleware;
+ *     - the local middleware is gracefully killed.
  *
  * Additionally, the following failure modes can cause a channel to be closed
  * is a non-graceful manner (i.e. without sending a tear-down message):
- *     - the underlying connection to the far host fails while sending a message;
- *     - the near middleware is non-gracefully killed.
+ *     - the underlying connection to the remote host fails while sending a message;
+ *     - the local middleware is non-gracefully killed.
  *
  * In these situations, consensus about the state of the channel is not shared between
- * the near and far middlewares. Therefore, these closures are tracked by the near
- * middleware and relayed to the far middleware when possible, giving the final
+ * the local and remote middlewares. Therefore, these closures are tracked by the local
+ * middleware and relayed to the remote middleware when possible, giving the final
  * condition for channel closure:
- *     - the far middleware indicates that a channel was locally closed in the past,
+ *     - the remote middleware indicates that a channel was locally closed in the past,
  *       but it was not able to perform the graceful tear-down.
  */
 public class Channel extends CloseableSubject<Channel> {
 
-    private Endpoint near;
-
-    private RemoteEndpointDetails far;
+    /**
+     * Generate a deterministic identifier based on the endpoints of the channel. This
+     * identifier must be the same at both ends, so the details are sorted by identifier
+     * before a hash is taken.
+     */
+    private static long generateId(EndpointDetails first, EndpointDetails second) {
+        long multiplier = 769L;
+        long constant = 12289L;
+        if (first.getEndpointId() < second.getEndpointId()) {
+            return multiplier * first.getEndpointId() + second.getEndpointId() + constant;
+        } else {
+            return multiplier * second.getEndpointId() + first.getEndpointId() + constant;
+        }
+    }
 
 
     /**
-     * Create a new channel representing the flow of data between near and far endpoints.
-     *
-     * @param near Reference to the endpoint object at the near end of the channel.
-     * @param far Details of the far endpoint, including the host on which it resides.
+     * Universally unique identifier for the channel.
      */
-    public Channel(Endpoint near, RemoteEndpointDetails far) {
-        this.near = near;
-        this.far = far;
+    private long channelId;
+
+    /**
+     * Reference to the endpoint at the local end of the channel.
+     */
+    private Endpoint local;
+
+    /**
+     * Details of the endpoint at the remote end of the channel.
+     */
+    private RemoteEndpointDetails remote;
+
+
+    /**
+     * Create a new channel representing the flow of data between local and remote endpoints.
+     *
+     * @param local Reference to the endpoint object at the local end of the channel.
+     * @param remote Details of the remote endpoint, including the host on which it resides.
+     */
+    public Channel(Endpoint local, RemoteEndpointDetails remote) {
+        channelId = generateId(local.getDetails(), remote);
+        this.local = local;
+        this.remote = remote;
     }
 
-    public Endpoint getNear() {
-        return near;
+    public long getChannelId() {
+        return channelId;
     }
 
-    public RemoteEndpointDetails getFar() {
-        return far;
+    public Endpoint getLocal() {
+        return local;
+    }
+
+    public RemoteEndpointDetails getRemote() {
+        return remote;
     }
 }

@@ -1,16 +1,20 @@
 package uk.ac.cam.seh208.middleware.core.comms;
 
+import android.util.Pair;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.TreeSet;
 
+import java8.util.stream.Collectors;
+import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
+import uk.ac.cam.seh208.middleware.core.MiddlewareService;
+import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
 
 /**
@@ -58,7 +62,7 @@ public class OpenChannelsControlMessage extends ControlMessage {
      * Remote view of the local endpoint with which channels should be established.
      */
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
-    private RemoteEndpointDetails localEndpoint;
+    private RemoteEndpointDetails initiatorEndpoint;
 
     /**
      * Query used to filter endpoints on the remote host.
@@ -71,10 +75,28 @@ public class OpenChannelsControlMessage extends ControlMessage {
      * Instantiate a new immutable OPEN_CHANNELS control message with the given query.
      */
     public OpenChannelsControlMessage(
-            @JsonProperty("localEndpoint") RemoteEndpointDetails localEndpoint,
+            @JsonProperty("initiatorEndpoint") RemoteEndpointDetails initiatorEndpoint,
             @JsonProperty("query") Query query) {
-        this.localEndpoint = localEndpoint;
+        this.initiatorEndpoint = initiatorEndpoint;
         this.query = query;
+    }
+
+    /**
+     * Open channels via the service, and encapsulate the result in a response object.
+     *
+     * @param service A reference to the middleware service receiving the message.
+     *
+     * @return a response containing the details of the opened channels.
+     */
+    @Override
+    public Response handle(MiddlewareService service) {
+        // Open channels according to the stored query.
+        return new Response(service.openChannels(query, initiatorEndpoint));
+    }
+
+    @Override
+    public Response getResponse(RequestStream stream) {
+        return (Response) super.getResponse(stream);
     }
 
     @Override
@@ -87,7 +109,7 @@ public class OpenChannelsControlMessage extends ControlMessage {
         }
         OpenChannelsControlMessage other = (OpenChannelsControlMessage) obj;
 
-        return (Objects.equals(localEndpoint, other.localEndpoint)
+        return (Objects.equals(initiatorEndpoint, other.initiatorEndpoint)
              && Objects.equals(query, other.query));
     }
 }

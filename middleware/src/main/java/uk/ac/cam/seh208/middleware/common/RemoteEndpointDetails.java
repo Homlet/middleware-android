@@ -61,6 +61,19 @@ public class RemoteEndpointDetails extends EndpointDetails implements JSONSerial
         this.location = location;
     }
 
+    /**
+     * Construct a new immutable remote endpoint details object taking parameters from
+     * the given endpoint details object.
+     */
+    public RemoteEndpointDetails(EndpointDetails details, Location location) {
+        this(details.getName(),
+             details.getDesc(),
+             details.getPolarity(),
+             details.getSchema(),
+             details.getTags(),
+             location);
+    }
+
     protected RemoteEndpointDetails(Parcel in) {
         // Extract the base details from the parcel.
         super(in);

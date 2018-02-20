@@ -16,7 +16,7 @@ import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
-import uk.ac.cam.seh208.middleware.core.network.impl.Switch;
+import uk.ac.cam.seh208.middleware.core.network.Switch;
 
 
 /**

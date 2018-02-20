@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.io.IOException;
 
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
+import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
 
@@ -62,4 +63,13 @@ public abstract class ControlMessage implements JSONSerializable {
             return null;
         }
     }
+
+    /**
+     * Handle the control message according to its definition.
+     *
+     * @param service A reference to the middleware service receiving the message.
+     *
+     * @return a Response object representing the result.
+     */
+    public abstract Response handle(MiddlewareService service);
 }

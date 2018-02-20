@@ -7,23 +7,32 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.ArrayMap;
+import android.util.Pair;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.binder.EndpointBinder;
 import uk.ac.cam.seh208.middleware.binder.MiddlewareBinder;
 import uk.ac.cam.seh208.middleware.common.BinderType;
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
+import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
+import uk.ac.cam.seh208.middleware.core.comms.ControlMessageHandler;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.comms.EndpointSet;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.Location;
-import uk.ac.cam.seh208.middleware.core.network.impl.Switch;
+import uk.ac.cam.seh208.middleware.core.network.MessageStream;
+import uk.ac.cam.seh208.middleware.core.network.RequestHandler;
+import uk.ac.cam.seh208.middleware.core.network.RequestStream;
+import uk.ac.cam.seh208.middleware.core.network.Switch;
 
 
 public class MiddlewareService extends Service {
@@ -48,6 +57,11 @@ public class MiddlewareService extends Service {
      * Pool of open connections within the middleware.
      */
 //    private ConnectionPool connectionPool;
+
+    /**
+     * Handler implementation for responding to control messages from peers.
+     */
+    private RequestHandler handler;
 
     /**
      * Switch handling communications at the transport and network layers.
@@ -85,7 +99,8 @@ public class MiddlewareService extends Service {
         // Initialise object parameters.
         endpointBinders = new ArrayMap<>();
         endpointSet = new EndpointSet();
-        commsSwitch = new Switch(Arrays.asList(Switch.SCHEME_ZMQ));
+        handler = new ControlMessageHandler(this);
+        commsSwitch = new Switch(Arrays.asList(Switch.SCHEME_ZMQ), handler);
 
         // Attempt to restart this service if the scheduler kills it for resources.
         return START_STICKY;
@@ -183,6 +198,38 @@ public class MiddlewareService extends Service {
     }
 
     /**
+     * Return a message stream to the given location, preferring certain
+     * network schemes according to the set policy.
+     *
+     * @param host Location of the remote host to get a message stream to.
+     *
+     * @return a reference to a message stream.
+     *
+     * @throws BadHostException if it was impossible to create a connection to the
+     *                          given host.
+     */
+    public MessageStream getMessageStream(Location host) throws BadHostException {
+        // TODO: implement.
+        return null;
+    }
+
+    /**
+     * Return a request stream to the given location, preferring certain
+     * network schemes according to the set policy.
+     *
+     * @param host Location of the remote host to get a request stream to.
+     *
+     * @return a reference to a request stream.
+     *
+     * @throws BadHostException if it was impossible to create a connection to the
+     *                          given host.
+     */
+    public RequestStream getRequestStream(Location host) throws BadHostException {
+        // TODO: implement.
+        return null;
+    }
+
+    /**
      * Send a QUERY_COARSE control message to the registered RDC, returning the resultant
      * list of remote locations. If no locations match the query, an empty list is returned;
      * if something went wrong contacting the RDC, null is returned.
@@ -195,9 +242,41 @@ public class MiddlewareService extends Service {
         return null;
     }
 
+    /**
+     * Filter existing endpoints by a query, and open channels from all matching
+     * to a single given remote endpoint.
+     *
+     * @param query Query with which to filter local endpoints.
+     * @param remote Remote endpoint to which to open channels.
+     *
+     * @return a list of endpoint-details for the opened channels.
+     */
+    public List<RemoteEndpointDetails> openChannels(Query query, RemoteEndpointDetails remote) {
+        // Keep track of endpoints returned.
+        List<RemoteEndpointDetails> endpoints = new ArrayList<>();
+
+        //noinspection SynchronizeOnNonFinalField
+        synchronized (endpointSet) {
+            // Filter the endpoint set according to the query.
+            StreamSupport.stream(endpointSet)
+                    .filter(e -> query.getFilter().test(e.getRemoteDetails()))
+                    .forEach(e -> {
+                        e.openChannel(remote);
+                        endpoints.add(e.getRemoteDetails());
+                    });
+
+            // Return the filtered channel details.
+            return endpoints;
+        }
+    }
+
     public EndpointSet getEndpointSet() {
         // TODO: return unmodifiable view on the endpoint set.
         return endpointSet;
+    }
+
+    public Location getLocation() {
+        return commsSwitch.getLocation();
     }
 
     public boolean isForceable() {

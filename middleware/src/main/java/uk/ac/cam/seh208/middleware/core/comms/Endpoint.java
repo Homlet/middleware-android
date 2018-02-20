@@ -2,8 +2,8 @@ package uk.ac.cam.seh208.middleware.core.comms;
 
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.util.ArrayMap;
 import android.util.Log;
+import android.util.LongSparseArray;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jackson.JsonLoader;
@@ -22,6 +22,7 @@ import uk.ac.cam.seh208.middleware.common.IMessageListener;
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
@@ -31,13 +32,13 @@ import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.network.Location;
-import uk.ac.cam.seh208.middleware.core.network.MessageListener;
+import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
 
 /**
  * Object encapsulating the state of an active endpoint within the middleware.
  */
-public class Endpoint implements MessageListener {
+public class Endpoint {
 
     /**
      * Reference to the containing instance of the middleware service.
@@ -82,7 +83,7 @@ public class Endpoint implements MessageListener {
      * Map of channels owned by the endpoint; i.e. having the
      * endpoint at their near end, addressed by their unique identifier.
      */
-    private ArrayMap<Long, Channel> channels;
+    private LongSparseArray<Channel> channels;
 
     /**
      * Collection of mappings established from this endpoint.
@@ -96,7 +97,7 @@ public class Endpoint implements MessageListener {
 
 
     /**
-     * TODO: document.
+     * Construct a new endpoint with the given parent service, details and options.
      */
     public Endpoint(MiddlewareService service, EndpointDetails details,
                     boolean exposed, boolean forceable)
@@ -115,6 +116,7 @@ public class Endpoint implements MessageListener {
         }
 
         listeners = new ArrayList<>();
+        channels = new LongSparseArray<>();
         mappings = new ArrayList<>();
     }
 
@@ -123,10 +125,11 @@ public class Endpoint implements MessageListener {
     }
 
     /**
-     * TODO: document.
+     * Initialisation routine run after the endpoint has been integrated into the middleware
+     * instance (i.e. after we have ensured there was no name or uuid collision).
      */
     public void initialise() {
-        // TODO: implement.
+        // TODO: work out what needs to be done (if anything), and implement.
     }
 
     /**
@@ -300,37 +303,138 @@ public class Endpoint implements MessageListener {
                 .build();
 
         // Keep track of the currently established channels.
-        List<Channel> channels = new ArrayList<>();
+        List<Channel> mapChannels = new ArrayList<>();
 
-        // Establish channels with each host in turn.
-        for (Location host : hosts) {
-            // If we have accepted the maximum number of channels, we need not
-            // contact the remaining remote hosts.
-            if (channels.size() == query.matches) {
-                break;
+        synchronized (this) {
+            // Establish channels with each host in turn.
+            for (Location host : hosts) {
+                // If we have accepted the maximum number of channels, we need not
+                // contact the remaining remote hosts.
+                if (mapChannels.size() == query.matches) {
+                    break;
+                }
+
+                // Modify the sent query to only accept the remaining number of channels.
+                Query modifiedQuery = new Query.Builder()
+                        .copy(query)
+                        .setMatches(query.matches - mapChannels.size())
+                        .build();
+
+                // Establish channels to endpoints on the remote host, and add them to our list.
+                try {
+                    mapChannels.addAll(establishChannels(host, modifiedQuery));
+                } catch (BadHostException e) {
+                    Log.w(getTag(), "Unable to establish channels to host (" + host + ").");
+                }
             }
 
-            // Modify the sent query to only accept the remaining number of channels.
-            Query modifiedQuery = new Query.Builder()
-                    .copy(query)
-                    .setMatches(query.matches - channels.size())
-                    .build();
-
-            // Establish channels to endpoints on the remote host, and add them to our list.
-            channels.addAll(establishChannels(host, modifiedQuery));
+            // Build the mapping object, keeping internal record of it before returning.
+            Mapping mapping = new Mapping(this, query, persistence, mapChannels);
+            mapping.subscribe(m -> mappings.remove(m));
+            mappings.add(mapping);
+            return mapping;
         }
-
-        // Build the mapping object, keeping internal record of it before returning.
-        Mapping mapping = new Mapping(this, query, persistence, channels);
-        mappings.add(mapping);
-        return mapping;
     }
 
     /**
-     * TODO: document (pull some stuff out of the map and mapTo documentation).
+     * Establish some number of channels to a remote instance of the middleware by
+     * sending a OPEN-CHANNELS control message, containing the given query.
+     *
+     * The established channels are opened using the openChannel method, meaning
+     * they are automatically added to the channels map. However, they are not
+     * automatically associated with a mapping.
+     *
+     * @param host Location on which the remote instance of the middleware resides.
+     * @param query Query used to filter the remote endpoints.
      */
-    private List<Channel> establishChannels(Location host, Query query) {
-        return null;
+    private List<Channel> establishChannels(Location host, Query query) throws BadHostException {
+        // Send an OPEN-CHANNELS control message to the remote host.
+        OpenChannelsControlMessage message =
+                new OpenChannelsControlMessage(getRemoteDetails(), query);
+        RequestStream stream = service.getRequestStream(host);
+        OpenChannelsControlMessage.Response response = message.getResponse(stream);
+
+        // Synchronise to prevent messages being sent to an incomplete mapping.
+        synchronized (this) {
+            // The response to the OPEN-CHANNELS message contains a list of remote
+            // endpoint-details from which channels were opened. Open local
+            // counterparts to these channels and track them in the returned list.
+            List<Channel> establishedChannels = new ArrayList<>();
+            for (RemoteEndpointDetails remote : response.getDetails()) {
+                establishedChannels.add(openChannel(remote));
+            }
+            return establishedChannels;
+        }
+    }
+
+    /**
+     * Open a channel to a remote endpoint. This affects only the local state, and
+     * assumes the remote endpoint will be/has been informed that this channel exists.
+     *
+     * @param remote Remote endpoint to which the channel should be opened.
+     *
+     * @return the newly generated id of the channel.
+     */
+    public Channel openChannel(RemoteEndpointDetails remote) {
+        // Create a new channel from this endpoint to the remote endpoint.
+        Channel channel = new Channel(this, remote);
+
+        synchronized (this) {
+            // Track the open channel in the channel map.
+            channels.put(channel.getChannelId(), channel);
+
+            // Subscribe to channel closure, by removing it from the channel map.
+            channel.subscribe(c -> channels.remove(c.getChannelId()));
+        }
+
+        return channel;
+    }
+
+    /**
+     * Callback to be registered as a message handler with connections.
+     *
+     * Distributes newly received messages to all registered listeners,
+     * de-multiplexed by channel identifier.
+     *
+     * @param channelId The identifier of the channel on which the message
+     *                  was received.
+     * @param message The newly received message string.
+     */
+    public synchronized void onMessage(long channelId, String message) {
+        if (channels.indexOfKey(channelId) < 0) {
+            // If the channel identifier is not in the channel set, this
+            // message shouldn't have ended up here.
+            Log.e(getTag(), "Received message from unknown channel ID (" +
+                    channelId + ")");
+            return;
+        }
+
+        if (!validate(message)) {
+            // The message does not match the schema; the remote endpoint has broken
+            // protocol, and the channel must be closed.
+            Log.e(getTag(), "Incoming message schema mismatch on channel (" +
+                    channelId + ")");
+
+            channels.get(channelId).close();
+            return;
+        }
+
+        Log.v(getTag(), "Received new message: \"" + message + "\"");
+
+        // Dispatch the message to each of the listeners' onMessage methods
+        // in turn, logging the case where a remote error occurs.
+        int failures = 0;
+        for (IMessageListener listener : listeners) {
+            try {
+                listener.onMessage(message);
+            } catch (RemoteException e) {
+                failures++;
+            }
+        }
+        if (failures > 0) {
+            Log.e(getTag(), "Error occurred dispatching message to " +
+                    failures + " listener(s).");
+        }
     }
 
     /**
@@ -353,6 +457,13 @@ public class Endpoint implements MessageListener {
 
     public EndpointDetails getDetails() {
         return details;
+    }
+
+    /**
+     * @return a newly constructed RemoteEndpointDetails object referencing
+     */
+    public RemoteEndpointDetails getRemoteDetails() {
+        return new RemoteEndpointDetails(details, service.getLocation());
     }
 
     public boolean isExposed() {
@@ -386,48 +497,6 @@ public class Endpoint implements MessageListener {
             return report.isSuccess();
         } catch (IOException | ProcessingException e) {
             return false;
-        }
-    }
-
-    /**
-     * Callback to be registered as a message handler with channels.
-     *
-     * Distributes newly received messages to all registered listeners.
-     *
-     * @param message The newly received message string.
-     */
-    public synchronized void onMessage(String message) {
-//        if (!channels.keySet().contains(channelId)) {
-//            // If the channel identifier is not in the channel set, this
-//            Log.e(getTag(), "Received message from unknown channel ID (" +
-//                    channelId + ").");
-//            return;
-//        }
-//
-//        if (!validate(message)) {
-//            // The message does not match the schema; the remote endpoint has broken
-//            // protocol, and the channel must be closed.
-//            Log.e(getTag(), "Incoming message schema mismatch.");
-//
-//            channels.get(channelId).close();
-//            return;
-//        }
-
-        Log.v(getTag(), "Received new message: \"" + message + "\"");
-
-        // Dispatch the message to each of the listeners' onMessage methods
-        // in turn, logging the case where a remote error occurs.
-        int failures = 0;
-        for (IMessageListener listener : listeners) {
-            try {
-                listener.onMessage(message);
-            } catch (RemoteException e) {
-                failures++;
-            }
-        }
-        if (failures > 0) {
-            Log.e(getTag(), "Error occurred dispatching message to " +
-                    failures + " listener(s).");
         }
     }
 

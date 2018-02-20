@@ -1,17 +1,17 @@
-package uk.ac.cam.seh208.middleware.core.network.impl;
+package uk.ac.cam.seh208.middleware.core.network;
 
 import android.util.Log;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
-import uk.ac.cam.seh208.middleware.core.network.Address;
-import uk.ac.cam.seh208.middleware.core.network.AddressBuilder;
-import uk.ac.cam.seh208.middleware.core.network.MessageContext;
-import uk.ac.cam.seh208.middleware.core.network.RequestContext;
+import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
+import uk.ac.cam.seh208.middleware.core.network.impl.ZMQMessageContext;
+import uk.ac.cam.seh208.middleware.core.network.impl.ZMQRequestContext;
 
 
 /**
@@ -75,11 +75,19 @@ public class Switch {
      */
     private HashMap<String, RequestContext> requestContextsByScheme;
 
+    /**
+     * Reference the canonical location of this switch.
+     */
+    private Location location;
+
 
     /**
      * Construct and initialise message and request contexts for the given schemes.
      */
-    public Switch(List<String> schemes) {
+    public Switch(List<String> schemes, RequestHandler handler) {
+        Random random = new Random();
+        location = new Location(random.nextInt());
+
         messageContextsByScheme = new HashMap<>();
         requestContextsByScheme = new HashMap<>();
 
@@ -88,7 +96,10 @@ public class Switch {
             switch (scheme) {
                 case SCHEME_ZMQ:
                     messageContextsByScheme.put(scheme, new ZMQMessageContext());
-                    requestContextsByScheme.put(scheme, new ZMQRequestContext());
+
+                    RequestContext requestContext = new ZMQRequestContext();
+                    requestContext.getResponder().setHandler(handler);
+                    requestContextsByScheme.put(scheme, requestContext);
                     break;
 
                 // case SCHEME_BLUETOOTH etc...
@@ -114,6 +125,10 @@ public class Switch {
      */
     public RequestContext getRequestContext(String scheme) {
         return requestContextsByScheme.get(scheme);
+    }
+
+    public Location getLocation() {
+        return location;
     }
 
     private static String getTag() {
