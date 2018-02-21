@@ -12,7 +12,7 @@ import uk.ac.cam.seh208.middleware.core.CloseableSubject;
  * Channels will always exist in pairs, like socket endpoints.
  *
  * Channels do not actually implement the means for data transfer; this is
- * handled by the Connection class. However, connection objects reference
+ * handled by the Multiplexer class. However, connection objects reference
  * channels in order to implement multiplexing.
  *
  * Once closed, a channel cannot be re-opened. Gracefully closing a channel sends

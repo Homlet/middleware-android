@@ -1,6 +1,6 @@
 package uk.ac.cam.seh208.middleware.core.network;
 
-import uk.ac.cam.seh208.middleware.core.Closeable;
+import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 
 
@@ -12,7 +12,9 @@ import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
  * balancing purposes; i.e. to leverage threading on the device when connections host channels
  * to different endpoints.
  */
-public interface MessageStream extends Closeable, MessageListener{
+public abstract class MessageStream extends CloseableSubject<MessageStream>
+        implements MessageListener {
+
     /**
      * Queue a string message to be sent from the socket asynchronously.
      *
@@ -20,24 +22,24 @@ public interface MessageStream extends Closeable, MessageListener{
      *
      * @param message Complete string message to send over the socket.
      */
-    void send(String message) throws ConnectionFailedException;
+    public abstract void send(String message) throws ConnectionFailedException;
 
     /**
      * Register a listener to be run on receipt of a new message.
      *
      * @param listener A MessageListener implementor to be registered.
      */
-    void registerListener(MessageListener listener);
+    public abstract void registerListener(MessageListener listener);
 
     /**
      * Unregister a currently registered message listener.
      *
      * @param listener A MessageListener implementor to be unregistered.
      */
-    void unregisterListener(MessageListener listener);
+    public abstract void unregisterListener(MessageListener listener);
 
     /**
      * Unregister all currently registered message listeners.
      */
-    void clearListeners();
+    public abstract void clearListeners();
 }

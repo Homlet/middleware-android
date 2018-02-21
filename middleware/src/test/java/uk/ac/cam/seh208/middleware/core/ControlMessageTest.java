@@ -57,22 +57,22 @@ public class ControlMessageTest {
         Random random = new Random();
         ControlMessage.Response response = new OpenChannelsControlMessage.Response(
                 Arrays.asList(
-                        new Pair<>(0L, new RemoteEndpointDetails(
+                        new RemoteEndpointDetails(
                                 "test1",
                                 "desc a",
                                 Polarity.SOURCE,
                                 "{}",
                                 Collections.emptyList(),
                                 new Location(random.nextInt())
-                        )),
-                        new Pair<>(1L, new RemoteEndpointDetails(
+                        ),
+                        new RemoteEndpointDetails(
                                 "test2",
                                 "desc b",
                                 Polarity.SINK,
                                 "{}",
                                 Arrays.asList("tag1", "tag2"),
                                 new Location(random.nextInt())
-                        ))
+                        )
                 )
         );
 

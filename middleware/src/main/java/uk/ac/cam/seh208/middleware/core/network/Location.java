@@ -39,7 +39,6 @@ public class Location implements Parcelable, JSONSerializable {
         }
     };
 
-
     /**
      * Universally unique identifier of the middleware instance. This is used
      * to identify middleware instances that may be contacted via multiple interfaces.
@@ -104,6 +103,11 @@ public class Location implements Parcelable, JSONSerializable {
      */
     public List<Address> getAddresses() {
         return Collections.unmodifiableList(addresses);
+    }
+
+
+    public long getUUID() {
+        return uuid;
     }
 
     /**

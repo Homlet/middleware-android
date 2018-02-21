@@ -7,7 +7,7 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.ArrayMap;
-import android.util.Pair;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,10 +27,12 @@ import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.core.comms.ControlMessageHandler;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.comms.EndpointSet;
+import uk.ac.cam.seh208.middleware.core.comms.Multiplexer;
+import uk.ac.cam.seh208.middleware.core.comms.MultiplexerPool;
+import uk.ac.cam.seh208.middleware.core.exception.UnexpectedClosureException;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
-import uk.ac.cam.seh208.middleware.core.network.RequestHandler;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 import uk.ac.cam.seh208.middleware.core.network.Switch;
 
@@ -54,14 +56,9 @@ public class MiddlewareService extends Service {
     private EndpointSet endpointSet;
 
     /**
-     * Pool of open connections within the middleware.
+     * Pool of open multiplexers within the middleware.
      */
-//    private ConnectionPool connectionPool;
-
-    /**
-     * Handler implementation for responding to control messages from peers.
-     */
-    private RequestHandler handler;
+    private MultiplexerPool multiplexerPool;
 
     /**
      * Switch handling communications at the transport and network layers.
@@ -99,7 +96,9 @@ public class MiddlewareService extends Service {
         // Initialise object parameters.
         endpointBinders = new ArrayMap<>();
         endpointSet = new EndpointSet();
-        handler = new ControlMessageHandler(this);
+        multiplexerPool = new MultiplexerPool(this);
+
+        ControlMessageHandler handler = new ControlMessageHandler(this);
         commsSwitch = new Switch(Arrays.asList(Switch.SCHEME_ZMQ), handler);
 
         // Attempt to restart this service if the scheduler kills it for resources.
@@ -198,17 +197,31 @@ public class MiddlewareService extends Service {
     }
 
     /**
+     * Return the unique pooled multiplexer for the given remote location.
+     *
+     * @param remote Remote location with which the multiplexer communicates.
+     *
+     * @return a reference to a Multiplexer object.
+     *
+     * @throws BadHostException if it was impossible to create an underlying message
+     *                          stream to the given host.
+     */
+    public Multiplexer getMultiplexer(Location remote) throws BadHostException {
+        return multiplexerPool.getMultiplexer(remote);
+    }
+
+    /**
      * Return a message stream to the given location, preferring certain
      * network schemes according to the set policy.
      *
-     * @param host Location of the remote host to get a message stream to.
+     * @param remote Location of the remote host to get a message stream to.
      *
      * @return a reference to a message stream.
      *
-     * @throws BadHostException if it was impossible to create a connection to the
+     * @throws BadHostException if it was impossible to create a message stream to the
      *                          given host.
      */
-    public MessageStream getMessageStream(Location host) throws BadHostException {
+    public MessageStream getMessageStream(Location remote) throws BadHostException {
         // TODO: implement.
         return null;
     }
@@ -217,14 +230,14 @@ public class MiddlewareService extends Service {
      * Return a request stream to the given location, preferring certain
      * network schemes according to the set policy.
      *
-     * @param host Location of the remote host to get a request stream to.
+     * @param remote Location of the remote host to get a request stream to.
      *
      * @return a reference to a request stream.
      *
-     * @throws BadHostException if it was impossible to create a connection to the
+     * @throws BadHostException if it was impossible to create a message stream to the
      *                          given host.
      */
-    public RequestStream getRequestStream(Location host) throws BadHostException {
+    public RequestStream getRequestStream(Location remote) throws BadHostException {
         // TODO: implement.
         return null;
     }
@@ -261,8 +274,13 @@ public class MiddlewareService extends Service {
             StreamSupport.stream(endpointSet)
                     .filter(e -> query.getFilter().test(e.getRemoteDetails()))
                     .forEach(e -> {
-                        e.openChannel(remote);
-                        endpoints.add(e.getRemoteDetails());
+                        try {
+                            e.openChannel(remote);
+                            endpoints.add(e.getRemoteDetails());
+                        } catch (BadHostException | UnexpectedClosureException ex) {
+                            Log.e(getTag(), "Error opening channel on endpoint (" +
+                                    e.getEndpointId() + ")");
+                        }
                     });
 
             // Return the filtered channel details.
@@ -303,7 +321,7 @@ public class MiddlewareService extends Service {
         this.discoverable = discoverable;
     }
 
-    public static String getStaticTag() {
-        return "STATIC";
+    private String getTag() {
+        return "MW";
     }
 }

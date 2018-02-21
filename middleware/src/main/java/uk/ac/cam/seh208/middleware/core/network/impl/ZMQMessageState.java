@@ -59,7 +59,7 @@ class ZMQMessageState {
         streamsByAddress.put(addressString, stream);
 
         // Subscribe to stream closure, removing the stream by address.
-        stream.subscribe(s -> removeStreamByAddress(s.getRemoteAddress()));
+        stream.subscribe(s -> removeStreamByAddress(((ZMQMessageStream) s).getRemoteAddress()));
 
         return true;
     }

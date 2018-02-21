@@ -18,9 +18,9 @@ interface IMiddleware {
     List<EndpointDetails> getAllEndpointDetails();
 
     // @see MiddlewareBinder#force
-    void force(String host, in MiddlewareCommand command);
+    void force(String remote, in MiddlewareCommand command);
     // @see MiddlewareBinder#forceEndpoint
-    void forceEndpoint(String host, String name, in EndpointCommand command);
+    void forceEndpoint(String remote, String name, in EndpointCommand command);
     // @see MiddlewareBinder#setForceable
     void setForceable(boolean forceable);
 

@@ -93,6 +93,8 @@ public class Mapping extends CloseableSubject<Mapping> {
         // Drop the endpoint reference to speed up garbage collection.
         local = null;
 
+        // TODO: close all owned channels.
+
         super.close();
     }
 

@@ -8,7 +8,6 @@ import org.zeromq.ZMQException;
 import java.util.ArrayList;
 import java.util.List;
 
-import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 import uk.ac.cam.seh208.middleware.core.network.MessageListener;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
@@ -17,7 +16,7 @@ import uk.ac.cam.seh208.middleware.core.network.MessageStream;
 /**
  * ZeroMQ Harmony-pattern implementor of the message stream interface.
  */
-public class ZMQMessageStream extends CloseableSubject<ZMQMessageStream> implements MessageStream {
+public class ZMQMessageStream extends MessageStream {
 
 
     /**

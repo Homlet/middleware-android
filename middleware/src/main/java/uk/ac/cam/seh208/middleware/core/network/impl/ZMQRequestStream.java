@@ -3,10 +3,6 @@ package uk.ac.cam.seh208.middleware.core.network.impl;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
-import java.util.Objects;
-
-import uk.ac.cam.seh208.middleware.core.CloseableSubject;
-import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
@@ -14,7 +10,7 @@ import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 /**
  * ZeroMQ implementor of the request stream interface.
  */
-public class ZMQRequestStream extends CloseableSubject<ZMQRequestStream> implements RequestStream {
+public class ZMQRequestStream extends RequestStream {
 
     /**
      * REQ socket over which to send new requests.
@@ -30,12 +26,12 @@ public class ZMQRequestStream extends CloseableSubject<ZMQRequestStream> impleme
     /**
      * The ZeroMQ address on which this middleware instance resides.
      */
-    private Address localAddress;
+    private ZMQAddress localAddress;
 
     /**
      * The ZeroMQ address with which this stream communicates.
      */
-    private Address remoteAddress;
+    private ZMQAddress remoteAddress;
 
 
     public ZMQRequestStream(ZMQ.Context context, ZMQAddress localAddress,
@@ -94,6 +90,15 @@ public class ZMQRequestStream extends CloseableSubject<ZMQRequestStream> impleme
             return null;
         }
     }
+
+    public ZMQAddress getLocalAddress() {
+        return localAddress;
+    }
+
+    public ZMQAddress getRemoteAddress() {
+        return remoteAddress;
+    }
+
 
     /**
      * Open the REQ socket to the peer if this has not already been done. After

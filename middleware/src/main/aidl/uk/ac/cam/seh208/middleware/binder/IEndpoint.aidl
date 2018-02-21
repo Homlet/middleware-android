@@ -23,11 +23,11 @@ interface IEndpoint {
     // @see EndpointBinder#map
     List<RemoteEndpointDetails> map(in Query query, in Persistence persistence);
     // @see EndpointBinder#mapTo
-    List<RemoteEndpointDetails> mapTo(String host, in Query query, in Persistence persistence);
+    List<RemoteEndpointDetails> mapTo(String remote, in Query query, in Persistence persistence);
     // @see EndpointBinder#unmap
     List<RemoteEndpointDetails> unmap(in Query query);
     // @see EndpointBinder#unmapFrom
-    List<RemoteEndpointDetails> unmapFrom(String host, in Query query);
+    List<RemoteEndpointDetails> unmapFrom(String remote, in Query query);
 
     // @see EndpointBinder#setExposed
     void setExposed(boolean exposed);

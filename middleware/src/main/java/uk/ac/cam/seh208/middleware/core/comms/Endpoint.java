@@ -2,6 +2,7 @@ package uk.ac.cam.seh208.middleware.core.comms;
 
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.util.ArraySet;
 import android.util.Log;
 import android.util.LongSparseArray;
 
@@ -15,8 +16,11 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
 import uk.ac.cam.seh208.middleware.common.Persistence;
@@ -31,6 +35,7 @@ import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
+import uk.ac.cam.seh208.middleware.core.exception.UnexpectedClosureException;
 import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
@@ -77,7 +82,7 @@ public class Endpoint {
     /**
      * Collection of application listeners used to respond to messages.
      */
-    private List<IMessageListener> listeners;
+    private Set<IMessageListener> listeners;
 
     /**
      * Map of channels owned by the endpoint; i.e. having the
@@ -88,12 +93,13 @@ public class Endpoint {
     /**
      * Collection of mappings established from this endpoint.
      */
-    private List<Mapping> mappings;
+    private Set<Mapping> mappings;
 
     /**
-     * Collection of connections serving channels from this endpoint.
+     * Map of multiplexers carrying channels from this endpoint, indexed by the UUID
+     * of their remote location.
      */
-//    private List<Connection> connections;
+    private LongSparseArray<Multiplexer> multiplexers;
 
 
     /**
@@ -115,9 +121,10 @@ public class Endpoint {
             throw new BadSchemaException(details.getSchema());
         }
 
-        listeners = new ArrayList<>();
+        listeners = new HashSet<>();
         channels = new LongSparseArray<>();
-        mappings = new ArrayList<>();
+        mappings = new HashSet<>();
+        multiplexers = new LongSparseArray<>();
     }
 
     public Endpoint(MiddlewareService service, EndpointDetails details) throws BadSchemaException {
@@ -128,21 +135,25 @@ public class Endpoint {
      * Initialisation routine run after the endpoint has been integrated into the middleware
      * instance (i.e. after we have ensured there was no name or uuid collision).
      */
-    public void initialise() {
+    public synchronized void initialise() {
         // TODO: work out what needs to be done (if anything), and implement.
     }
 
     /**
-     * TODO: document.
+     * Close all active mappings, and all remaining channels.
      */
-    public void destroy() {
-        // TODO: implement.
+    public synchronized void destroy() {
+        StreamSupport.stream(mappings).forEach(Mapping::close);
+        int size = channels.size();
+        for (int i = 0; i < size; i++) {
+            channels.valueAt(0).close();
+        }
     }
 
     /**
-     * Send a JSON message over the JeroMQ mapping sockets (provided the endpoint polarity
-     * permits this). The message must conform to the endpoint message schema; if not, an
-     * exception will be thrown.
+     * Send a string message over the multiplexer (provided the endpoint polarity permits
+     * this). The message must be JSON formatted and conform to the endpoint message
+     * schema; if not, an exception will be thrown.
      *
      * @param message JSON string representation of the message to send.
      *
@@ -155,7 +166,12 @@ public class Endpoint {
             throw new WrongPolarityException(getPolarity());
         }
 
-        // TODO: forward message along connections.
+        synchronized (this) {
+            // Dispatch the message to all multiplexers carrying channels for this endpoint.
+            for (int i = 0; i < multiplexers.size(); i++) {
+                multiplexers.valueAt(i).send(this, message);
+            }
+        }
     }
 
     /**
@@ -173,20 +189,22 @@ public class Endpoint {
      * @param listener Object implementing the IMessageListener interface, which will be
      *                 remoted by Android allowing the middleware to call its methods.
      */
-    public synchronized void registerListener(IMessageListener listener) throws RemoteException {
+    public void registerListener(IMessageListener listener) throws RemoteException {
         if (!getPolarity().supportsListeners) {
             throw new WrongPolarityException(getPolarity());
         }
 
-        // On death of its host process, remove the listener from the list (in a
-        // synchronised manner so as not to interfere with existing iterators).
-        IBinder.DeathRecipient recipient = () -> {
-            synchronized (this) {
-                listeners.remove(listener);
-            }
-        };
-        listener.asBinder().linkToDeath(recipient, 0);
-        listeners.add(listener);
+        synchronized (this) {
+            // On death of its host process, remove the listener from the list (in a
+            // synchronised manner so as not to interfere with existing iterators).
+            IBinder.DeathRecipient recipient = () -> {
+                synchronized (this) {
+                    listeners.remove(listener);
+                }
+            };
+            listener.asBinder().linkToDeath(recipient, 0);
+            listeners.add(listener);
+        }
     }
 
     /**
@@ -236,7 +254,7 @@ public class Endpoint {
      * @throws BadHostException when the set RDC host is invalid.
      * @throws ProtocolException if the RDC breaks protocol.
      */
-    public synchronized Mapping map(Query query, Persistence persistence)
+    public Mapping map(Query query, Persistence persistence)
         throws BadQueryException, BadHostException, ProtocolException {
         List<Location> hosts = service.discover(query);
         return establishMapping(hosts, query, persistence);
@@ -261,7 +279,7 @@ public class Endpoint {
      *
      * @throws BadQueryException if either of the schema or polarity fields are set in the query.
      */
-    public synchronized Mapping mapTo(Location host, Query query, Persistence persistence)
+    public Mapping mapTo(Location host, Query query, Persistence persistence)
             throws BadQueryException {
         return establishMapping(Collections.singletonList(host), query, persistence);
     }
@@ -307,7 +325,7 @@ public class Endpoint {
 
         synchronized (this) {
             // Establish channels with each host in turn.
-            for (Location host : hosts) {
+            for (Location remote : hosts) {
                 // If we have accepted the maximum number of channels, we need not
                 // contact the remaining remote hosts.
                 if (mapChannels.size() == query.matches) {
@@ -322,16 +340,18 @@ public class Endpoint {
 
                 // Establish channels to endpoints on the remote host, and add them to our list.
                 try {
-                    mapChannels.addAll(establishChannels(host, modifiedQuery));
+                    mapChannels.addAll(establishChannels(remote, modifiedQuery));
                 } catch (BadHostException e) {
-                    Log.w(getTag(), "Unable to establish channels to host (" + host + ").");
+                    Log.w(getTag(), "Unable to establish channels to host (" + remote + ").");
                 }
             }
 
             // Build the mapping object, keeping internal record of it before returning.
             Mapping mapping = new Mapping(this, query, persistence, mapChannels);
-            mapping.subscribe(m -> mappings.remove(m));
             mappings.add(mapping);
+
+            // No need for subscribeIfOpen here because the mapping must still be open.
+            mapping.subscribe(mappings::remove);
             return mapping;
         }
     }
@@ -361,8 +381,17 @@ public class Endpoint {
             // counterparts to these channels and track them in the returned list.
             List<Channel> establishedChannels = new ArrayList<>();
             for (RemoteEndpointDetails remote : response.getDetails()) {
-                establishedChannels.add(openChannel(remote));
+                try {
+                    establishedChannels.add(openChannel(remote));
+                } catch (UnexpectedClosureException e) {
+                    // Do nothing; whilst the remote currently believes this channel to be
+                    // open, any attempt to communicate over it will either lead to a
+                    // ConnectionFailedException or a CLOSE-CHANNEL control response.
+                    Log.w(getTag(), "Couldn't establish channel to remote endpoint due to " +
+                            "unexpected closure (" + remote.getEndpointId() + ")");
+                }
             }
+
             return establishedChannels;
         }
     }
@@ -375,23 +404,47 @@ public class Endpoint {
      *
      * @return the newly generated id of the channel.
      */
-    public Channel openChannel(RemoteEndpointDetails remote) {
+    public Channel openChannel(RemoteEndpointDetails remote)
+            throws BadHostException, UnexpectedClosureException {
         // Create a new channel from this endpoint to the remote endpoint.
         Channel channel = new Channel(this, remote);
 
         synchronized (this) {
+            // Get the multiplexer to the remote location.
+            long uuid = remote.getLocation().getUUID();
+            Multiplexer multiplexer = service.getMultiplexer(remote.getLocation());
+            multiplexers.put(uuid, multiplexer);
+
+            if (multiplexer.subscribeIfOpen(m -> multiplexers.remove(uuid))) {
+                // Remove this multiplexer.
+                multiplexers.remove(uuid);
+
+                throw new UnexpectedClosureException("Unexpected multiplexer closure " +
+                        "whilst opening channel.");
+            }
+
+            // Carry the channel on the multiplexer.
+            if (!multiplexer.carryChannel(channel)) {
+                throw new UnexpectedClosureException("Unexpected multiplexer closure " +
+                        "whilst opening channel.");
+            }
+
             // Track the open channel in the channel map.
             channels.put(channel.getChannelId(), channel);
 
             // Subscribe to channel closure, by removing it from the channel map.
-            channel.subscribe(c -> channels.remove(c.getChannelId()));
+            if (!channel.subscribeIfOpen(c -> channels.remove(c.getChannelId()))) {
+                channels.remove(channel.getChannelId());
+                throw new UnexpectedClosureException("Unexpected channel closure " +
+                        "whilst opening.");
+            }
         }
 
         return channel;
     }
 
     /**
-     * Callback to be registered as a message handler with connections.
+     * Callback to be registered as a message handler with multiplexers.
      *
      * Distributes newly received messages to all registered listeners,
      * de-multiplexed by channel identifier.
@@ -435,6 +488,15 @@ public class Endpoint {
             Log.e(getTag(), "Error occurred dispatching message to " +
                     failures + " listener(s).");
         }
+    }
+
+    /**
+     * Convenience method for getting the endpoint identifier from the details.
+     *
+     * @return the endpoint identifier.
+     */
+    public long getEndpointId() {
+        return details.getEndpointId();
     }
 
     /**

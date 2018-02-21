@@ -1,13 +1,13 @@
 package uk.ac.cam.seh208.middleware.core.network;
 
-import uk.ac.cam.seh208.middleware.core.Closeable;
+import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 
 
 /**
  * Simple interface for an asynchronous request socket with blocking semantics
  * for responses.
  */
-public interface RequestStream extends Closeable {
+public abstract class RequestStream extends CloseableSubject<RequestStream> {
     /**
      * Send a request message to the remote host, blocking until a response
      * is received. Should the stream be closed, or the remote host respond
@@ -17,5 +17,5 @@ public interface RequestStream extends Closeable {
      *
      * @return the response string, or null in the case of an error.
      */
-    String request(String request);
+    public abstract String request(String request);
 }
