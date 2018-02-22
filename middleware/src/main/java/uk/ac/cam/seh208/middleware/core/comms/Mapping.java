@@ -1,7 +1,10 @@
 package uk.ac.cam.seh208.middleware.core.comms;
 
+import android.util.LongSparseArray;
+
 import java.util.List;
 
+import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
@@ -40,10 +43,10 @@ public class Mapping extends CloseableSubject<Mapping> {
     private Persistence persistence;
 
     /**
-     * Integer tracking the count of currently open channels in the mapping. This is used
-     * to determine how many new channels should be established to restore the mapping.
+     * Map of channels constituent to the mapping. This is used to determine how many
+     * new channels should be established to restore the mapping.
      */
-    private int open;
+    private LongSparseArray<Channel> channels;
 
 
     /**
@@ -58,14 +61,13 @@ public class Mapping extends CloseableSubject<Mapping> {
         this.local = local;
         this.query = query;
         this.persistence = persistence;
+        this.channels = new LongSparseArray<>();
 
         // Add each channel as an open constituent of the mapping.
         if (channels == null) {
             return;
         }
-        for (Channel channel : channels) {
-            addChannel(channel);
-        }
+        StreamSupport.stream(channels).forEach(this::addChannel);
     }
 
     /**
@@ -80,11 +82,13 @@ public class Mapping extends CloseableSubject<Mapping> {
             return;
         }
 
+        // Put the channel in the open channels list.
+        channels.put(channel.getChannelId(), channel);
+
         // Attempt to subscribe to the channel. If the channel was closed
         // prior to this point, continue with no action.
         if (channel.subscribeIfOpen(this::onChannelClose)) {
-            // Subscription was successful; increase the open channel count.
-            open++;
+            channels.remove(channel.getChannelId());
         }
     }
 
@@ -93,7 +97,11 @@ public class Mapping extends CloseableSubject<Mapping> {
         // Drop the endpoint reference to speed up garbage collection.
         local = null;
 
-        // TODO: close all owned channels.
+        // Close all remaining channels.
+        int size = channels.size();
+        for (int i = 0; i < size; i++) {
+            channels.valueAt(0).close();
+        }
 
         super.close();
     }
@@ -107,7 +115,7 @@ public class Mapping extends CloseableSubject<Mapping> {
      * @param channel Reference to the channel which closed.
      */
     private synchronized void onChannelClose(Channel channel) {
-        open--;
+        channels.remove(channel.getChannelId());
         restore();
     }
 
@@ -121,7 +129,7 @@ public class Mapping extends CloseableSubject<Mapping> {
                 return;
 
             case RESEND_QUERY:
-                if (open == 0) {
+                if (channels.size() == 0) {
                     // TODO: implement.
                 }
                 return;
