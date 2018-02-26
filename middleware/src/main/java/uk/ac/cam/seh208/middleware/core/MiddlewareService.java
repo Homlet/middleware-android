@@ -18,7 +18,7 @@ import uk.ac.cam.seh208.middleware.binder.EndpointBinder;
 import uk.ac.cam.seh208.middleware.binder.MiddlewareBinder;
 import uk.ac.cam.seh208.middleware.common.BinderType;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
+import uk.ac.cam.seh208.middleware.core.comms.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;

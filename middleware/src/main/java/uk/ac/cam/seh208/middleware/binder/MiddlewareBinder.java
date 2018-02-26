@@ -77,22 +77,6 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     }
 
     /**
-     * List the details of all the currently active endpoint in the middleware.
-     *
-     * Endpoints are listed in no particular order.
-     *
-     * @return a list of EndpointDetails objects.
-     */
-    @Override
-    public List<EndpointDetails> getAllEndpointDetails() {
-        ArrayList<EndpointDetails> details = new ArrayList<>();
-        for (Endpoint endpoint : service.getEndpointSet()) {
-            details.add(endpoint.getDetails());
-        }
-        return details;
-    }
-
-    /**
      * Get the details for a specific endpoint, from its unique name.
      *
      * @param name Unique name of the endpoint.
@@ -108,6 +92,22 @@ public class MiddlewareBinder extends IMiddleware.Stub {
             throw new EndpointNotFoundException(name);
         }
         return endpoint.getDetails();
+    }
+
+    /**
+     * List the details of all the currently active endpoint in the middleware.
+     *
+     * Endpoints are listed in no particular order.
+     *
+     * @return a list of EndpointDetails objects.
+     */
+    @Override
+    public List<EndpointDetails> getAllEndpointDetails() {
+        ArrayList<EndpointDetails> details = new ArrayList<>();
+        for (Endpoint endpoint : service.getEndpointSet()) {
+            details.add(endpoint.getDetails());
+        }
+        return details;
     }
 
     /**

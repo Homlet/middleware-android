@@ -1,7 +1,5 @@
 package uk.ac.cam.seh208.middleware.core.comms;
 
-import android.util.Pair;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
@@ -9,10 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import java8.util.stream.Collectors;
-import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 

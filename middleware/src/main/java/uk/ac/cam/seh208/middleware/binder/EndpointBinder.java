@@ -2,19 +2,14 @@ package uk.ac.cam.seh208.middleware.binder;
 
 import android.os.RemoteException;
 
-import com.github.fge.jsonschema.core.exceptions.ProcessingException;
-
-import java.io.IOException;
-import java.util.List;
-
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
 import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
+import uk.ac.cam.seh208.middleware.common.exception.MappingNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
@@ -23,12 +18,12 @@ import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 /**
  * Implementation of the endpoint inter-process interface stub.
  *
- * This is defined in a thread-safe manner, as IPC procedure calls
- * are dispatched asynchronously from a thread pool maintained by
- * the Android runtime.
+ * IPC procedure calls are dispatched asynchronously from a thread pool
+ * maintained by the Android runtime. Therefore, the objects acted upon
+ * by this binder are correctly synchronised.
  *
- * Each endpoint within the middleware has an associated binder object
- * instantiated from this class. Therefore, the user may interact with
+ * Each active endpoint within the middleware may have an associated binder
+ * object instantiated from this class. Therefore, the user may interact with
  * the middleware using object-oriented programming techniques.
  *
  * The interface is described in IEndpoint.aidl
@@ -63,12 +58,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      */
     @Override
     public void send(String message) throws WrongPolarityException, SchemaMismatchException {
-        try {
-            endpoint.send(message);
-        } catch (IOException | ProcessingException e) {
-            // TODO: remove once new exception type has been implemented (@see Endpoint#send).
-            e.printStackTrace();
-        }
+        endpoint.send(message);
     }
 
     /**
@@ -116,132 +106,89 @@ public class EndpointBinder extends IEndpoint.Stub {
     }
 
     /**
-     * Get a list of all mapped peer endpoint details.
-     *
-     * @return a list of RemoteEndpointDetails objects.
-     */
-    @Override
-    public List<RemoteEndpointDetails> getPeers() {
-        // TODO: implement.
-        return null;
-    }
-
-    /**
-     * Perform an indirect mapping on the bound endpoint. This consists of two stages:
+     * Perform an RDC-indirect mapping on the bound endpoint. This consists of two stages:
      *
      *   1. use the registered RDC to discover the locations of peers exposing endpoints
      *      matching the given query;
-     *   2. establish mappings with one or more endpoints from one or more of these
-     *      peers, by sending queries to each in turn.
+     *   2. establish a mapping by opening channels to one or more endpoints from one
+     *      or more of these peers.
      *
      * The schema and polarity fields in the given query must be left empty; these are
      * determined by the schema and polarity of the bound endpoint.
      *
      * If the given query allows only a limited number of matches, a new query object
      * is constructed for each peer, allowing only the number of matches remaining
-     * after mappings were established with previously contacted peers. Peers are
+     * after channels were established with previously contacted peers. Peers are
      * contacted in the order returned by the RDC.
      *
      * In the case that any resources returned from the RDC time out or break protocol
      * whilst being contacted, these are collated and sent to the RDC at the end of the
      * operation to aid RDC bookkeeping.
      *
-     * The return value is a list of the endpoints that were successfully mapped to.
+     * The return value is the unique identifier of the newly created mapping.
      *
      * @param query An endpoint query object for resource discovery and filtering
      *              remote endpoints.
      *
-     * @return a list of RemoteEndpointDetails objects representing the endpoints that were
-     *         successfully mapped to during the operation.
+     * @return a unique long identifier of the newly created mapping.
      *
      * @throws BadQueryException if either of the schema or polarity fields are set in the query.
      * @throws BadHostException when the set RDC host is invalid.
      * @throws ProtocolException if the RDC breaks protocol.
      */
     @Override
-    public List<RemoteEndpointDetails> map(Query query, Persistence persistence)
+    public long map(Query query, Persistence persistence)
             throws BadQueryException, BadHostException, ProtocolException {
-        // TODO: implement.
-        return null;
+        return endpoint.map(query, persistence).getMappingId();
     }
 
     /**
-     * Perform a direct mapping on the bound endpoint. This is equivalent to the second stage
-     * of an indirect mapping: the query is sent to a given peer in order to establish
-     * mappings with remote endpoints.
+     * Close a mapping associated with this endpoint, referenced by its unique mapping
+     * identifier. The process of closing the mapping will close any remaining owned
+     * channels.
      *
-     * The schema and polarity fields in the given query must be left empty; these are
-     * determined by the schema and polarity of the bound endpoint.
+     * @param mappingId Unique long identifier of the mapping.
      *
-     * In the case that the given host times out or breaks protocol whilst being contacted,
-     * an exception will be thrown.
-     *
-     * The return value is a list of the endpoints that were successfully mapped to.
-     *
-     * @param host Hostname or address of the peer.
-     * @param query An endpoint query object for filtering remote endpoints.
-     *
-     * @return a list of RemoteEndpointDetails objects representing the endpoints that were
-     *         successfully mapped to during the operation.
-     *
-     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
-     * @throws BadHostException if the given host is invalid.
-     * @throws ProtocolException if the given host breaks protocol.
+     * @throws MappingNotFoundException if the mapping identifier is not recognised
+     *                                  for this endpoint.
      */
     @Override
-    public List<RemoteEndpointDetails> mapTo(String host, Query query, Persistence persistence)
-            throws BadQueryException, BadHostException, ProtocolException {
-        // TODO: implement.
-        return null;
+    public void unmap(long mappingId) throws MappingNotFoundException {
+        endpoint.unmap(mappingId);
     }
 
     /**
-     * Gracefully tear down any remote mappings to the bound endpoint whose remote endpoints
-     * match the given query. Note that the query does not take into account the location of
-     * the peer on which the remote endpoint resides; to discriminate by host, use unmapFrom.
+     * Close all active mappings on this endpoint. The process of closing each mapping
+     * will close any remaining owned channels.
      *
-     * The schema and polarity fields in the given query must be left empty; these are
-     * determined by the schema and polarity of the bound endpoint.
-     *
-     * The return value is a list of the endpoints that were unmapped from.
-     *
-     * @param query An endpoint query object for filtering remote endpoints.
-     *
-     * @return a list of RemoteEndpointDetails object representing the endpoints that were
-     *         unmapped from during the operation.
-     *
-     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
+     * Note that channels initiated by remote mappings will remain open after this call.
+     * To close all remaining channels following this call, use EndpointBinder#closeAll
      */
     @Override
-    public List<RemoteEndpointDetails> unmap(Query query) throws BadQueryException {
-        // TODO: implement.
-        return null;
+    public void unmapAll() {
+        endpoint.unmapAll();
     }
 
-
     /**
-     * Gracefully tear down any remote mappings to the bound endpoint whose remote endpoints
-     * match the given query, and whose peer resides on the given host.
+     * Close all channels from this endpoint which match a given query.
      *
-     * The schema and polarity fields in the given query must be left empty; these are
-     * determined by the schema and polarity of the bound endpoint.
+     * @param query Query used to filter the channels from this endpoint.
      *
-     * The return value is a list of the endpoints that were unmapped from.
-     *
-     * @param host Hostname or address of the peer.
-     * @param query An endpoint query object for filtering remote endpoints.
-     *
-     * @return a list of RemoteEndpointDetails object representing the endpoints that were
-     *         unmapped from during the operation.
-     *
-     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
-     * @throws BadHostException if the given host is invalid.
+     * @return the number of channels that were closed.
      */
     @Override
-    public List<RemoteEndpointDetails> unmapFrom(String host, Query query)
-            throws BadQueryException, BadHostException {
-        // TODO: implement.
-        return null;
+    public int close(Query query) {
+        return endpoint.closeChannels(query);
+    }
+
+    /**
+     * Close all channels from this endpoint.
+     *
+     * @return the number of channels that were closed.
+     */
+    @Override
+    public int closeAll() {
+        return endpoint.closeAllChannels();
     }
 
     /**

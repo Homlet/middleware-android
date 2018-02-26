@@ -1,7 +1,5 @@
 package uk.ac.cam.seh208.middleware.core;
 
-import android.util.Pair;
-
 import junit.framework.Assert;
 
 import org.junit.Test;
@@ -14,7 +12,7 @@ import java.util.Random;
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
+import uk.ac.cam.seh208.middleware.core.comms.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.core.comms.ControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.OpenChannelsControlMessage;
 import uk.ac.cam.seh208.middleware.core.exception.InvalidControlMessageException;

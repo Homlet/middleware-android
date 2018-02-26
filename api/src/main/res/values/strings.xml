@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="middleware_service_start_intent">uk.ac.cam.seh208.middleware.core.MiddlewareService</string>
+    <string name="middleware_service_bind_intent">uk.ac.cam.seh208.middleware.core.MiddlewareService.BIND</string>
+    <string name="middleware_service_package">uk.ac.cam.seh208.middleware.core</string>
+</resources>

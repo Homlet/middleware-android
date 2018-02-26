@@ -2,7 +2,6 @@ package uk.ac.cam.seh208.middleware.core.comms;
 
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.util.ArraySet;
 import android.util.Log;
 import android.util.LongSparseArray;
 
@@ -20,17 +19,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import java8.util.J8Arrays;
+import java8.util.function.Predicate;
 import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.common.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
+import uk.ac.cam.seh208.middleware.common.exception.MappingNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
@@ -91,9 +92,9 @@ public class Endpoint {
     private LongSparseArray<Channel> channels;
 
     /**
-     * Collection of mappings established from this endpoint.
+     * Map of mappings established from this endpoint, indexed by their unique identifier.
      */
-    private Set<Mapping> mappings;
+    private LongSparseArray<Mapping> mappings;
 
     /**
      * Map of multiplexers carrying channels from this endpoint, indexed by the UUID
@@ -123,7 +124,7 @@ public class Endpoint {
 
         listeners = new HashSet<>();
         channels = new LongSparseArray<>();
-        mappings = new HashSet<>();
+        mappings = new LongSparseArray<>();
         multiplexers = new LongSparseArray<>();
     }
 
@@ -143,11 +144,8 @@ public class Endpoint {
      * Close all active mappings, and all remaining channels.
      */
     public synchronized void destroy() {
-        StreamSupport.stream(mappings).forEach(Mapping::close);
-        int size = channels.size();
-        for (int i = 0; i < size; i++) {
-            channels.valueAt(0).close();
-        }
+        unmapAll();
+        closeAllChannels();
     }
 
     /**
@@ -160,10 +158,13 @@ public class Endpoint {
      * @throws WrongPolarityException when the bound endpoint polarity does not permit sending.
      * @throws SchemaMismatchException when the message string does not match the endpoint schema.
      */
-    public void send(String message) throws WrongPolarityException, SchemaMismatchException,
-                                            IOException, ProcessingException {
+    public void send(String message) throws WrongPolarityException, SchemaMismatchException {
         if (!getPolarity().supportsSending) {
             throw new WrongPolarityException(getPolarity());
+        }
+
+        if (!validate(message)) {
+            throw new SchemaMismatchException();
         }
 
         synchronized (this) {
@@ -285,6 +286,78 @@ public class Endpoint {
     }
 
     /**
+     * Close a mapping associated with this endpoint, referenced by its unique mapping
+     * identifier. The process of closing the mapping will close any remaining owned
+     * channels.
+     *
+     * @param mappingId Unique long identifier of the mapping.
+     *
+     * @throws MappingNotFoundException if the mapping identifier is not recognised
+     *                                  for this endpoint.
+     */
+    public synchronized void unmap(long mappingId) throws MappingNotFoundException {
+        if (mappings.indexOfKey(mappingId) < 0) {
+            throw new MappingNotFoundException(mappingId);
+        }
+
+        // Close the mapping, automatically removing it from the mappings map.
+        mappings.get(mappingId).close();
+    }
+
+    /**
+     * Close all active mappings on this endpoint.
+     */
+    public synchronized void unmapAll() {
+        int size = mappings.size();
+        for (int i = 0; i < size; i++) {
+            mappings.valueAt(0).close();
+        }
+    }
+
+    /**
+     * Close all channels from this endpoint which match a given query.
+     *
+     * @param query Query used to filter the channels from this endpoint.
+     *
+     * @return the number of channels that were closed.
+     */
+    public synchronized int closeChannels(Query query) {
+        // Create a list of channels to close.
+        List<Channel> toClose = new ArrayList<>();
+        Predicate<EndpointDetails> filter = query.getFilter();
+
+        // Populate the list with channels that match the query.
+        for (int i = 0; i < channels.size(); i++) {
+            Channel channel = channels.valueAt(i);
+
+            if (filter.test(channel.getRemote())) {
+                toClose.add(channel);
+            }
+        }
+
+        // Close all channels that matched the query.
+        StreamSupport.stream(toClose).forEach(Channel::close);
+
+        // Return the count of closed channels.
+        return toClose.size();
+    }
+
+    /**
+     * Close all channels from this endpoint.
+     *
+     * @return the number of channels that were closed.
+     */
+    public synchronized int closeAllChannels() {
+        int size = channels.size();
+
+        for (int i = 0; i < size; i++) {
+            channels.valueAt(0).close();
+        }
+
+        return size;
+    }
+
+    /**
      * Internal function for establishing a mapping with a number of remote hosts. A given
      * query is sent to each host in turn in order to establish channels, up to a maximum
      * number given in the query.
@@ -346,12 +419,15 @@ public class Endpoint {
                 }
             }
 
-            // Build the mapping object, keeping internal record of it before returning.
+            // Build the mapping object.
             Mapping mapping = new Mapping(this, query, persistence, mapChannels);
-            mappings.add(mapping);
 
             // No need for subscribeIfOpen here because the mapping must still be open.
-            mapping.subscribe(mappings::remove);
+            mapping.subscribe(m -> mappings.remove(m.getMappingId()));
+
+            // Put the mapping object in the mappings list before returning it.
+            mappings.put(mapping.getMappingId(), mapping);
+
             return mapping;
         }
     }

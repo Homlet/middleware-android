@@ -3,6 +3,7 @@ package uk.ac.cam.seh208.middleware.core.comms;
 import android.util.LongSparseArray;
 
 import java.util.List;
+import java.util.Random;
 
 import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.Persistence;
@@ -22,6 +23,11 @@ import uk.ac.cam.seh208.middleware.core.CloseableSubject;
  * being killed by the scheduler.
  */
 public class Mapping extends CloseableSubject<Mapping> {
+
+    /**
+     * Universally unique identifier for the channel.
+     */
+    private long mappingId;
 
     /**
      * Back-reference to the owning local endpoint object.
@@ -58,6 +64,7 @@ public class Mapping extends CloseableSubject<Mapping> {
      * @param channels List of channels which should be included as part of the mapping.
      */
     public Mapping(Endpoint local, Query query, Persistence persistence, List<Channel> channels) {
+        this.mappingId = new Random(System.nanoTime()).nextLong();
         this.local = local;
         this.query = query;
         this.persistence = persistence;
@@ -104,6 +111,10 @@ public class Mapping extends CloseableSubject<Mapping> {
         }
 
         super.close();
+    }
+
+    public long getMappingId() {
+        return mappingId;
     }
 
     /**
