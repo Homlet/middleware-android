@@ -20,7 +20,7 @@ public class ZMQRequestContext implements RequestContext {
     /**
      * The default port on which the incoming control message socket resides.
      */
-    private static final int PORT_DEFAULT = 4801;
+    private static final int PORT_DEFAULT = 4852;
 
     /**
      * The number of I/O threads used by ZMQ to handle middleware communication.
@@ -70,12 +70,12 @@ public class ZMQRequestContext implements RequestContext {
         // Compute the local address.
         // TODO: determine all local interface addresses, and use a sub-location.
         ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
-        try {
-            addressBuilder.setHost(ZMQAddress.getLocalHost());
-        } catch (UnknownHostException e) {
-            // Default to all interfaces.
-            addressBuilder.setHost("*");
-        }
+//        try {
+        addressBuilder.setHost("*");//ZMQAddress.getLocalHost());
+//        } catch (UnknownHostException e) {
+//            // Default to all interfaces.
+//            addressBuilder.setHost("*");
+//        }
         localAddress = addressBuilder.setPort(port).build();
 
         // Set-up the request/response context.

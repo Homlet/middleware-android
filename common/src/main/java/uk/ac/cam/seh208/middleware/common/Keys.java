@@ -37,9 +37,4 @@ public class Keys {
         public static final String POLARITY = "POLARITY";
         public static final String MATCHES = "MATCHES";
     }
-
-    public static class MiddlewareService {
-        public static final String BINDER_TYPE = "BINDER_TYPE";
-        public static final String ENDPOINT_NAME = "ENDPOINT_NAME";
-    }
 }

@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import uk.ac.cam.seh208.middleware.BuildConfig;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
+import uk.ac.cam.seh208.middleware.core.BuildConfig;
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;

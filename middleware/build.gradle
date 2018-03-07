@@ -5,7 +5,7 @@ android {
     compileSdkVersion 26
 
     defaultConfig {
-        applicationId "uk.ac.cam.seh208.middleware"
+        applicationId "uk.ac.cam.seh208.middleware.core"
         minSdkVersion 21
         targetSdkVersion 26
         versionCode 1
@@ -16,7 +16,7 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -25,6 +25,13 @@ android {
         targetCompatibility 1.8
         sourceCompatibility 1.8
     }
+
+    packagingOptions {
+        exclude 'META-INF/ASL-2.0.txt'
+        exclude 'META-INF/LGPL-3.0.txt'
+        pickFirst 'draftv3/schema'
+        pickFirst 'draftv4/schema'
+    }
 }
 
 unMock {
@@ -32,14 +39,15 @@ unMock {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'net.sourceforge.streamsupport:streamsupport:1.6.0'
     implementation 'com.github.java-json-tools:json-schema-validator:2.2.8'
     implementation 'com.android.support:appcompat-v7:26.1.0'
-    implementation 'org.zeromq:jeromq:0.4.2'
+    implementation 'org.zeromq:jeromq:0.4.3'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.1'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
+
     unmock 'org.robolectric:android-all:4.3_r2-robolectric-0'
+
     implementation project(':common')
 }

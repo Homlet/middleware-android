@@ -113,27 +113,27 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     /**
      * Run a general middleware command on a remote instance of the middleware.
      *
-     * @param host The hostname of the device the middleware is accessible on.
+     * @param remote The address of the device the middleware is accessible on.
      * @param command Object describing the command.
      *
      * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public void force(String host, MiddlewareCommand command) throws BadHostException {
+    public void force(String remote, MiddlewareCommand command) throws BadHostException {
         // TODO: implement.
     }
 
     /**
      * Run a command on a remote endpoint (an endpoint of a remote middleware instance).
      *
-     * @param host The hostname of the device the middleware is accessible on.
+     * @param remote The address of the device the middleware is accessible on.
      * @param name The name of the endpoint to run the command on.
      * @param command Object describing the command.
      *
      * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public void forceEndpoint(String host, String name,
+    public void forceEndpoint(String remote, String name,
                               EndpointCommand command) throws BadHostException {
         // TODO: implement.
     }

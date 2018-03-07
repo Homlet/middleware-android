@@ -1,22 +1,19 @@
 package uk.ac.cam.seh208.middleware.core;
 
-import static uk.ac.cam.seh208.middleware.common.Keys.MiddlewareService.*;
-
 import android.app.Service;
 import android.content.Intent;
+import android.os.Debug;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
-import android.util.ArrayMap;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import java8.util.stream.StreamSupport;
-import uk.ac.cam.seh208.middleware.binder.EndpointBinder;
-import uk.ac.cam.seh208.middleware.binder.MiddlewareBinder;
-import uk.ac.cam.seh208.middleware.common.BinderType;
+import uk.ac.cam.seh208.middleware.binder.CombinedBinder;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.core.comms.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
@@ -40,15 +37,14 @@ import uk.ac.cam.seh208.middleware.core.network.Switch;
 public class MiddlewareService extends Service {
 
     /**
-     * Binder object for handling general middleware IPC calls.
+     * Boolean tracking whether the service has previously been started.
      */
-    private MiddlewareBinder middlewareBinder;
+    private boolean started;
 
     /**
-     * Collection of binder objects for handling endpoint-specific
-     * IPC calls on a particular endpoint. Indexed by endpoint name.
+     * Combined binder object for handling IPC calls.
      */
-    private ArrayMap<String, EndpointBinder> endpointBinders;
+    private CombinedBinder binder;
 
     /**
      * Set of endpoints currently active in the middleware.
@@ -92,53 +88,42 @@ public class MiddlewareService extends Service {
      *         process if it is killed to free resources.
      */
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public synchronized int onStartCommand(Intent intent, int flags, int startId) {
+        if (started) {
+            Log.i(getTag(), "Start command ignored (already started).");
+            return START_STICKY;
+        }
+
+        if (BuildConfig.DEBUG) {
+            Debug.waitForDebugger();
+        }
+
+        Log.i(getTag(), "Middleware starting...");
+        Toast.makeText(this, getText(R.string.toast_starting), Toast.LENGTH_SHORT).show();
+
         // Initialise object parameters.
-        endpointBinders = new ArrayMap<>();
+        binder = new CombinedBinder(this);
         endpointSet = new EndpointSet();
         multiplexerPool = new MultiplexerPool(this);
 
         ControlMessageHandler handler = new ControlMessageHandler(this);
         commsSwitch = new Switch(Arrays.asList(Switch.SCHEME_ZMQ), handler);
 
+        Log.i(getTag(), "Middleware started successfully.");
+        started = true;
+
         // Attempt to restart this service if the scheduler kills it for resources.
         return START_STICKY;
     }
 
     /**
-     * Called by Android when a remote process requests to bind to this service. The
-     * intent is used to determine whether the process wants a general middleware API
-     * binder, or a binder exposing the API of a particular endpoint.
+     * Called by Android when a remote process requests to bind to this service.
      */
     @Nullable
     @Override
-    public IBinder onBind(Intent intent) {
-        // Determine which type of binder is being requested.
-        BinderType binderType = (BinderType) intent.getSerializableExtra(BINDER_TYPE);
-
-        switch (binderType) {
-            case MIDDLEWARE:
-                // Return a middleware binder for servicing general commands.
-                if (middlewareBinder == null) {
-                    // Construct a new binder if one does not yet exist.
-                    middlewareBinder = new MiddlewareBinder(this);
-                }
-                return middlewareBinder;
-
-            case ENDPOINT:
-                // Return an endpoint binder for servicing a particular endpoint.
-                String name = intent.getStringExtra(ENDPOINT_NAME);
-                EndpointBinder binder = endpointBinders.get(name);
-                if (binder == null) {
-                    // Construct a new binder if one does not already exist for this endpoint.
-                    binder = new EndpointBinder(endpointSet.getEndpointByName(name));
-                    endpointBinders.put(name, binder);
-                }
-                return binder;
-
-            default:
-                return null;
-        }
+    public synchronized IBinder onBind(Intent intent) {
+        Log.i(getTag(), "Client bound to service.");
+        return binder;
     }
 
     /**
@@ -154,8 +139,11 @@ public class MiddlewareService extends Service {
         // destruction and creation/another destruction.
         //noinspection SynchronizeOnNonFinalField
         synchronized (endpointSet) {
+            Log.i(getTag(), "Creating endpoint " + details);
+
             if (endpointSet.getEndpointByName(details.getName()) != null) {
                 // An endpoint of this name already exists!
+                Log.w(getTag(), "Endpoint with name \"" + details.getName() + "\" already exists.");
                 throw new EndpointCollisionException(details.getName());
             }
 
@@ -164,6 +152,8 @@ public class MiddlewareService extends Service {
 
             // Add the endpoint to the set.
             endpointSet.add(endpoint);
+
+            Log.i(getTag(), "Endpoint " + details + " created.");
         }
 
         // TODO: schedule update message to the RDC.
@@ -186,11 +176,12 @@ public class MiddlewareService extends Service {
                 throw new EndpointNotFoundException(name);
             }
 
-            // TODO: destroy endpoint binder (if one exists).
-
-            // Perform destruction routines for the endpoint.
+            // Perform destruction routines for the endpoint and binder.
+            binder.invalidateEndpoint(name);
             endpoint.destroy();
             endpointSet.remove(endpoint);
+
+            Log.i(getTag(), "Endpoint with name \"" + name + "\" destroyed.");
         }
 
         // TODO: schedule update message to the RDC.
@@ -251,6 +242,8 @@ public class MiddlewareService extends Service {
      *         the RDC could not be contacted.
      */
     public List<Location> discover(Query query) {
+        Log.i(getTag(), "Querying RDC for peers matching " + query);
+
         // TODO: implement.
         return null;
     }
@@ -265,6 +258,9 @@ public class MiddlewareService extends Service {
      * @return a list of endpoint-details for the opened channels.
      */
     public List<RemoteEndpointDetails> openChannels(Query query, RemoteEndpointDetails remote) {
+        Log.i(getTag(), "Opening channels to " + remote +
+                " from local endpoints matching " + query);
+
         // Keep track of endpoints returned.
         List<RemoteEndpointDetails> endpoints = new ArrayList<>();
 
@@ -278,7 +274,7 @@ public class MiddlewareService extends Service {
                             e.openChannel(remote);
                             endpoints.add(e.getRemoteDetails());
                         } catch (BadHostException | UnexpectedClosureException ex) {
-                            Log.e(getTag(), "Error opening channel on endpoint (" +
+                            Log.w(getTag(), "Error opening channel on endpoint (" +
                                     e.getEndpointId() + ")");
                         }
                     });
@@ -302,6 +298,7 @@ public class MiddlewareService extends Service {
     }
 
     public synchronized void setForceable(boolean forceable) {
+        Log.i(getTag(), "Middleware forceable flag set " + forceable);
         this.forceable = forceable;
     }
 
@@ -310,6 +307,7 @@ public class MiddlewareService extends Service {
     }
 
     public synchronized void setRDCAddress(Address address) {
+        Log.i(getTag(), "RDC address set to " + address);
         this.rdcAddress = address;
     }
 
@@ -318,6 +316,7 @@ public class MiddlewareService extends Service {
     }
 
     public synchronized void setDiscoverable(boolean discoverable) {
+        Log.i(getTag(), "Middleware discoverable flag set " + discoverable);
         this.discoverable = discoverable;
     }
 

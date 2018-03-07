@@ -35,11 +35,20 @@ public class EndpointBinder extends IEndpoint.Stub {
     /**
      * Reference to the endpoint object exposed by this binder.
      */
-    private final Endpoint endpoint;
+    private Endpoint endpoint;
 
 
     public EndpointBinder(Endpoint endpoint) {
         this.endpoint = endpoint;
+    }
+
+    /**
+     * Drop the endpoint reference to allow garbage collection after the endpoint is destroyed.
+     *
+     * NOTE: after this call no further calls should be made.
+     */
+    public void destroy() {
+        endpoint = null;
     }
 
     /**

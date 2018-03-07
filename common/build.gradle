@@ -15,7 +15,7 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -24,6 +24,13 @@ android {
         targetCompatibility 1.8
         sourceCompatibility 1.8
     }
+
+    packagingOptions {
+        exclude 'META-INF/ASL-2.0.txt'
+        exclude 'META-INF/LGPL-3.0.txt'
+        pickFirst 'draftv3/schema'
+        pickFirst 'draftv4/schema'
+    }
 }
 
 unMock {
@@ -31,8 +38,6 @@ unMock {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
     implementation 'net.sourceforge.streamsupport:streamsupport:1.6.0'
     implementation 'com.github.java-json-tools:json-schema-validator:2.2.8'
     implementation 'com.android.support:appcompat-v7:26.1.0'

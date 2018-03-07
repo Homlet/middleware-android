@@ -1,9 +1,12 @@
 package uk.ac.cam.seh208.middleware.core.network.impl;
 
+import android.os.AsyncTask;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,15 +20,29 @@ import uk.ac.cam.seh208.middleware.core.network.AddressBuilder;
  */
 public class ZMQAddress extends Address {
 
+    private static class GetLocalHostTask extends AsyncTask<Void, Void, String> {
+        @Override
+        protected String doInBackground(Void... voids) {
+//            try {
+                return "127.0.0.1";
+//                return InetAddress.getLocalHost().getHostAddress();
+//            } catch (UnknownHostException e) {
+//                return null;
+//            }
+        }
+    }
+
     /**
      * Return the public IP of the local host.
      *
      * @return a String formatted IP address.
-     *
-     * @throws UnknownHostException if the host has no bound IP address.
      */
     public static String getLocalHost() throws UnknownHostException {
-        return InetAddress.getLocalHost().getHostAddress();
+        try {
+            return new GetLocalHostTask().get();
+        } catch (InterruptedException | ExecutionException e) {
+            return null;
+        }
     }
 
 

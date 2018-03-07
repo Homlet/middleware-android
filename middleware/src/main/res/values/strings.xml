@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Middleware</string>
     <string name="app_desc">Provides networking services to pervasive applications</string>
+    <string name="toast_starting">Middleware starting…</string>
 </resources>

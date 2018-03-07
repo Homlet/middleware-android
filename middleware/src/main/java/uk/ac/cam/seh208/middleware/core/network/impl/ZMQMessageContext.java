@@ -25,7 +25,7 @@ public class ZMQMessageContext implements MessageContext {
     /**
      * The default port on which the incoming message socket resides.
      */
-    private static final int PORT_DEFAULT = 4800;
+    private static final int PORT_DEFAULT = 4853;
 
     /**
      * The number of I/O threads used by ZMQ to handle middleware communication.
@@ -71,12 +71,12 @@ public class ZMQMessageContext implements MessageContext {
         // Compute the local address.
         // TODO: determine all local interface addresses, and use a location.
         ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
-        try {
-            addressBuilder.setHost(ZMQAddress.getLocalHost());
-        } catch (UnknownHostException e) {
-            // Default to all interfaces.
-            addressBuilder.setHost("*");
-        }
+//        try {
+            addressBuilder.setHost("*");//ZMQAddress.getLocalHost());
+//        } catch (UnknownHostException e) {
+//            // Default to all interfaces.
+//            addressBuilder.setHost("*");
+//        }
         ZMQAddress harmonyAddress = addressBuilder.setPort(port).build();
 
         // Set-up the Harmony context.
