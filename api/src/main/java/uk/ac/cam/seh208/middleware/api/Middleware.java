@@ -2,10 +2,7 @@ package uk.ac.cam.seh208.middleware.api;
 
 import android.content.Context;
 import android.content.Intent;
-import android.os.DeadObjectException;
-import android.os.RemoteException;
 import android.support.annotation.NonNull;
-import android.util.Log;
 
 import java.util.List;
 
@@ -18,7 +15,8 @@ import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
-import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
+
+import static uk.ac.cam.seh208.middleware.api.RemoteUtils.callSafe;
 
 
 /**
@@ -57,8 +55,7 @@ public class Middleware {
     public Endpoint createSource(@NonNull String name, String desc,
                                  String schema, List<String> tags,
                                  boolean exposed, boolean forceable)
-            throws MiddlewareDisconnectedException, EndpointCollisionException,
-                   BadSchemaException {
+            throws MiddlewareDisconnectedException {
         createEndpoint(
                 new EndpointDetails(name, desc, Polarity.SOURCE, schema, tags),
                 exposed,
@@ -69,8 +66,7 @@ public class Middleware {
     public Endpoint createSink(@NonNull String name, String desc,
                                String schema, List<String> tags,
                                boolean exposed, boolean forceable)
-            throws MiddlewareDisconnectedException, EndpointCollisionException,
-                   BadSchemaException {
+            throws MiddlewareDisconnectedException {
         createEndpoint(
                 new EndpointDetails(name, desc, Polarity.SINK, schema, tags),
                 exposed,
@@ -79,126 +75,42 @@ public class Middleware {
     }
 
     private void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
-            throws MiddlewareDisconnectedException, EndpointCollisionException,
-                   BadSchemaException {
-        try {
-            connection.waitForBinder().mw_createEndpoint(details, exposed, forceable);
-        } catch (EndpointCollisionException | BadSchemaException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in createEndpoint.");
-        }
-    }
-
-    public void destroyEndpoint(String name)
-            throws MiddlewareDisconnectedException, EndpointNotFoundException {
-        try {
-            connection.waitForBinder().mw_destroyEndpoint(name);
-        } catch (EndpointNotFoundException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in destroyEndpoint.");
-        }
-    }
-
-    public EndpointDetails getEndpointDetails(String name)
-            throws MiddlewareDisconnectedException, EndpointNotFoundException {
-        try {
-            return connection.waitForBinder().mw_getEndpointDetails(name);
-        } catch (EndpointNotFoundException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in getEndpointDetails.");
-            return null;
-        }
-    }
-
-    public List<EndpointDetails> getAllEndpointDetails()
             throws MiddlewareDisconnectedException {
-        try {
-            return connection.waitForBinder().mw_getAllEndpointDetails();
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in getAllEndpointDetails.");
-            return null;
-        }
+        callSafe(() -> connection.waitForBinder().mw_createEndpoint(details, exposed, forceable));
+    }
+
+    public void destroyEndpoint(String name) throws MiddlewareDisconnectedException {
+        callSafe(() -> connection.waitForBinder().mw_destroyEndpoint(name));
+    }
+
+    public EndpointDetails getEndpointDetails(String name) throws MiddlewareDisconnectedException {
+        return callSafe(() -> connection.waitForBinder().mw_getEndpointDetails(name));
+    }
+
+    public List<EndpointDetails> getAllEndpointDetails() throws MiddlewareDisconnectedException {
+        return callSafe(() -> connection.waitForBinder().mw_getAllEndpointDetails());
     }
 
     private void force(String remote, MiddlewareCommand command)
-            throws MiddlewareDisconnectedException, BadHostException {
-        try {
-            connection.waitForBinder().mw_force(remote, command);
-        } catch (BadHostException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in force.");
-        }
+            throws MiddlewareDisconnectedException {
+        callSafe(() -> connection.waitForBinder().mw_force(remote, command));
     }
 
     private void forceEndpoint(String remote, String name, EndpointCommand command)
             throws MiddlewareDisconnectedException, BadHostException {
-        try {
-            connection.waitForBinder().mw_forceEndpoint(remote, name, command);
-        } catch (BadHostException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in forceEndpoint.");
-        }
+        callSafe(() -> connection.waitForBinder().mw_forceEndpoint(remote, name, command));
     }
 
-    public void setForceable(boolean forceable)
-            throws MiddlewareDisconnectedException {
-        try {
-            connection.waitForBinder().mw_setForceable(forceable);
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in setForceable.");
-        }
+    public void setForceable(boolean forceable) throws MiddlewareDisconnectedException {
+        callSafe(() -> connection.waitForBinder().mw_setForceable(forceable));
     }
 
-    public void setRDCAddress(String address)
-            throws MiddlewareDisconnectedException, BadHostException {
-        try {
-            connection.waitForBinder().mw_setRDCAddress(address);
-        } catch (BadHostException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in setRDCAddress.");
-        }
+    public void setRDCAddress(String address) throws MiddlewareDisconnectedException {
+        callSafe(() -> connection.waitForBinder().mw_setRDCAddress(address));
     }
 
-    public void setDiscoverable(boolean discoverable)
-            throws MiddlewareDisconnectedException {
-        try {
-            connection.waitForBinder().mw_setDiscoverable(discoverable);
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in setDiscoverable.");
-        }
+    public void setDiscoverable(boolean discoverable) throws MiddlewareDisconnectedException {
+        callSafe(() -> connection.waitForBinder().mw_setDiscoverable(discoverable));
     }
 
     private static String getTag() {

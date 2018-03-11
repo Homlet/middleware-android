@@ -1,22 +1,12 @@
 package uk.ac.cam.seh208.middleware.api;
 
-import android.os.DeadObjectException;
-import android.os.RemoteException;
-import android.util.Log;
-
 import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
-import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
-import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
-import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
-import uk.ac.cam.seh208.middleware.common.exception.MappingNotFoundException;
-import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
-import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
-import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
+
+import static uk.ac.cam.seh208.middleware.api.RemoteUtils.callSafe;
 
 
 /**
@@ -47,155 +37,60 @@ public class Endpoint {
         this.name = name;
     }
 
-    public EndpointDetails getDetails()
-            throws MiddlewareDisconnectedException, EndpointNotFoundException {
-        try {
-            return connection.waitForBinder().mw_getEndpointDetails(name);
-        } catch (EndpointNotFoundException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in getDetails.");
-            return null;
-        }
+    public EndpointDetails getDetails() throws MiddlewareDisconnectedException {
+        return callSafe(() -> connection.waitForBinder().mw_getEndpointDetails(name));
     }
 
-    public void send(String message)
-            throws MiddlewareDisconnectedException, WrongPolarityException,
-                   SchemaMismatchException {
-        try {
-            connection.waitForBinder().ep_send(name, message);
-        } catch (WrongPolarityException | SchemaMismatchException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in send.");
-        }
+    public void send(String message) throws MiddlewareDisconnectedException {
+        callSafe(() -> connection.waitForBinder().ep_send(name, message));
     }
 
     public void registerListener(IMessageListener listener)
-            throws MiddlewareDisconnectedException, RemoteException {
-        try {
-            connection.waitForBinder().ep_registerListener(name, listener);
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        }
+            throws MiddlewareDisconnectedException {
+        callSafe(() -> connection.waitForBinder().ep_registerListener(name, listener));
     }
 
     public void unregisterListener(IMessageListener listener)
-            throws MiddlewareDisconnectedException, ListenerNotFoundException {
-        try {
-            connection.waitForBinder().ep_unregisterListener(name, listener);
-        } catch (ListenerNotFoundException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in unregisterListener.");
-        }
+            throws MiddlewareDisconnectedException {
+        callSafe(() -> connection.waitForBinder().ep_unregisterListener(name, listener));
     }
 
     public void clearListeners() throws MiddlewareDisconnectedException {
-        try {
-            connection.waitForBinder().ep_clearListeners(name);
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in clearListeners.");
-        }
+        callSafe(() -> connection.waitForBinder().ep_clearListeners(name));
     }
 
-    public long map(Query query, Persistence persistence)
-            throws MiddlewareDisconnectedException, BadQueryException,
-                   BadHostException, ProtocolException {
-        try {
-            return connection.waitForBinder().ep_map(name, query, persistence);
-        } catch (BadQueryException | BadHostException | ProtocolException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in map.");
-            return -1;
-        }
+    public long map(Query query, Persistence persistence) throws MiddlewareDisconnectedException {
+        // NOTE: Unboxing of null cannot occur as null is returned only in an unreachable case.
+        //noinspection ConstantConditions
+        return callSafe(() -> connection.waitForBinder().ep_map(name, query, persistence));
     }
 
-    public void unmap(long mappingId)
-            throws MiddlewareDisconnectedException, MappingNotFoundException {
-        try {
-            connection.waitForBinder().ep_unmap(name, mappingId);
-        } catch (MappingNotFoundException e) {
-            throw e;
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in unmap.");
-        }
+    public void unmap(long mappingId) throws MiddlewareDisconnectedException {
+        callSafe(() -> connection.waitForBinder().ep_unmap(name, mappingId));
     }
 
     public void unmapAll() throws MiddlewareDisconnectedException {
-        try {
-            connection.waitForBinder().ep_unmapAll(name);
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in unmapAll.");
-        }
+        callSafe(() -> connection.waitForBinder().ep_unmapAll(name));
     }
 
     public int close(Query query) throws MiddlewareDisconnectedException {
-        try {
-            return connection.waitForBinder().ep_close(name, query);
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in close.");
-            return -1;
-        }
+        // NOTE: Unboxing of null cannot occur as null is returned only in an unreachable case.
+        //noinspection ConstantConditions
+        return callSafe(() -> connection.waitForBinder().ep_close(name, query));
     }
 
     public int closeAll() throws MiddlewareDisconnectedException {
-        try {
-            return connection.waitForBinder().ep_closeAll(name);
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in closeAll.");
-            return -1;
-        }
+        // NOTE: Unboxing of null cannot occur as null is returned only in an unreachable case.
+        //noinspection ConstantConditions
+        return callSafe(() -> connection.waitForBinder().ep_closeAll(name));
     }
 
     public void setExposed(boolean exposed) throws MiddlewareDisconnectedException {
-        try {
-            connection.waitForBinder().ep_setExposed(name, exposed);
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in setExposed.");
-        }
+        callSafe(() -> connection.waitForBinder().ep_setExposed(name, exposed));
     }
 
     public void setForceable(boolean forceable) throws MiddlewareDisconnectedException {
-        try {
-            connection.waitForBinder().ep_setForceable(name, forceable);
-        } catch (DeadObjectException e) {
-            throw new MiddlewareDisconnectedException();
-        } catch (RemoteException ignored) {
-            // Unreachable.
-            Log.e(getTag(), "Unexpected exception thrown in setForceable.");
-        }
+        callSafe(() -> connection.waitForBinder().ep_setForceable(name, forceable));
     }
 
     private static String getTag() {
