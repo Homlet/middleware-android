@@ -11,6 +11,7 @@
             <option value="$PROJECT_DIR$/api" />
             <option value="$PROJECT_DIR$/common" />
             <option value="$PROJECT_DIR$/demo" />
+            <option value="$PROJECT_DIR$/json-schema-validator" />
             <option value="$PROJECT_DIR$/middleware" />
           </set>
         </option>

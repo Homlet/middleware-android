@@ -1,0 +1,60 @@
+import proguard.gradle.ProGuardTask
+
+apply plugin: "base"
+apply plugin: "com.android.library"
+
+android {
+    compileSdkVersion 26
+
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 26
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            consumerProguardFiles "library-rules.pro"
+        }
+        debug {
+            consumerProguardFiles "library-rules.pro", "debug-rules.pro"
+        }
+    }
+}
+
+configurations {
+    shrinkApi
+    shrinkImplementation
+}
+
+dependencies {
+    api fileTree(dir: "build/shrinked", include: ["api.jar"])
+    implementation fileTree(dir: "build/shrinked", include: ["implementation.jar"])
+    implementation "com.google.code.findbugs:jsr305:3.0.1"
+
+    shrinkApi "com.fasterxml.jackson.core:jackson-databind:2.2.3"
+    shrinkImplementation "com.google.guava:guava:22.0-android"
+    shrinkImplementation "org.mozilla:rhino:1.7.7.1"
+    shrinkImplementation "joda-time:joda-time:2.9.7"
+    shrinkImplementation "com.googlecode.libphonenumber:libphonenumber:8.0.0"
+    shrinkImplementation "javax.mail:mailapi:1.4.3"
+    shrinkImplementation "net.sf.jopt-simple:jopt-simple:5.0.3"
+}
+
+task shrinkApiDependencies(type: ProGuardTask) {
+    injars configurations.shrinkApi.files
+    libraryjars file("$android.sdkDirectory/platforms/$android.compileSdkVersion/android.jar")
+    outjars file("build/shrinked/api.jar")
+    configuration "shrink.pro"
+}
+
+task shrinkImplementationDependencies(type: ProGuardTask) {
+    injars configurations.shrinkImplementation.files
+    libraryjars file("$android.sdkDirectory/platforms/$android.compileSdkVersion/android.jar")
+    outjars file("build/shrinked/implementation.jar")
+    configuration "shrink.pro"
+}
+
+preBuild.dependsOn(shrinkApiDependencies)
+preBuild.dependsOn(shrinkImplementationDependencies)

@@ -8,7 +8,7 @@
     tools:context="uk.ac.cam.seh208.middleware.demo.ui.EditEndpointActivity">
 
     <android.support.design.widget.TextInputLayout
-        android:id="@+id/input_wrapper_cname"
+        android:id="@+id/input_wrapper_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
@@ -19,10 +19,10 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <EditText
-            android:id="@+id/input_cname"
+            android:id="@+id/input_name"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:hint="@string/canonical_name"
+            android:hint="@string/endpoint_name"
             android:inputType="text"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium.Inverse"/>
 
@@ -37,7 +37,7 @@
         android:layout_marginTop="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/input_wrapper_cname">
+        app:layout_constraintTop_toBottomOf="@id/input_wrapper_name">
 
         <EditText
             android:id="@+id/input_desc"

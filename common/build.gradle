@@ -1,5 +1,5 @@
-apply plugin: 'com.android.library'
-apply plugin: 'de.mobilej.unmock'
+apply plugin: "com.android.library"
+apply plugin: "de.mobilej.unmock"
 
 android {
     compileSdkVersion 26
@@ -13,23 +13,24 @@ android {
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
-        release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
-
     compileOptions {
         targetCompatibility 1.8
         sourceCompatibility 1.8
     }
 
-    packagingOptions {
-        exclude 'META-INF/ASL-2.0.txt'
-        exclude 'META-INF/LGPL-3.0.txt'
-        pickFirst 'draftv3/schema'
-        pickFirst 'draftv4/schema'
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile("proguard-android.txt"),
+                    "library-rules.pro", "debug-rules.pro"
+            consumerProguardFiles "library-rules.pro"
+        }
+        debug {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile("proguard-android.txt"),
+                    "library-rules.pro", "debug-rules.pro"
+            consumerProguardFiles "library-rules.pro", "debug-rules.pro"
+        }
     }
 }
 
@@ -38,12 +39,12 @@ unMock {
 }
 
 dependencies {
-    implementation 'net.sourceforge.streamsupport:streamsupport:1.6.0'
-    implementation 'com.github.java-json-tools:json-schema-validator:2.2.8'
-    implementation 'com.android.support:appcompat-v7:26.1.0'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.1'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
+    api project(":json-schema-validator")
+    api "net.sourceforge.streamsupport:streamsupport:1.6.0"
+    api "com.android.support:appcompat-v7:26.1.0"
+    testImplementation "junit:junit:4.12"
+    androidTestImplementation "com.android.support.test:runner:1.0.1"
+    androidTestImplementation "com.android.support.test.espresso:espresso-core:3.0.1"
 
-    unmock 'org.robolectric:android-all:4.3_r2-robolectric-0'
+    unmock "org.robolectric:android-all:4.3_r2-robolectric-0"
 }

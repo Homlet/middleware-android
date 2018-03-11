@@ -14,7 +14,7 @@
     <string name="heading_data">Data</string>
     <string name="action_send_message">Send message</string>
     <string name="edit_endpoint">Edit endpoint</string>
-    <string name="canonical_name">Canonical name</string>
+    <string name="endpoint_name">Endpoint name</string>
     <string name="description">Description</string>
     <string name="polarity_source">Source</string>
     <string name="polarity_sink">Sink</string>

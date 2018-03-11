@@ -8,15 +8,21 @@ import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import uk.ac.cam.seh208.middleware.api.Middleware;
+import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.demo.R;
 import uk.ac.cam.seh208.middleware.demo.endpoint.Endpoint;
 
 
-public class MainActivity extends AppCompatActivity implements EndpointListFragment.OnListItemInteractionListener {
+public class MainActivity extends AppCompatActivity
+        implements EndpointListFragment.OnListItemInteractionListener {
+
+    private Middleware middleware;
 
     /**
      * Reference to the bottom navigation bar view.
@@ -57,6 +63,13 @@ public class MainActivity extends AppCompatActivity implements EndpointListFragm
 
         // Load the endpoints page.
         navigateTo(R.id.page_endpoints);
+
+        // Connect to the middleware service.
+        try {
+            middleware = new Middleware(this);
+        } catch (MiddlewareDisconnectedException e) {
+            Log.e(getTag(), "Failed to connect to middleware.");
+        }
     }
 
     /**
@@ -151,5 +164,9 @@ public class MainActivity extends AppCompatActivity implements EndpointListFragm
             default:
                 return null;
         }
+    }
+
+    private String getTag() {
+        return "MAIN";
     }
 }

@@ -9,7 +9,6 @@ import android.support.annotation.NonNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,6 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+
 import java8.util.function.Predicate;
 
 
@@ -403,8 +403,8 @@ public class Query implements Parcelable {
         bundle.putString(DESC_REGEX, descRegex);
         bundle.putString(SCHEMA, schema);
         bundle.putSerializable(POLARITY, polarity);
-        bundle.putStringArrayList(TAGS_TO_INCLUDE, Lists.newArrayList(tagsToInclude));
-        bundle.putStringArrayList(TAGS_TO_EXCLUDE, Lists.newArrayList(tagsToExclude));
+        bundle.putStringArrayList(TAGS_TO_INCLUDE, new ArrayList<>(tagsToInclude));
+        bundle.putStringArrayList(TAGS_TO_EXCLUDE, new ArrayList<>(tagsToExclude));
         bundle.putInt(MATCHES, matches);
 
         // Serialise the bundle into the parcel.

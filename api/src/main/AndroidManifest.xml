@@ -1,7 +1,1 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="uk.ac.cam.seh208.middleware.api">
-
-    <application
-        android:name="android.support.multidex.MultiDexApplication" />
-
-</manifest>
+<manifest package="uk.ac.cam.seh208.middleware.api" />

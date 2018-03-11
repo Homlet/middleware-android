@@ -1,1 +1,1 @@
-include ':middleware', ':api', ':common', ':demo'
+include ':middleware', ':api', ':common', ':demo', ':json-schema-validator'
