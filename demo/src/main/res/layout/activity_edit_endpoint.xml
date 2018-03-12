@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="uk.ac.cam.seh208.middleware.demo.ui.EditEndpointActivity">
+    tools:context="uk.ac.cam.seh208.middleware.demo.CreateEndpointActivity">
 
     <android.support.design.widget.TextInputLayout
         android:id="@+id/input_wrapper_name"
@@ -22,7 +22,7 @@
             android:id="@+id/input_name"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:hint="@string/endpoint_name"
+            android:hint="@string/label_name"
             android:inputType="text"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium.Inverse"/>
 
@@ -43,7 +43,7 @@
             android:id="@+id/input_desc"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:hint="@string/description"
+            android:hint="@string/label_description"
             android:inputType="textMultiLine"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium.Inverse"/>
 
@@ -63,7 +63,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
         android:labelFor="@id/input_polarity"
-        android:text="@string/input_label_polarity"
+        android:text="@string/label_polarity"
         android:textAppearance="@style/Caption"
         app:layout_constraintBaseline_toBaselineOf="@id/input_polarity"
         app:layout_constraintStart_toStartOf="parent"/>
@@ -86,7 +86,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
         android:labelFor="@id/input_schema"
-        android:text="@string/input_label_schema"
+        android:text="@string/label_schema"
         android:textAppearance="@style/Caption"
         app:layout_constraintBaseline_toBaselineOf="@id/input_schema"
         app:layout_constraintStart_toStartOf="parent"/>

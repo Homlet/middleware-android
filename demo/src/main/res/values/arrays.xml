@@ -7,6 +7,5 @@
     <string-array name="schemata">
         <item>@string/schema_text</item>
         <item>@string/schema_int</item>
-        <item>@string/schema_subscription</item>
     </string-array>
 </resources>

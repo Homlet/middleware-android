@@ -1,26 +1,19 @@
-package uk.ac.cam.seh208.middleware.demo.ui;
+package uk.ac.cam.seh208.middleware.demo;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.IdRes;
 import android.support.design.widget.BottomNavigationView;
-import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 
+import butterknife.ButterKnife;
 import uk.ac.cam.seh208.middleware.api.Middleware;
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
-import uk.ac.cam.seh208.middleware.demo.R;
-import uk.ac.cam.seh208.middleware.demo.endpoint.Endpoint;
 
 
-public class MainActivity extends AppCompatActivity
-        implements EndpointListFragment.OnListItemInteractionListener {
+public class MainActivity extends AppCompatActivity {
 
     private Middleware middleware;
 
@@ -56,6 +49,7 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        ButterKnife.bind(this);
 
         // Configure the bottom navigation bar.
         navigation = findViewById(R.id.navigation);
@@ -64,28 +58,24 @@ public class MainActivity extends AppCompatActivity
         // Load the endpoints page.
         navigateTo(R.id.page_endpoints);
 
-        // Connect to the middleware service.
-        try {
-            middleware = new Middleware(this);
-        } catch (MiddlewareDisconnectedException e) {
-            Log.e(getTag(), "Failed to connect to middleware.");
-        }
+        // Instantiate the middleware interface.
+        middleware = new Middleware(this);
     }
 
-    /**
-     * Launch the 'view endpoint' activity for the selected endpoint card.
-     *
-     * @param endpoint Reference to the endpoint associated with the card.
-     * @param card     Reference to the card view in the endpoint list that was selected.
-     */
     @Override
-    public void onListItemInteraction(Endpoint endpoint, View card) {
-        Intent intent = new Intent(this, ViewEndpointActivity.class);
-        intent.putExtra(ViewEndpointActivity.EXTRA_CNAME, endpoint.getCName());
-        ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                this, card, "view_endpoint_container"
-        );
-        startActivity(intent, options.toBundle());
+    protected void onStart() {
+        super.onStart();
+
+        // Connect to the middleware service.
+        middleware.bind();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        // Disconnect from the middleware service.
+        middleware.unbind();
     }
 
     /**
@@ -166,7 +156,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private String getTag() {
+    public static String getTag() {
         return "MAIN";
     }
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:title="@string/set_registry_ip"/>
-    <item android:title="@string/reset_middleware"/>
+    <item android:title="@string/action_set_rdc_address"/>
+    <item android:title="@string/action_reset_middleware"/>
 </menu>

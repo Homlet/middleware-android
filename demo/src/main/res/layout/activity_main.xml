@@ -6,7 +6,7 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="uk.ac.cam.seh208.middleware.demo.ui.MainActivity">
+    tools:context="uk.ac.cam.seh208.middleware.demo.MainActivity">
 
     <FrameLayout
         android:id="@+id/page_container"

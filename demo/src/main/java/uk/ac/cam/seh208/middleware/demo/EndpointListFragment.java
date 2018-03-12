@@ -1,63 +1,34 @@
-package uk.ac.cam.seh208.middleware.demo.ui;
+package uk.ac.cam.seh208.middleware.demo;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
-import uk.ac.cam.seh208.middleware.demo.endpoint.Endpoint;
-import uk.ac.cam.seh208.middleware.demo.endpoint.EndpointListAdapter;
-import uk.ac.cam.seh208.middleware.demo.R;
+import uk.ac.cam.seh208.middleware.api.Endpoint;
+import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
 
 
 public class EndpointListFragment extends Fragment {
 
-    public static final ArrayList<Endpoint> ENDPOINTS = new ArrayList<>();
-    static {
-        ENDPOINTS.add(new Endpoint(
-                "datetime",
-                "An endpoint that emits the date-time in ISO-8601 format every second.",
-                Endpoint.Polarity.SOURCE
-        ));
-        ENDPOINTS.add(new Endpoint(
-                "app_x",
-                "An endpoint that accepts tick signals.",
-                Endpoint.Polarity.SINK
-        ));
-        ENDPOINTS.add(new Endpoint(
-                "tick5",
-                "An endpoint that emits the character \"1\" every five seconds.",
-                Endpoint.Polarity.SOURCE
-        ));
-        ENDPOINTS.add(new Endpoint(
-                "app_y",
-                "An endpoint that accepts tick signals.",
-                Endpoint.Polarity.SINK
-        ));
-        ENDPOINTS.add(new Endpoint(
-                "tick10",
-                "An endpoint that emits the character \"1\" every ten seconds.",
-                Endpoint.Polarity.SOURCE
-        ));
-        ENDPOINTS.add(new Endpoint(
-                "tick30",
-                "An endpoint that emits the character \"1\" every thirty seconds.",
-                Endpoint.Polarity.SOURCE
-        ));
-    }
+    private final ArrayList<Endpoint> endpoints = new ArrayList<>();
 
     /**
      * Reference to the parent context, for the purposes of signalling events.
      */
-    private OnListItemInteractionListener listener;
+    private Context context;
 
 
     /**
@@ -73,9 +44,19 @@ public class EndpointListFragment extends Fragment {
 
         // Set the adapter for the recycler view.
         RecyclerView recycler = view.findViewById(R.id.endpoint_list);
-        Context context = view.getContext();
         recycler.setLayoutManager(new LinearLayoutManager(context));
-        recycler.setAdapter(new EndpointListAdapter(ENDPOINTS, listener));
+        recycler.setAdapter(new EndpointListAdapter(endpoints, (e, v) -> {
+            try {
+                Intent intent = new Intent(context, ViewEndpointActivity.class);
+                intent.putExtra(ViewEndpointActivity.EXTRA_NAME, e.getDetails().getName());
+                ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                        (Activity) context, v, "view_endpoint_container"
+                );
+                context.startActivity(intent, options.toBundle());
+            } catch (MiddlewareDisconnectedException ex) {
+                Toast.makeText(context, R.string.error_contact_middleware, Toast.LENGTH_SHORT).show();
+            }
+        }));
 
         // Add padding before the first card in the recycler.
         recycler.addItemDecoration(new RecyclerView.ItemDecoration() {
@@ -90,15 +71,21 @@ public class EndpointListFragment extends Fragment {
             }
         });
 
-        // Hide the floating action button on scrolling the list.
-        final FloatingActionButton button = view.findViewById(R.id.button_add);
+        // Configure the floating action button (FAB) for creating new endpoints.
+        final FloatingActionButton plusButton = view.findViewById(R.id.button_add);
+        plusButton.setOnClickListener(v -> {
+            // When the button is pressed, start a new activity for configuring the endpoint.
+            Intent intent = new Intent(context, CreateEndpointActivity.class);
+            context.startActivity(intent);
+        });
         recycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(RecyclerView recycler, int dx, int dy) {
-                if (dy < -5 && !button.isShown()) {
-                    button.show();
-                } else if(dy > 5 && button.isShown()) {
-                    button.hide();
+                // Hide the floating action button on scrolling the list.
+                if (dy < -5 && !plusButton.isShown()) {
+                    plusButton.show();
+                } else if(dy > 5 && plusButton.isShown()) {
+                    plusButton.hide();
                 }
             }
         });
@@ -115,12 +102,7 @@ public class EndpointListFragment extends Fragment {
     public void onAttach(Context context) {
         super.onAttach(context);
 
-        if (context instanceof OnListItemInteractionListener) {
-            listener = (OnListItemInteractionListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnListItemInteractionListener");
-        }
+        this.context = context;
     }
 
     /**
@@ -131,14 +113,10 @@ public class EndpointListFragment extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        listener = null;
+
+        context = null;
     }
 
-    /**
-     * This interface must be implemented by contexts that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the context, and potentially to sibling fragments.
-     */
     public interface OnListItemInteractionListener {
         void onListItemInteraction(Endpoint endpoint, View view);
     }

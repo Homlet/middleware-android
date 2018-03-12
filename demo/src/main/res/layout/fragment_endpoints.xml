@@ -14,7 +14,7 @@
         android:layout_height="match_parent"
         android:scrollbars="vertical"
         app:layoutManager="LinearLayoutManager"
-        tools:context="uk.ac.cam.seh208.middleware.demo.ui.EndpointListFragment"
+        tools:context="uk.ac.cam.seh208.middleware.demo.EndpointListFragment"
         tools:listitem="@layout/layout_endpoint"/>
 
     <android.support.design.widget.FloatingActionButton
