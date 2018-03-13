@@ -94,10 +94,6 @@ public class MiddlewareService extends Service {
             return START_STICKY;
         }
 
-        if (BuildConfig.DEBUG) {
-            Debug.waitForDebugger();
-        }
-
         Log.i(getTag(), "Middleware starting...");
         Toast.makeText(this, getText(R.string.toast_starting), Toast.LENGTH_SHORT).show();
 
