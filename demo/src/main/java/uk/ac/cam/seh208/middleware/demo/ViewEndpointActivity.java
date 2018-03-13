@@ -30,7 +30,7 @@ public class ViewEndpointActivity extends AppCompatActivity {
     private Middleware middleware;
 
     /**
-     * Reference to the endpoint we are viewing.
+     * Instance of the endpoint interface bound to this activity.
      */
     private Endpoint endpoint;
 
@@ -58,6 +58,8 @@ public class ViewEndpointActivity extends AppCompatActivity {
 
         // Get a reference to the endpoint-specific interface for this endpoint.
         endpoint = middleware.getEndpoint(name);
+
+        Log.i(getTag(), "Created view endpoint activity for endpoint \"" + name + "\"");
     }
 
     @Override

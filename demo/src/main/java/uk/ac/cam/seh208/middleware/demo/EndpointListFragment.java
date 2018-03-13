@@ -4,31 +4,118 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Rect;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.List;
 
-import uk.ac.cam.seh208.middleware.api.Endpoint;
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
+import uk.ac.cam.seh208.middleware.api.Middleware;
 import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
+import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 
 
 public class EndpointListFragment extends Fragment {
 
-    private final ArrayList<Endpoint> endpoints = new ArrayList<>();
+    public interface OnListItemInteractionListener {
+        void onListItemInteraction(EndpointDetails details, View view);
+    }
+
+    private static class UpdateEndpointDetailsTask
+            extends AsyncTask<UpdateEndpointDetailsTask.Args, Void, Void> {
+
+        static class Args {
+            Args(List<EndpointDetails> details, Middleware middleware,
+                 RecyclerView.Adapter adapter, SwipeRefreshLayout refresher,
+                 Activity activity) {
+                this.details = details;
+                this.middleware = middleware;
+                this.adapter = adapter;
+                this.refresher = refresher;
+                this.activity = activity;
+            }
+
+            final List<EndpointDetails> details;
+            final Middleware middleware;
+            final RecyclerView.Adapter adapter;
+            final SwipeRefreshLayout refresher;
+            final Activity activity;
+        }
+
+        @Override
+        protected Void doInBackground(Args... args) {
+            Log.i(MainActivity.getTag(), "Updating endpoint details list...");
+
+            try {
+                // Get an updated endpoint details list.
+                List<EndpointDetails> newDetails = args[0].middleware.getAllEndpointDetails();
+
+                synchronized (args[0].details) {
+                    // Clear the old list.
+                    args[0].details.clear();
+
+                    // Populate the old list with the new details;
+                    args[0].details.addAll(newDetails);
+                }
+
+                Log.i(MainActivity.getTag(), "Found " + newDetails.size() + " endpoints.");
+
+                args[0].activity.runOnUiThread(() -> {
+                    args[0].refresher.setRefreshing(false);
+                    args[0].adapter.notifyDataSetChanged();
+                });
+            } catch (MiddlewareDisconnectedException e) {
+                Log.e(MainActivity.getTag(), "Error updating endpoint details list.");
+
+                args[0].activity.runOnUiThread(() -> {
+                    args[0].refresher.setRefreshing(false);
+                    Toast.makeText(
+                            args[0].activity,
+                            R.string.error_contact_middleware,
+                            Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            return null;
+        }
+    }
+
+
+    /**
+     * Mutable endpoint details list tracking the current active endpoints in
+     * the middleware instance.
+     */
+    private final List<EndpointDetails> details = new ArrayList<>();
 
     /**
      * Reference to the parent context, for the purposes of signalling events.
      */
     private Context context;
+
+    private Middleware middleware;
+
+    @BindView(R.id.endpoint_list_swipe)
+    SwipeRefreshLayout refresher;
+
+    @BindView(R.id.endpoint_list)
+    RecyclerView recycler;
+
+    @BindView(R.id.button_add)
+    FloatingActionButton buttonAdd;
 
 
     /**
@@ -41,21 +128,23 @@ public class EndpointListFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_endpoints, container, false);
+        ButterKnife.bind(this, view);
+
+        // Set the refresh listener for the swipe refresh layout.
+        refresher.setOnRefreshListener(() -> {
+            refresher.setRefreshing(true);
+            updateEndpointDetails();
+        });
 
         // Set the adapter for the recycler view.
-        RecyclerView recycler = view.findViewById(R.id.endpoint_list);
         recycler.setLayoutManager(new LinearLayoutManager(context));
-        recycler.setAdapter(new EndpointListAdapter(endpoints, (e, v) -> {
-            try {
-                Intent intent = new Intent(context, ViewEndpointActivity.class);
-                intent.putExtra(ViewEndpointActivity.EXTRA_NAME, e.getDetails().getName());
-                ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                        (Activity) context, v, "view_endpoint_container"
-                );
-                context.startActivity(intent, options.toBundle());
-            } catch (MiddlewareDisconnectedException ex) {
-                Toast.makeText(context, R.string.error_contact_middleware, Toast.LENGTH_SHORT).show();
-            }
+        recycler.setAdapter(new EndpointListAdapter(details, (d, v) -> {
+            Intent intent = new Intent(context, ViewEndpointActivity.class);
+            intent.putExtra(ViewEndpointActivity.EXTRA_NAME, d.getName());
+            ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                    (Activity) context, v, "view_endpoint_container"
+            );
+            context.startActivity(intent, options.toBundle());
         }));
 
         // Add padding before the first card in the recycler.
@@ -71,24 +160,20 @@ public class EndpointListFragment extends Fragment {
             }
         });
 
-        // Configure the floating action button (FAB) for creating new endpoints.
-        final FloatingActionButton plusButton = view.findViewById(R.id.button_add);
-        plusButton.setOnClickListener(v -> {
-            // When the button is pressed, start a new activity for configuring the endpoint.
-            Intent intent = new Intent(context, CreateEndpointActivity.class);
-            context.startActivity(intent);
-        });
+        // Hide the floating action button on scrolling the list.
         recycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(RecyclerView recycler, int dx, int dy) {
-                // Hide the floating action button on scrolling the list.
-                if (dy < -5 && !plusButton.isShown()) {
-                    plusButton.show();
-                } else if(dy > 5 && plusButton.isShown()) {
-                    plusButton.hide();
+                if (dy < -5 && !buttonAdd.isShown()) {
+                    buttonAdd.show();
+                } else if(dy > 5 && buttonAdd.isShown()) {
+                    buttonAdd.hide();
                 }
             }
         });
+
+        // Update the endpoints list.
+        updateEndpointDetails();
 
         return view;
     }
@@ -102,7 +187,21 @@ public class EndpointListFragment extends Fragment {
     public void onAttach(Context context) {
         super.onAttach(context);
 
+        // Keep a reference to the attached context.
         this.context = context;
+
+        // Get a reference to the middleware from the attached context.
+        middleware = ((MainActivity) context).getMiddleware();
+    }
+
+    /**
+     * Called when the main activity comes back into focus.
+     */
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        updateEndpointDetails();
     }
 
     /**
@@ -114,10 +213,25 @@ public class EndpointListFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
 
+        // Drop the reference to the context.
         context = null;
     }
 
-    public interface OnListItemInteractionListener {
-        void onListItemInteraction(Endpoint endpoint, View view);
+    /**
+     * When the add button is pressed, start a new activity for creating the new endpoint.
+     */
+    @OnClick(R.id.button_add)
+    void add(View view) {
+        Intent intent = new Intent(context, CreateEndpointActivity.class);
+        context.startActivity(intent);
+    }
+
+    private void updateEndpointDetails() {
+        // Pack the task arguments.
+        UpdateEndpointDetailsTask.Args args = new UpdateEndpointDetailsTask.Args(
+                details, middleware, recycler.getAdapter(), refresher, getActivity());
+
+        // Execute the update task.
+        new UpdateEndpointDetailsTask().execute(args);
     }
 }

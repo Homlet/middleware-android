@@ -18,8 +18,14 @@ import uk.ac.cam.seh208.middleware.common.Polarity;
 
 public class CreateEndpointActivity extends AppCompatActivity {
 
+    /**
+     * Instance of the middleware interface bound to this activity.
+     */
     private Middleware middleware;
 
+    /**
+     * Instance of the endpoint interface bound to this activity.
+     */
     private Endpoint endpoint;
 
     @BindView(R.id.input_name)
@@ -38,7 +44,7 @@ public class CreateEndpointActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_edit_endpoint);
+        setContentView(R.layout.activity_create_endpoint);
         ButterKnife.bind(this);
 
         // Connect to the middleware service.

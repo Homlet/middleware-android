@@ -7,15 +7,22 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/endpoint_list"
-        android:name="uk.ac.cam.seh208.middleware.demo.EndpointListFragment"
+    <android.support.v4.widget.SwipeRefreshLayout
+        android:id="@+id/endpoint_list_swipe"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scrollbars="vertical"
-        app:layoutManager="LinearLayoutManager"
-        tools:context="uk.ac.cam.seh208.middleware.demo.EndpointListFragment"
-        tools:listitem="@layout/layout_endpoint"/>
+        android:layout_height="match_parent">
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/endpoint_list"
+            android:name="uk.ac.cam.seh208.middleware.demo.EndpointListFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="vertical"
+            app:layoutManager="LinearLayoutManager"
+            tools:context="uk.ac.cam.seh208.middleware.demo.EndpointListFragment"
+            tools:listitem="@layout/layout_endpoint"/>
+
+    </android.support.v4.widget.SwipeRefreshLayout>
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/button_add"

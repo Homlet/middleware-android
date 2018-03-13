@@ -1,7 +1,6 @@
 package uk.ac.cam.seh208.middleware.demo;
 
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,8 +9,8 @@ import android.widget.TextView;
 
 import java.util.List;
 
-import uk.ac.cam.seh208.middleware.api.Endpoint;
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 
 
@@ -20,20 +19,32 @@ public class EndpointListAdapter extends RecyclerView.Adapter<EndpointListAdapte
     class ViewHolder extends RecyclerView.ViewHolder {
         View view;
 
+        @BindView(R.id.endpoint_name)
+        TextView textName;
+
+        @BindView(R.id.endpoint_desc)
+        TextView textDesc;
+
+        @BindView(R.id.endpoint_polarity)
+        ImageView polarity;
+
+
         ViewHolder(View view) {
             super(view);
             this.view = view;
+            ButterKnife.bind(this, view);
         }
     }
 
 
-    private final List<Endpoint> endpoints;
+    private final List<EndpointDetails> detailsList;
+
     private final EndpointListFragment.OnListItemInteractionListener listener;
 
 
-    public EndpointListAdapter(List<Endpoint> endpoints,
+    public EndpointListAdapter(List<EndpointDetails> detailsList,
                                EndpointListFragment.OnListItemInteractionListener listener) {
-        this.endpoints = endpoints;
+        this.detailsList = detailsList;
         this.listener = listener;
     }
 
@@ -46,42 +57,29 @@ public class EndpointListAdapter extends RecyclerView.Adapter<EndpointListAdapte
 
     @Override
     public void onBindViewHolder(ViewHolder holder, final int position) {
-        try {
-            final Endpoint endpoint = endpoints.get(position);
-            EndpointDetails details = endpoint.getDetails();
+        // Get the endpoint details.
+        synchronized (detailsList) {
+            EndpointDetails details = detailsList.get(position);
 
             // Fill in the details in the card.
-            TextView name = holder.view.findViewById(R.id.endpoint_name);
-            name.setText(details.getName());
-
-            TextView desc = holder.view.findViewById(R.id.endpoint_desc);
-            desc.setText(details.getDesc());
-
-            ImageView polarity = holder.view.findViewById(R.id.endpoint_polarity);
-            switch (details.getPolarity()) {
-                case SOURCE:
-                    polarity.setImageResource(R.drawable.ic_endpoint_source_48dp);
-                    break;
-                case SINK:
-                    polarity.setImageResource(R.drawable.ic_endpoint_sink_48dp);
-                    break;
-            }
+            holder.textName.setText(details.getName());
+            holder.textDesc.setText(details.getDesc());
+            holder.polarity.setImageResource(
+                    ResourceUtils.getPolarityImageResource(details.getPolarity()));
 
             // Set the click handler for the card to signal the activity.
             holder.view.setOnClickListener(v -> {
                 if (listener != null) {
                     // Notify the active callbacks interface (the activity, if the
                     // fragment is attached to one) that an endpoint has been selected.
-                    listener.onListItemInteraction(endpoint, v);
+                    listener.onListItemInteraction(details, v);
                 }
             });
-        } catch (MiddlewareDisconnectedException e) {
-            Log.e(MainActivity.getTag(), "Lost connection to middleware in onBindViewHolder.");
         }
     }
 
     @Override
     public int getItemCount() {
-        return endpoints.size();
+        return detailsList.size();
     }
 }

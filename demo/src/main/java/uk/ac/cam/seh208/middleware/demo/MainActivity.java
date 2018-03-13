@@ -15,6 +15,9 @@ import uk.ac.cam.seh208.middleware.api.Middleware;
 
 public class MainActivity extends AppCompatActivity {
 
+    /**
+     * Instance of the middleware interface bound to this activity.
+     */
     private Middleware middleware;
 
     /**
@@ -76,6 +79,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Disconnect from the middleware service.
         middleware.unbind();
+    }
+
+    public Middleware getMiddleware() {
+        return middleware;
     }
 
     /**

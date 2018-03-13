@@ -81,17 +81,13 @@ public class MiddlewareService extends Service {
 
 
     /**
-     * Called by Android when the service is started, either from an intent or
-     * after a restart attempt.
+     * Initialise the service fields and set up the communications switch.
      *
-     * @return START_STICKY to indicate the OS should attempt to restart this
-     *         process if it is killed to free resources.
+     * @return whether the middleware was started.
      */
-    @Override
-    public synchronized int onStartCommand(Intent intent, int flags, int startId) {
+    private synchronized boolean start() {
         if (started) {
-            Log.i(getTag(), "Start command ignored (already started).");
-            return START_STICKY;
+            return false;
         }
 
         Log.i(getTag(), "Middleware starting...");
@@ -107,6 +103,21 @@ public class MiddlewareService extends Service {
 
         Log.i(getTag(), "Middleware started successfully.");
         started = true;
+        return true;
+    }
+
+    /**
+     * Called by Android when the service is started, either from an intent or
+     * after a restart attempt.
+     *
+     * @return START_STICKY to indicate the OS should attempt to restart this
+     *         process if it is killed to free resources.
+     */
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (!start()) {
+            Log.d(getTag(), "Start command ignored (already started).");
+        }
 
         // Attempt to restart this service if the scheduler kills it for resources.
         return START_STICKY;
@@ -117,8 +128,12 @@ public class MiddlewareService extends Service {
      */
     @Nullable
     @Override
-    public synchronized IBinder onBind(Intent intent) {
-        Log.i(getTag(), "Client bound to service.");
+    public IBinder onBind(Intent intent) {
+        Log.i(getTag(), "Uncached binder returned in onBind.");
+
+        // Attempt to start the service if not already started.
+        start();
+
         return binder;
     }
 
