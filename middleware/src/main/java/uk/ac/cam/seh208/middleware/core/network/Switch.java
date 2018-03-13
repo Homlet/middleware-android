@@ -64,6 +64,22 @@ public class Switch {
         return builder.fromString(matcher.group(2)).build();
     }
 
+    /**
+     * Get the scheme string associated with a given address, determined by its dynamic type.
+     *
+     * @param address Address to introspect for scheme type.
+     *
+     * @return a scheme string.
+     */
+    public static String getScheme(Address address) {
+        if (address instanceof ZMQAddress) {
+            return SCHEME_ZMQ;
+        }
+
+        // Unreachable.
+        return null;
+    }
+
 
     /**
      * Store of message contexts by scheme string.

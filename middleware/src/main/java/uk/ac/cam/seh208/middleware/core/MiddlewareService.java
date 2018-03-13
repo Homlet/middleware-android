@@ -29,7 +29,9 @@ import uk.ac.cam.seh208.middleware.core.comms.MultiplexerPool;
 import uk.ac.cam.seh208.middleware.core.exception.UnexpectedClosureException;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.Location;
+import uk.ac.cam.seh208.middleware.core.network.MessageContext;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
+import uk.ac.cam.seh208.middleware.core.network.RequestContext;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 import uk.ac.cam.seh208.middleware.core.network.Switch;
 
@@ -224,8 +226,19 @@ public class MiddlewareService extends Service {
      *                          given host.
      */
     public MessageStream getMessageStream(Location remote) throws BadHostException {
-        // TODO: implement.
-        return null;
+        // TODO: more intelligent implementation.
+
+        Address preferredAddress = remote.getAddresses().get(0);
+
+        if (preferredAddress == null) {
+            // If the location is empty or contains corrupt data, throw an exception.
+            throw new BadHostException(remote.toString());
+        }
+
+        String scheme = Switch.getScheme(preferredAddress);
+        MessageContext context = commsSwitch.getMessageContext(scheme);
+
+        return context.getMessageStream(preferredAddress);
     }
 
     /**
@@ -240,8 +253,19 @@ public class MiddlewareService extends Service {
      *                          given host.
      */
     public RequestStream getRequestStream(Location remote) throws BadHostException {
-        // TODO: implement.
-        return null;
+        // TODO: more intelligent implementation.
+
+        Address preferredAddress = remote.getAddresses().get(0);
+
+        if (preferredAddress == null) {
+            // If the location is empty or contains corrupt data, throw an exception.
+            throw new BadHostException(remote.toString());
+        }
+
+        String scheme = Switch.getScheme(preferredAddress);
+        RequestContext context = commsSwitch.getRequestContext(scheme);
+
+        return context.getRequestStream(preferredAddress);
     }
 
     /**
