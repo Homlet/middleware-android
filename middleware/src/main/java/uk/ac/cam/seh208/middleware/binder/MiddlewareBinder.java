@@ -16,6 +16,7 @@ import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
 import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
+import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.Switch;
 
 
@@ -162,7 +163,11 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     @Override
     public void setRDCAddress(String address) throws BadHostException {
         try {
-            service.setRDCAddress(Switch.makeAddress(address));
+            // Build an RDC location with negative ID.
+            // TODO: create location builder for this.
+            Location location = new Location(-1);
+            location.addAddress(Switch.makeAddress(address));
+            service.setRDCLocation(location);
         } catch (MalformedAddressException ignored) {
             Log.e(getTag(), "Malformed address string given when setting RDC address.");
         }

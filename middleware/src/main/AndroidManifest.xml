@@ -13,10 +13,13 @@
 
         <service
             android:name="uk.ac.cam.seh208.middleware.core.MiddlewareService"
-            android:description="@string/app_desc"
-            android:exported="true">
+            android:description="@string/mw_desc"
+            android:exported="true" />
 
-        </service>
+        <service
+            android:name="uk.ac.cam.seh208.middleware.core.RDCService"
+            android:description="@string/rdc_desc"
+            android:exported="true" />
 
     </application>
 

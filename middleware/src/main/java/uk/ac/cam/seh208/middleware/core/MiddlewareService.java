@@ -2,7 +2,6 @@ package uk.ac.cam.seh208.middleware.core;
 
 import android.app.Service;
 import android.content.Intent;
-import android.os.Debug;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -11,10 +10,18 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.binder.CombinedBinder;
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.core.comms.QueryControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
@@ -26,6 +33,8 @@ import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
 import uk.ac.cam.seh208.middleware.core.comms.EndpointSet;
 import uk.ac.cam.seh208.middleware.core.comms.Multiplexer;
 import uk.ac.cam.seh208.middleware.core.comms.MultiplexerPool;
+import uk.ac.cam.seh208.middleware.core.comms.RemoveControlMessage;
+import uk.ac.cam.seh208.middleware.core.comms.UpdateControlMessage;
 import uk.ac.cam.seh208.middleware.core.exception.UnexpectedClosureException;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.Location;
@@ -37,6 +46,23 @@ import uk.ac.cam.seh208.middleware.core.network.Switch;
 
 
 public class MiddlewareService extends Service {
+
+    /**
+     * The delay in seconds between RDC update ticks.
+     */
+    private static final int RDC_DELAY_MILLIS = 5000;
+
+    /**
+     * The amount of time waited for an acknowledgement from the RDC before
+     * failure is assumed.
+     */
+    private static final int RDC_TIMEOUT_MILLIS = 5000;
+
+    /**
+     * Executor for running update tasks with timeout.
+     */
+    private static final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
+
 
     /**
      * Boolean tracking whether the service has previously been started.
@@ -70,16 +96,22 @@ public class MiddlewareService extends Service {
     private boolean forceable;
 
     /**
-     * Stores the address of the remote host on which the resource discovery component
+     * Stores the location of the remote host on which the resource discovery component
      * (RDC) is accessible.
      */
-    private Address rdcAddress;
+    private Location rdcLocation;
 
     /**
      * Indicates whether the middleware instance should be discoverable
      * via the registered RDC.
      */
     private boolean discoverable;
+
+    /**
+     * Indicates that some event occurred since the last update tick invalidating
+     * this middleware's RDC entry.
+     */
+    private boolean shouldUpdateRDC;
 
 
     /**
@@ -93,7 +125,7 @@ public class MiddlewareService extends Service {
         }
 
         Log.i(getTag(), "Middleware starting...");
-        Toast.makeText(this, getText(R.string.toast_starting), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, getText(R.string.toast_mw_starting), Toast.LENGTH_SHORT).show();
 
         // Initialise object parameters.
         binder = new CombinedBinder(this);
@@ -103,9 +135,113 @@ public class MiddlewareService extends Service {
         ControlMessageHandler handler = new ControlMessageHandler(this);
         commsSwitch = new Switch(Arrays.asList(Switch.SCHEME_ZMQ), handler);
 
+        // Set up the RDC update ticker.
+        ScheduledExecutorService updateScheduler = Executors.newSingleThreadScheduledExecutor();
+        updateScheduler.scheduleWithFixedDelay(
+                this::maybeUpdateRDC,
+                RDC_DELAY_MILLIS,
+                RDC_DELAY_MILLIS,
+                TimeUnit.MILLISECONDS);
+
         Log.i(getTag(), "Middleware started successfully.");
         started = true;
         return true;
+    }
+
+    /**
+     * Indicate that an UPDATE control message should be sent to the RDC at the next
+     * update tick.
+     */
+    private synchronized void scheduleUpdateRDC() {
+        shouldUpdateRDC = true;
+    }
+
+    /**
+     * If some previous event marked that we should update our entry in the RDC
+     * by calling scheduleUpdateRDC, send an UPDATE control message using the
+     * updateRDC routine.
+     */
+    private void maybeUpdateRDC() {
+        // Determine, in a thread-safe manner, whether we should update the RDC.
+        boolean update, remove;
+        synchronized (this) {
+            update = shouldUpdateRDC;
+            remove = !discoverable;
+        }
+
+        if (update) {
+            // Determine whether we should update our entry with the RDC, or
+            // remove it, depending on whether we are discoverable.
+            Runnable task = (remove) ? this::removeRDC : this::updateRDC;
+
+            // Run the task in the background, allowing a timeout if the
+            // RDC fails to respond.
+            Future<?> future = updateExecutor.submit(task);
+
+            try {
+                // Limit the execution of the task with a timeout.
+                future.get(RDC_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+
+                // If we were successful, don't update on the next tick (unless
+                // another event invalidates our RDC entry).
+                synchronized (this) {
+                    shouldUpdateRDC = false;
+                }
+            } catch (InterruptedException | TimeoutException e) {
+                Log.w(getTag(), "Timeout during RDC update tick.");
+            } catch (ExecutionException e) {
+                Log.e(getTag(), "Error during RDC update tick.", e);
+            } finally {
+                future.cancel(true);
+            }
+        } else {
+            Log.d(getTag(), "Ignoring RDC update tick.");
+        }
+    }
+
+    /**
+     * Send an UPDATE control message to the RDC listing all currently exposed endpoints.
+     */
+    private void updateRDC() {
+        try {
+            Log.i(getTag(), "Sending update to the RDC.");
+
+            // Construct an UPDATE control message with all endpoint details.
+            ArrayList<EndpointDetails> details = new ArrayList<>();
+            for (Endpoint endpoint : getEndpointSet()) {
+                details.add(endpoint.getDetails());
+            }
+            UpdateControlMessage message = new UpdateControlMessage(getLocation(), details);
+
+            // Get a request stream to the RDC location.
+            RequestStream stream = getRequestStream(rdcLocation);
+
+            // Send the control message over the stream.
+            message.getResponse(stream);
+        } catch (BadHostException e) {
+            Log.w(getTag(), "Error sending update to RDC.", e);
+        }
+    }
+
+    /**
+     * Send a REMOVE control message to the RDC indicating that this middleware instance
+     * is no longer discoverable.
+     */
+    private void removeRDC() {
+        try {
+            Log.i(getTag(), "Sending removal request to the RDC.");
+
+            // Construct an REMOVE control message.
+            RemoveControlMessage message = new RemoveControlMessage(getLocation());
+
+            // Get a request stream to the RDC location.
+            RequestStream stream = getRequestStream(rdcLocation);
+
+            // Send the control message over the stream.
+            message.getResponse(stream);
+        } catch (BadHostException e) {
+            Log.e(getTag(), "Error sending removal request to RDC.", e);
+        }
     }
 
     /**
@@ -139,6 +275,11 @@ public class MiddlewareService extends Service {
         return binder;
     }
 
+    @Override
+    public void onDestroy() {
+        Toast.makeText(this, R.string.toast_mw_stopped, Toast.LENGTH_SHORT).show();
+    }
+
     /**
      * Create a new endpoint within the middleware, having the given details and settings.
      * The endpoint will have a freshly generated endpoint identifier, and is initialised
@@ -156,7 +297,8 @@ public class MiddlewareService extends Service {
 
             if (endpointSet.getEndpointByName(details.getName()) != null) {
                 // An endpoint of this name already exists!
-                Log.w(getTag(), "Endpoint with name \"" + details.getName() + "\" already exists.");
+                Log.w(getTag(), "Endpoint with name \"" + details.getName() +
+                        "\" already exists.");
                 throw new EndpointCollisionException(details.getName());
             }
 
@@ -169,7 +311,7 @@ public class MiddlewareService extends Service {
             Log.i(getTag(), "Endpoint " + details + " created.");
         }
 
-        // TODO: schedule update message to the RDC.
+        scheduleUpdateRDC();
     }
 
     /**
@@ -197,7 +339,7 @@ public class MiddlewareService extends Service {
             Log.i(getTag(), "Endpoint with name \"" + name + "\" destroyed.");
         }
 
-        // TODO: schedule update message to the RDC.
+        scheduleUpdateRDC();
     }
 
     /**
@@ -269,18 +411,26 @@ public class MiddlewareService extends Service {
     }
 
     /**
-     * Send a QUERY_COARSE control message to the registered RDC, returning the resultant
-     * list of remote locations. If no locations match the query, an empty list is returned;
-     * if something went wrong contacting the RDC, null is returned.
+     * Send a QUERY control message to the registered RDC, returning the resultant
+     * list of remote locations. If no locations match the query, an empty list is
+     * returned; if something went wrong contacting the RDC, null is returned.
      *
-     * @return a list of locations exposing endpoints which match the query, or null if
-     *         the RDC could not be contacted.
+     * @return a list of locations exposing endpoints which match the query.
+     *
+     * @throws BadHostException if the middleware fails to connect to the RDC location.
      */
-    public List<Location> discover(Query query) {
+    public List<Location> discover(Query query) throws BadHostException {
         Log.i(getTag(), "Querying RDC for peers matching " + query);
 
-        // TODO: implement.
-        return null;
+        // Construct a QUERY control message with the given query.
+        QueryControlMessage message = new QueryControlMessage(query);
+
+        // Get a request stream to the RDC location.
+        RequestStream stream = getRequestStream(rdcLocation);
+
+        // Send the control message over the stream, and return the response from the RDC.
+        QueryControlMessage.Response response = message.getResponse(stream);
+        return response.getLocations();
     }
 
     /**
@@ -337,13 +487,13 @@ public class MiddlewareService extends Service {
         this.forceable = forceable;
     }
 
-    public Address getRDCAddress() {
-        return rdcAddress;
+    public Location getRDCLocation() {
+        return rdcLocation;
     }
 
-    public synchronized void setRDCAddress(Address address) {
-        Log.i(getTag(), "RDC address set to " + address);
-        this.rdcAddress = address;
+    public synchronized void setRDCLocation(Location location) {
+        Log.i(getTag(), "RDC location set to " + location);
+        this.rdcLocation = location;
     }
 
     public boolean isDiscoverable() {
@@ -355,7 +505,7 @@ public class MiddlewareService extends Service {
         this.discoverable = discoverable;
     }
 
-    private String getTag() {
+    private static String getTag() {
         return "MW";
     }
 }

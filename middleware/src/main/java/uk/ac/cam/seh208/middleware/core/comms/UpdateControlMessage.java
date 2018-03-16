@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
@@ -54,14 +55,14 @@ public class UpdateControlMessage extends ControlMessage {
     /**
      * List of endpoint details exposed by the middleware at that location.
      */
-    private List<RemoteEndpointDetails> details;
+    private List<EndpointDetails> details;
 
 
     /**
      * Instantiate a new immutable UPDATE control message for the given location.
      */
     public UpdateControlMessage(@JsonProperty("location") Location location,
-                                @JsonProperty("details") List<RemoteEndpointDetails> details) {
+                                @JsonProperty("details") List<EndpointDetails> details) {
         this.location = location;
         this.details = new ArrayList<>(details);
     }

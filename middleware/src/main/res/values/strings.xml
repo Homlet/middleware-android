@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">Middleware</string>
-    <string name="app_desc">Provides networking services to pervasive applications</string>
-    <string name="toast_starting">Middleware starting…</string>
+    <string name="mw_desc">Provides networking services to pervasive applications</string>
+    <string name="rdc_desc">Tracks devices on a network, allowing dynamic resource discovery</string>
+    <string name="toast_mw_starting">Middleware starting…</string>
+    <string name="toast_mw_stopped">Middleware stopped</string>
+    <string name="toast_rdc_starting">RDC starting…</string>
+    <string name="toast_rdc_stopped">RDC stopped</string>
 </resources>

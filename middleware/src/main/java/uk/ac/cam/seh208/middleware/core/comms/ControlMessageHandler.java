@@ -1,11 +1,11 @@
 package uk.ac.cam.seh208.middleware.core.comms;
 
+import android.app.Service;
 import android.util.Log;
 
 import java.io.IOException;
 
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
-import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.network.RequestHandler;
 
 
@@ -18,13 +18,13 @@ public class ControlMessageHandler implements RequestHandler {
     /**
      * Reference to the owning service.
      */
-    private MiddlewareService service;
+    private Service service;
 
 
     /**
      * Instantiate a new handler referencing a parent service.
      */
-    public ControlMessageHandler(MiddlewareService service) {
+    public ControlMessageHandler(Service service) {
         this.service = service;
     }
 
@@ -54,6 +54,6 @@ public class ControlMessageHandler implements RequestHandler {
     }
 
     private static String getTag() {
-        return "MIDDLEWARE_HANDLER";
+        return "HANDLER";
     }
 }
