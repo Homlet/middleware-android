@@ -85,7 +85,7 @@ public class OpenChannelsControlMessage extends ControlMessage {
     @Override
     public Response handle(Service service) {
         if (!(service instanceof MiddlewareService)) {
-            // Open channels can only be handled by a middleware.
+            // OPEN_CHANNELS can only be handled by a middleware instance.
             return null;
         }
 

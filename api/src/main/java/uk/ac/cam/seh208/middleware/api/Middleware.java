@@ -50,7 +50,7 @@ public class Middleware {
     public void bind() {
         // Create a new intent for starting the middleware service (if not already started).
         Intent intent = new Intent();
-        intent.setClassName(IntentData.SERVICE_PACKAGE, IntentData.SERVICE_NAME);
+        intent.setClassName(IntentData.MW_PACKAGE, IntentData.MW_NAME);
         context.startService(intent);
 
         // Reuse the intent for binding the owning context to the service.

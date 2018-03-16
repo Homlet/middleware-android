@@ -8,8 +8,11 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.util.Arrays;
+import java.util.List;
 
+import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.core.comms.ControlMessageHandler;
+import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.Switch;
 
 
@@ -40,8 +43,6 @@ public class RDCService extends Service {
         Toast.makeText(this, getText(R.string.toast_rdc_starting), Toast.LENGTH_SHORT).show();
 
         // Initialise object parameters.
-        // TODO...
-
         ControlMessageHandler handler = new ControlMessageHandler(this);
         commsSwitch = new Switch(Arrays.asList(Switch.SCHEME_ZMQ), handler);
 
@@ -75,6 +76,25 @@ public class RDCService extends Service {
     public IBinder onBind(Intent intent) {
         // The RDC service has no bound interface.
         return null;
+    }
+
+    /**
+     * Update the middleware instance record for the given location in the RDC state.
+     *
+     * @param location Location indexing the middleware instance record.
+     * @param details New list of endpoints exposed by that middleware instance.
+     */
+    public void update(Location location, List<EndpointDetails> details) {
+        // TODO: implement.
+    }
+
+    /**
+     * Remove the middleware instance record for the given location in the RDC state.
+     *
+     * @param location Location indexing the middleware instance record to remove.
+     */
+    public void remove(Location location) {
+        // TODO: implement.
     }
 
     private static String getTag() {

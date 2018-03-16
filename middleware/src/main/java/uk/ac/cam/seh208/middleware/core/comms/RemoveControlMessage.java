@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
+import uk.ac.cam.seh208.middleware.core.RDCService;
 import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
@@ -57,7 +58,7 @@ public class RemoveControlMessage extends ControlMessage {
     }
 
     /**
-     * Update the entry in the RDC state, and respond with acknowledgement.
+     * Remove the entry from the RDC state, and respond with acknowledgement.
      *
      * @param service A reference to the RDC service receiving the message.
      *
@@ -65,8 +66,15 @@ public class RemoveControlMessage extends ControlMessage {
      */
     @Override
     public Response handle(Service service) {
-        // TODO: implement.
-        return Response.instance;
+        if (!(service instanceof RDCService)) {
+            // REMOVE can only be handled by an RDC instance.
+            return null;
+        }
+
+        RDCService rdc = (RDCService) service;
+        rdc.remove(location);
+
+        return Response.getInstance();
     }
 
     @Override

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Objects;
 
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
+import uk.ac.cam.seh208.middleware.core.RDCService;
 import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
@@ -76,7 +77,14 @@ public class UpdateControlMessage extends ControlMessage {
      */
     @Override
     public Response handle(Service service) {
-        // TODO: implement.
+        if (!(service instanceof RDCService)) {
+            // UPDATE can only be handled by an RDC instance.
+            return null;
+        }
+
+        RDCService rdc = (RDCService) service;
+        rdc.remove(location);
+
         return Response.getInstance();
     }
 

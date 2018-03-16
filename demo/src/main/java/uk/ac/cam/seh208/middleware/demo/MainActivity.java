@@ -11,6 +11,7 @@ import android.view.MenuItem;
 
 import butterknife.ButterKnife;
 import uk.ac.cam.seh208.middleware.api.Middleware;
+import uk.ac.cam.seh208.middleware.api.RDC;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -63,6 +64,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Instantiate the middleware interface.
         middleware = new Middleware(this);
+
+        // Start the RDC if not started already.
+        RDC.start(this);
     }
 
     @Override

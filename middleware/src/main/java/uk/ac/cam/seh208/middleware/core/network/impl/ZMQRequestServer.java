@@ -114,8 +114,14 @@ public class ZMQRequestServer implements Runnable {
             // Connect responder threads to the router via a queue.
             ZMQ.proxy(router, dealer, null);
         } catch (ZMQException e) {
+            if (e.getErrorCode() == ZMQ.Error.ETERM.getCode()) {
+                Log.i(getTag(), "Context was terminated.");
+                Log.i(getTag(), "Terminating request server...");
+                return;
+            }
+
             // This is some kind of network error.
-            Log.e(getTag(), "Network error occurred.");
+            Log.e(getTag(), "ZeroMQ error: " + e);
         } finally {
             Log.i(getTag(), "Terminating request server...");
             try {
