@@ -1,12 +1,13 @@
 package uk.ac.cam.seh208.middleware.core.comms;
 
+import android.app.Service;
+
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.io.IOException;
 
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
-import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
 
@@ -19,8 +20,11 @@ import uk.ac.cam.seh208.middleware.core.network.RequestStream;
         property = "tag"
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = OpenChannelsControlMessage.class, name = "m0")
-        // TODO: implement the rest.
+        @JsonSubTypes.Type(value = OpenChannelsControlMessage.class, name = "OPEN_CHANNELS"),
+        @JsonSubTypes.Type(value = CloseChannelControlMessage.class, name = "CLOSE_CHANNEL"),
+        @JsonSubTypes.Type(value = QueryControlMessage.class, name = "QUERY"),
+        @JsonSubTypes.Type(value = UpdateControlMessage.class, name = "UPDATE"),
+        @JsonSubTypes.Type(value = RemoveControlMessage.class, name = "REMOVE")
 })
 public abstract class ControlMessage implements JSONSerializable {
 
@@ -34,8 +38,16 @@ public abstract class ControlMessage implements JSONSerializable {
             property = "tag"
     )
     @JsonSubTypes({
-            @JsonSubTypes.Type(value = OpenChannelsControlMessage.Response.class, name = "r0")
-            // TODO: implement the rest.
+            @JsonSubTypes.Type(value = OpenChannelsControlMessage.Response.class,
+                               name = "OPEN_CHANNELS.R"),
+            @JsonSubTypes.Type(value = CloseChannelControlMessage.Response.class,
+                               name = "CLOSE_CHANNEL.R"),
+            @JsonSubTypes.Type(value = QueryControlMessage.Response.class,
+                               name = "QUERY.R"),
+            @JsonSubTypes.Type(value = UpdateControlMessage.Response.class,
+                               name = "UPDATE.R"),
+            @JsonSubTypes.Type(value = RemoveControlMessage.Response.class,
+                               name = "REMOVE.R")
     })
     public static abstract class Response implements JSONSerializable { }
 
@@ -67,9 +79,9 @@ public abstract class ControlMessage implements JSONSerializable {
     /**
      * Handle the control message according to its definition.
      *
-     * @param service A reference to the middleware service receiving the message.
+     * @param service A reference to the middleware or RDC service receiving the message.
      *
      * @return a Response object representing the result.
      */
-    public abstract Response handle(MiddlewareService service);
+    public abstract Response handle(Service service);
 }

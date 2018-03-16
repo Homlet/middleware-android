@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.core.comms;
 
+import android.app.Service;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
@@ -30,8 +32,7 @@ public class OpenChannelsControlMessage extends ControlMessage {
         public Response(@JsonProperty("details") List<RemoteEndpointDetails> details) {
             // Copy the passed details list so the internal state of this
             // immutable object cannot be modified.
-            this.details = new ArrayList<>();
-            this.details.addAll(details);
+            this.details = new ArrayList<>(details);
         }
 
         public List<RemoteEndpointDetails> getDetails() {
@@ -56,13 +57,11 @@ public class OpenChannelsControlMessage extends ControlMessage {
     /**
      * Remote view of the local endpoint with which channels should be established.
      */
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private RemoteEndpointDetails initiatorEndpoint;
 
     /**
      * Query used to filter endpoints on the remote host.
      */
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private Query query;
 
 
@@ -84,9 +83,15 @@ public class OpenChannelsControlMessage extends ControlMessage {
      * @return a response containing the details of the opened channels.
      */
     @Override
-    public Response handle(MiddlewareService service) {
+    public Response handle(Service service) {
+        if (!(service instanceof MiddlewareService)) {
+            // Open channels can only be handled by a middleware.
+            return null;
+        }
+
         // Open channels according to the stored query.
-        return new Response(service.openChannels(query, initiatorEndpoint));
+        MiddlewareService middleware = (MiddlewareService) service;
+        return new Response(middleware.openChannels(query, initiatorEndpoint));
     }
 
     @Override
