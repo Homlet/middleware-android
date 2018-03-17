@@ -13,7 +13,8 @@ import java.util.List;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.core.comms.ControlMessageHandler;
 import uk.ac.cam.seh208.middleware.core.network.Location;
-import uk.ac.cam.seh208.middleware.core.network.Switch;
+import uk.ac.cam.seh208.middleware.core.network.RequestSwitch;
+import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
 
 
 public class RDCService extends Service {
@@ -26,7 +27,7 @@ public class RDCService extends Service {
     /**
      * Switch handling communications at the transport and network layers.
      */
-    private Switch commsSwitch;
+    private RequestSwitch requestSwitch;
 
 
     /**
@@ -44,7 +45,11 @@ public class RDCService extends Service {
 
         // Initialise object parameters.
         ControlMessageHandler handler = new ControlMessageHandler(this);
-        commsSwitch = new Switch(Arrays.asList(Switch.SCHEME_ZMQ), handler);
+        requestSwitch = new RequestSwitch(
+                Arrays.asList(
+                    new ZMQSchemeConfiguration(ZMQSchemeConfiguration.DEFAULT_RDC_PORT)
+                ),
+                handler);
 
         Log.i(getTag(), "RDC started successfully.");
         started = true;

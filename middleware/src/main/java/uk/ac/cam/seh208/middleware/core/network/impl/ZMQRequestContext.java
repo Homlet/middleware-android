@@ -62,7 +62,7 @@ public class ZMQRequestContext implements RequestContext {
     /**
      * Instantiate a new context with the given port for the ROUTER socket.
      */
-    public ZMQRequestContext(int port) {
+    public ZMQRequestContext(ZMQSchemeConfiguration configuration) {
         // Create a new ZMQ context.
         context = ZMQ.context(IO_THREADS);
         termLock = new ReentrantReadWriteLock(true);
@@ -76,19 +76,12 @@ public class ZMQRequestContext implements RequestContext {
 //            // Default to all interfaces.
 //            addressBuilder.setHost("*");
 //        }
-        localAddress = addressBuilder.setPort(port).build();
+        localAddress = addressBuilder.setPort(configuration.getPort()).build();
 
         // Set-up the request/response context.
         responder = new Responder();
         requestServer = ZMQRequestServer.makeThread(context, localAddress, responder);
         requestServer.start();
-    }
-
-    /**
-     * Convenience constructor for creating a new context with the default port.
-     */
-    public ZMQRequestContext() {
-        this(PORT_DEFAULT);
     }
 
     /**

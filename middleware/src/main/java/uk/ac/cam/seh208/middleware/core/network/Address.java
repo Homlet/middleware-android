@@ -4,8 +4,11 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
 
 
@@ -21,6 +24,66 @@ import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
         @JsonSubTypes.Type(value = ZMQAddress.class, name = "a0")
 })
 public abstract class Address implements JSONSerializable {
+
+    /**
+     * Scheme string for zmq addresses.
+     */
+    public static final String SCHEME_ZMQ = "zmq";
+
+
+    /**
+     * Build a new address object from the given string in scheme://address
+     * form. The subtype of address constructed is determined by the scheme,
+     * and then the builder of that type is deferred to for interpretation
+     * of the address string.
+     *
+     * @param string Input scheme://address string.
+     *
+     * @return a newly constructed object of an Address subtype.
+     *
+     * @throws MalformedAddressException if the string does not have the form scheme://address
+     * @throws MalformedAddressException if the scheme is not supported.
+     * @throws MalformedAddressException if the builder cannot parse the address string.
+     */
+    public static Address make(String string) throws MalformedAddressException {
+        AddressBuilder builder;
+        Pattern pattern = Pattern.compile("(.*)://(.*)");
+        Matcher matcher = pattern.matcher(string);
+
+        if (!matcher.matches()) {
+            // The input string is not of the form scheme://address.
+            throw new MalformedAddressException(string);
+        }
+
+        switch (matcher.group(1).toLowerCase()) {
+            case SCHEME_ZMQ:
+                builder = new ZMQAddress.Builder();
+                break;
+
+            default:
+                // The given scheme is not yet supported by the middleware.
+                throw new MalformedAddressException(string);
+        }
+
+        return builder.fromString(matcher.group(2)).build();
+    }
+
+    /**
+     * Get the scheme string associated with a given address, determined by its dynamic type.
+     *
+     * @param address Address to introspect for scheme type.
+     *
+     * @return a scheme string.
+     */
+    public static String getScheme(Address address) {
+        if (address instanceof ZMQAddress) {
+            return SCHEME_ZMQ;
+        }
+
+        // Unreachable.
+        return null;
+    }
+
 
     /**
      * Return a reference to a string representing the address in its

@@ -5,8 +5,6 @@ import android.os.Parcelable;
 import android.util.Log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -54,7 +52,7 @@ public class Location implements Parcelable, JSONSerializable {
     /**
      * Instantiate a new location with the given uuid and a blank address set.
      */
-    public Location(@JsonProperty("uuid") int uuid) {
+    public Location(@JsonProperty("uuid") long uuid) {
         this.uuid = uuid;
         addresses = new ArrayList<>();
     }
@@ -65,7 +63,7 @@ public class Location implements Parcelable, JSONSerializable {
         List<String> strings = in.createStringArrayList();
         for (String string : strings) {
             try {
-                if (!addAddress(Switch.makeAddress(string))) {
+                if (!addAddress(Address.make(string))) {
                     Log.w(getTag(), "Could not add address to location: " +
                             "\"" + string + "\"");
                 }

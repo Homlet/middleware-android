@@ -10,6 +10,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import java8.util.stream.StreamSupport;
+
 import uk.ac.cam.seh208.middleware.binder.CombinedBinder;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.core.comms.QueryControlMessage;
@@ -38,11 +40,11 @@ import uk.ac.cam.seh208.middleware.core.comms.UpdateControlMessage;
 import uk.ac.cam.seh208.middleware.core.exception.UnexpectedClosureException;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.Location;
-import uk.ac.cam.seh208.middleware.core.network.MessageContext;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
-import uk.ac.cam.seh208.middleware.core.network.RequestContext;
+import uk.ac.cam.seh208.middleware.core.network.MessageSwitch;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
-import uk.ac.cam.seh208.middleware.core.network.Switch;
+import uk.ac.cam.seh208.middleware.core.network.RequestSwitch;
+import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
 
 
 public class MiddlewareService extends Service {
@@ -85,9 +87,19 @@ public class MiddlewareService extends Service {
     private MultiplexerPool multiplexerPool;
 
     /**
-     * Switch handling communications at the transport and network layers.
+     * Switch handling message-based communications at the transport and network layers.
      */
-    private Switch commsSwitch;
+    private MessageSwitch messageSwitch;
+
+    /**
+     * Switch handling message-based communications at the transport and network layers.
+     */
+    private RequestSwitch requestSwitch;
+
+    /**
+     * Stores the location of this middleware instance.
+     */
+    private Location location;
 
     /**
      * Indicates whether it should be possible for remote instances of the
@@ -132,8 +144,21 @@ public class MiddlewareService extends Service {
         endpointSet = new EndpointSet();
         multiplexerPool = new MultiplexerPool(this);
 
+        messageSwitch = new MessageSwitch(
+                Arrays.asList(
+                        new ZMQSchemeConfiguration(ZMQSchemeConfiguration.DEFAULT_MESSAGE_PORT)
+                ));
+
         ControlMessageHandler handler = new ControlMessageHandler(this);
-        commsSwitch = new Switch(Arrays.asList(Switch.SCHEME_ZMQ), handler);
+        requestSwitch = new RequestSwitch(
+                Arrays.asList(
+                        new ZMQSchemeConfiguration(ZMQSchemeConfiguration.DEFAULT_REQUEST_PORT)
+                ),
+                handler);
+
+        // TODO: restore location from persistent storage.s
+        Random random = new Random(System.nanoTime());
+        location = new Location(random.nextLong());
 
         // Set up the RDC update ticker.
         ScheduledExecutorService updateScheduler = Executors.newSingleThreadScheduledExecutor();
@@ -377,10 +402,7 @@ public class MiddlewareService extends Service {
             throw new BadHostException(remote.toString());
         }
 
-        String scheme = Switch.getScheme(preferredAddress);
-        MessageContext context = commsSwitch.getMessageContext(scheme);
-
-        return context.getMessageStream(preferredAddress);
+        return messageSwitch.getStream(preferredAddress);
     }
 
     /**
@@ -404,10 +426,7 @@ public class MiddlewareService extends Service {
             throw new BadHostException(remote.toString());
         }
 
-        String scheme = Switch.getScheme(preferredAddress);
-        RequestContext context = commsSwitch.getRequestContext(scheme);
-
-        return context.getRequestStream(preferredAddress);
+        return requestSwitch.getStream(preferredAddress);
     }
 
     /**
@@ -475,7 +494,7 @@ public class MiddlewareService extends Service {
     }
 
     public Location getLocation() {
-        return commsSwitch.getLocation();
+        return location;
     }
 
     public boolean isForceable() {

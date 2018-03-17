@@ -62,7 +62,7 @@ public class ZMQMessageContext implements MessageContext {
     /**
      * Instantiate a new context with the given port for the ROUTER socket.
      */
-    public ZMQMessageContext(int port) {
+    public ZMQMessageContext(ZMQSchemeConfiguration configuration) {
         // Create a new ZMQ context.
         context = ZMQ.context(IO_THREADS);
         terminated = false;
@@ -77,19 +77,12 @@ public class ZMQMessageContext implements MessageContext {
 //            // Default to all interfaces.
 //            addressBuilder.setHost("*");
 //        }
-        ZMQAddress harmonyAddress = addressBuilder.setPort(port).build();
+        ZMQAddress harmonyAddress = addressBuilder.setPort(configuration.getPort()).build();
 
         // Set-up the Harmony context.
         messageState = new ZMQMessageState(harmonyAddress);
         harmonyServer = ZMQMessageServer.makeThread(context, messageState);
         harmonyServer.start();
-    }
-
-    /**
-     * Convenience constructor for creating a new context with the default port.
-     */
-    public ZMQMessageContext() {
-        this(PORT_DEFAULT);
     }
 
     /**

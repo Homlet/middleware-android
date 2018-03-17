@@ -43,7 +43,7 @@ public class ControlMessageTest {
             Polarity.SOURCE,
             "{}",
             Collections.emptyList(),
-            new Location(random.nextInt())
+            new Location(random.nextLong())
     );
 
     private static final List<RemoteEndpointDetails> endpoints = Arrays.asList(
@@ -53,7 +53,7 @@ public class ControlMessageTest {
                     Polarity.SOURCE,
                     "{}",
                     Collections.emptyList(),
-                    new Location(random.nextInt())
+                    new Location(random.nextLong())
             ),
             new RemoteEndpointDetails(
                     "test2",
@@ -61,16 +61,16 @@ public class ControlMessageTest {
                     Polarity.SINK,
                     "{}",
                     Arrays.asList("tag1", "tag2"),
-                    new Location(random.nextInt())
+                    new Location(random.nextLong())
             )
     );
 
-    private static final Location location = new Location(random.nextInt());
+    private static final Location location = new Location(random.nextLong());
 
     private static final List<Location> locations = Arrays.asList(
-            new Location(random.nextInt()),
-            new Location(random.nextInt()),
-            new Location(random.nextInt())
+            new Location(random.nextLong()),
+            new Location(random.nextLong()),
+            new Location(random.nextLong())
     );
 
 
