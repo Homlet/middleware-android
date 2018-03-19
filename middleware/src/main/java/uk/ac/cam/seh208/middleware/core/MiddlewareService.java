@@ -52,18 +52,13 @@ public class MiddlewareService extends Service {
     /**
      * The delay in seconds between RDC update ticks.
      */
-    private static final int RDC_DELAY_MILLIS = 5000;
+    public static final int RDC_DELAY_MILLIS = 5000;
 
     /**
      * The amount of time waited for an acknowledgement from the RDC before
      * failure is assumed.
      */
-    private static final int RDC_TIMEOUT_MILLIS = 5000;
-
-    /**
-     * Executor for running update tasks with timeout.
-     */
-    private static final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
+    public static final int RDC_TIMEOUT_MILLIS = 5000;
 
 
     /**
@@ -125,6 +120,11 @@ public class MiddlewareService extends Service {
      */
     private boolean shouldUpdateRDC;
 
+    /**
+     * Executor for running update tasks with timeout.
+     */
+    private ExecutorService updateExecutor;
+
 
     /**
      * Initialise the service fields and set up the communications switch.
@@ -156,11 +156,15 @@ public class MiddlewareService extends Service {
                 ),
                 handler);
 
-        // TODO: restore location from persistent storage.s
+        // TODO: restore location from persistent storage.
         Random random = new Random(System.nanoTime());
         location = new Location(random.nextLong());
 
+        forceable = true;
+        discoverable = true;
+
         // Set up the RDC update ticker.
+        updateExecutor = Executors.newSingleThreadExecutor();
         ScheduledExecutorService updateScheduler = Executors.newSingleThreadScheduledExecutor();
         updateScheduler.scheduleWithFixedDelay(
                 this::maybeUpdateRDC,
@@ -520,8 +524,14 @@ public class MiddlewareService extends Service {
     }
 
     public synchronized void setDiscoverable(boolean discoverable) {
+        if (discoverable == this.discoverable) {
+            return;
+        }
+
         Log.i(getTag(), "Middleware discoverable flag set " + discoverable);
+
         this.discoverable = discoverable;
+        scheduleUpdateRDC();
     }
 
     private static String getTag() {

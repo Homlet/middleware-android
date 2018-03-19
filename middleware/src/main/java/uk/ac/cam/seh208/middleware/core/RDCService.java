@@ -79,6 +79,9 @@ public class RDCService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
+        // Attempt to start the service if not already started.
+        start();
+
         // The RDC service has no bound interface.
         return null;
     }
