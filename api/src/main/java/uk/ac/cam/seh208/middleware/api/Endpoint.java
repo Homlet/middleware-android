@@ -12,6 +12,7 @@ import static uk.ac.cam.seh208.middleware.api.RemoteUtils.callSafe;
 /**
  * Application-facing interface for an endpoint within a middleware instance.
  */
+@SuppressWarnings({"UnusedReturnValue", "SameParameterValue", "WeakerAccess", "unused"})
 public class Endpoint {
 
     /**

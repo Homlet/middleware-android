@@ -30,9 +30,9 @@ public class ViewEndpointActivity extends AppCompatActivity {
     private Middleware middleware;
 
     /**
-     * Instance of the endpoint interface bound to this activity.
+     * Name of the endpoint bound to this activity.
      */
-    private Endpoint endpoint;
+    private String name;
 
     @BindView(R.id.endpoint_name)
     TextView textName;
@@ -54,10 +54,7 @@ public class ViewEndpointActivity extends AppCompatActivity {
         middleware = new Middleware(this);
 
         // Extract the name from the passed bundle.
-        String name = getIntent().getStringExtra(EXTRA_NAME);
-
-        // Get a reference to the endpoint-specific interface for this endpoint.
-        endpoint = middleware.getEndpoint(name);
+        name = getIntent().getStringExtra(EXTRA_NAME);
 
         Log.i(getTag(), "Created view endpoint activity for endpoint \"" + name + "\"");
     }
@@ -67,7 +64,20 @@ public class ViewEndpointActivity extends AppCompatActivity {
         super.onStart();
 
         // Connect to the middleware service.
-        middleware.bind();
+        middleware.bind(this::onMiddleware);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        // Disconnect from the middleware service.
+        middleware.unbind();
+    }
+
+    private void onMiddleware() {
+        // Get a reference to the endpoint-specific interface for this endpoint.
+        Endpoint endpoint = middleware.getEndpoint(name);
 
         try {
             // Get the endpoint details.
@@ -83,14 +93,6 @@ public class ViewEndpointActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.error_contact_middleware, Toast.LENGTH_SHORT).show();
             finish();
         }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-
-        // Disconnect from the middleware service.
-        middleware.unbind();
     }
 
     /**

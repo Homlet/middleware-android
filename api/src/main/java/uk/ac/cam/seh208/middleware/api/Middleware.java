@@ -3,10 +3,19 @@ package uk.ac.cam.seh208.middleware.api;
 import android.content.Context;
 import android.content.Intent;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import java8.util.function.Consumer;
 import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
+import uk.ac.cam.seh208.middleware.binder.ICombined;
 import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IntentData;
@@ -20,6 +29,7 @@ import static uk.ac.cam.seh208.middleware.api.RemoteUtils.callSafe;
 /**
  * Application-facing interface for the middleware.
  */
+@SuppressWarnings({"UnusedReturnValue", "SameParameterValue", "WeakerAccess", "unused"})
 public class Middleware {
 
     /**
@@ -55,6 +65,15 @@ public class Middleware {
 
         // Reuse the intent for binding the owning context to the service.
         context.bindService(intent, connection, Context.BIND_IMPORTANT);
+    }
+
+    /**
+     * Bind the owning context to the service, allowing a callback to be specified
+     * to run once the binding has taken place.
+     */
+    public void bind(Runnable runnable) {
+        connection.setCallback(runnable);
+        bind();
     }
 
     /**

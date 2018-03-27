@@ -10,7 +10,6 @@ import android.widget.Toast;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
-import uk.ac.cam.seh208.middleware.api.Endpoint;
 import uk.ac.cam.seh208.middleware.api.Middleware;
 import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.common.Polarity;
@@ -22,11 +21,6 @@ public class CreateEndpointActivity extends AppCompatActivity {
      * Instance of the middleware interface bound to this activity.
      */
     private Middleware middleware;
-
-    /**
-     * Instance of the endpoint interface bound to this activity.
-     */
-    private Endpoint endpoint;
 
     @BindView(R.id.input_name)
     EditText inputName;
@@ -47,7 +41,7 @@ public class CreateEndpointActivity extends AppCompatActivity {
         setContentView(R.layout.activity_create_endpoint);
         ButterKnife.bind(this);
 
-        // Connect to the middleware service.
+        // Instantiate the middleware interface.
         middleware = new Middleware(this);
     }
 
