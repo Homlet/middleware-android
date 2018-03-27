@@ -51,10 +51,11 @@ public class Responder {
      * @return the string response from the middleware layer.
      */
     public String respond(String request) {
+        RequestHandler handler;
         synchronized (this) {
             // Grab the first non-null version of the handler. Note that
             // the handler can never be set null again after being set.
-            if (handler == null) {
+            if (this.handler == null) {
                 try {
                     wait();
                 } catch (InterruptedException e) {
@@ -63,7 +64,7 @@ public class Responder {
                     return null;
                 }
             }
-            RequestHandler handler = this.handler;
+            handler = this.handler;
         }
 
         // Respond without holding the lock, so multiple threads may use the

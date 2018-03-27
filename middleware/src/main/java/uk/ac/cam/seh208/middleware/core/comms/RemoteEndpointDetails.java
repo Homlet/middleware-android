@@ -23,7 +23,7 @@ import static uk.ac.cam.seh208.middleware.common.Keys.EndpointDetails.LOCATION;
  * host. These are used within the middleware to keep track of peer mappings,
  * and allow the user to specify particular mappings should be torn down.
  */
-public class RemoteEndpointDetails extends EndpointDetails implements JSONSerializable {
+public class RemoteEndpointDetails extends EndpointDetails {
 
     /**
      * This object is part of the Parcelable interface. It is used to instantiate

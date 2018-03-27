@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import java8.lang.Longs;
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 
@@ -153,6 +154,11 @@ public class Location implements Parcelable, JSONSerializable {
 
         return (uuid == other.uuid
              && Objects.equals(addresses, other.addresses));  // TODO: reintroduce HashSets.
+    }
+
+    @Override
+    public int hashCode() {
+        return Longs.hashCode(uuid);
     }
 
     private String getTag() {

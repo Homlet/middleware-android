@@ -13,6 +13,7 @@ import uk.ac.cam.seh208.middleware.core.network.MessageListener;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
 import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
 import uk.ac.cam.seh208.middleware.core.network.impl.ZMQMessageContext;
+import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
 
 
 /**
@@ -134,8 +135,8 @@ public class ZMQMessageTest {
         // Create two ZMQMessageContext objects, with different message ports.
         int port1 = 8000;
         int port2 = 8001;
-        MessageContext context1 = new ZMQMessageContext(port1);
-        MessageContext context2 = new ZMQMessageContext(port2);
+        MessageContext context1 = new ZMQMessageContext(new ZMQSchemeConfiguration(port1));
+        MessageContext context2 = new ZMQMessageContext(new ZMQSchemeConfiguration(port2));
 
         // Compute the local address.
         ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
@@ -178,7 +179,7 @@ public class ZMQMessageTest {
         int basePort = 9000;
         MessageContext[] contexts = new MessageContext[4];
         for (int i = 0; i < contexts.length; i++) {
-            contexts[i] = new ZMQMessageContext(basePort + i);
+            contexts[i] = new ZMQMessageContext(new ZMQSchemeConfiguration(basePort + i));
         }
 
         // Compute the local address.

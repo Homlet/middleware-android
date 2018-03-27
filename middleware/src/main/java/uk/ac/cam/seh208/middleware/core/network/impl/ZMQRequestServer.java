@@ -100,8 +100,14 @@ public class ZMQRequestServer implements Runnable {
                         while (!Thread.currentThread().isInterrupted()) {
                             String request = socket.recvStr();
                             Log.d(getTag() + ".T" + Thread.currentThread().getId(),
-                                    "REQ: \"" + request + "\"");
-                            socket.send(responder.respond(request));
+                                    "Got request \"" + request + "\"");
+
+                            String response = responder.respond(request);
+                            if (response != null) {
+                                socket.send(response);
+                            } else {
+                                socket.send("");
+                            }
                         }
                     } catch (ZMQException ignored) {
                         // Either we were interrupted, or some network error occurred.

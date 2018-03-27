@@ -83,7 +83,7 @@ public class UpdateControlMessage extends ControlMessage {
         }
 
         RDCService rdc = (RDCService) service;
-        rdc.remove(location);
+        rdc.update(location, details);
 
         return Response.getInstance();
     }

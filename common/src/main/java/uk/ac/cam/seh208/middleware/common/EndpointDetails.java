@@ -8,6 +8,8 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.NonNull;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -15,13 +17,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
+import java8.lang.Longs;
+
 
 /**
  * Immutable class describing an endpoint. This class may refer to an
  * endpoint in general; a subclass exists for describing endpoints existing
  * on a particular remote host.
  */
-public class EndpointDetails implements Parcelable {
+public class EndpointDetails implements Parcelable, JSONSerializable {
 
     /**
      * The universally unique endpoint identifier.
@@ -78,8 +82,13 @@ public class EndpointDetails implements Parcelable {
     /**
      * Construct a new immutable endpoint details object with the given parameters.
      */
-    public EndpointDetails(long endpointId, @NonNull String name, String desc,
-                           Polarity polarity, String schema, List<String> tags) {
+    public EndpointDetails(
+            @JsonProperty("endpointId") long endpointId,
+            @JsonProperty("name") @NonNull String name,
+            @JsonProperty("desc") String desc,
+            @JsonProperty("polarity") Polarity polarity,
+            @JsonProperty("schema") String schema,
+            @JsonProperty("tags") List<String> tags) {
         // TODO: validate schema string.
 
         this.endpointId = endpointId;
@@ -171,10 +180,21 @@ public class EndpointDetails implements Parcelable {
         }
         EndpointDetails other = (EndpointDetails) obj;
 
-        return (Objects.equals(name, other.name)
-             && Objects.equals(desc, other.desc)
-             && polarity == other.polarity
-             && Objects.equals(schema, other.schema)
-             && Objects.equals(new HashSet<>(tags), new HashSet<>(other.tags)));
+        return (endpointId == other.endpointId
+                && Objects.equals(name, other.name)
+                && Objects.equals(desc, other.desc)
+                && polarity == other.polarity
+                && Objects.equals(schema, other.schema)
+                && Objects.equals(new HashSet<>(tags), new HashSet<>(other.tags)));
+    }
+
+    @Override
+    public int hashCode() {
+        return Longs.hashCode(endpointId);
+    }
+
+    @Override
+    public String toString() {
+        return toJSON();
     }
 }

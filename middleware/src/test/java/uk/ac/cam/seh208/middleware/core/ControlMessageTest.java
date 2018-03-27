@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.Query;
@@ -46,7 +47,7 @@ public class ControlMessageTest {
             new Location(random.nextLong())
     );
 
-    private static final List<RemoteEndpointDetails> endpoints = Arrays.asList(
+    private static final List<RemoteEndpointDetails> remoteEndpoints = Arrays.asList(
             new RemoteEndpointDetails(
                     "test1",
                     "desc a",
@@ -62,6 +63,24 @@ public class ControlMessageTest {
                     "{}",
                     Arrays.asList("tag1", "tag2"),
                     new Location(random.nextLong())
+            )
+    );
+
+
+    private static final List<EndpointDetails> endpoints = Arrays.asList(
+            new EndpointDetails(
+                    "test1",
+                    "desc a",
+                    Polarity.SOURCE,
+                    "{}",
+                    Collections.emptyList()
+            ),
+            new EndpointDetails(
+                    "test2",
+                    "desc b",
+                    Polarity.SINK,
+                    "{}",
+                    Arrays.asList("tag1", "tag2")
             )
     );
 
@@ -93,7 +112,7 @@ public class ControlMessageTest {
     @Test
     public void testSerialiseOpenChannelsResponse()
             throws InvalidControlMessageException, IOException {
-        ControlMessage.Response response = new OpenChannelsControlMessage.Response(endpoints);
+        ControlMessage.Response response = new OpenChannelsControlMessage.Response(remoteEndpoints);
 
         testSerialise(response, ControlMessage.Response.class);
     }
@@ -130,7 +149,7 @@ public class ControlMessageTest {
 
     @Test
     public void testSerialiseUpdate() throws InvalidControlMessageException, IOException {
-        ControlMessage message = new CloseChannelControlMessage(random.nextLong());
+        ControlMessage message = new UpdateControlMessage(location, endpoints);
 
         testSerialise(message, ControlMessage.class);
     }

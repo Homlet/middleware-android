@@ -1,6 +1,7 @@
 package uk.ac.cam.seh208.middleware.core.comms;
 
 import android.app.Service;
+import android.util.Log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Objects;
 
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.core.RDCService;
 import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
@@ -76,8 +78,16 @@ public class QueryControlMessage extends ControlMessage {
      */
     @Override
     public Response handle(Service service) {
-        // TODO: implement.
-        return null;
+        if (!(service instanceof RDCService)) {
+            // REMOVE can only be handled by an RDC instance.
+            return null;
+        }
+
+        // Interpret the given service as an RDCService.
+        RDCService rdc = (RDCService) service;
+
+        // Discover resources and return them wrapped in a response message.
+        return new Response(rdc.discover(query));
     }
 
     @Override

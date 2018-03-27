@@ -26,12 +26,6 @@ android {
         targetCompatibility 1.8
         sourceCompatibility 1.8
     }
-
-    sourceSets {
-        main {
-            manifest.srcFile "src/androidTest/AndroidManifest.xml"
-        }
-    }
 }
 
 unMock {

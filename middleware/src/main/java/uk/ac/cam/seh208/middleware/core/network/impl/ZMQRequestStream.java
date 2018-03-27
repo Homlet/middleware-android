@@ -101,11 +101,10 @@ public class ZMQRequestStream extends RequestStream {
 
 
     /**
-     * Open the REQ socket to the peer if this has not already been done. After
-     * opening, an initialisation message is sent containing the local host.
+     * Open the REQ socket to the peer if this has not already been done.
      *
-     * @return whether the DEALER socket exists and is connected to the peer. If not,
-     *         the dealer field will remain null.
+     * @return whether the REQ socket exists and is connected to the peer. If not,
+     *         the socket field will remain null.
      */
     private synchronized boolean connect() {
         // We cannot re-establish a socket after the stream has been closed.
@@ -138,7 +137,7 @@ public class ZMQRequestStream extends RequestStream {
     }
 
     /**
-     * Close the DEALER socket to the peer if it is currently open, breaking
+     * Close the REQ socket to the peer if it is currently open, breaking
      * the connection to the peer.
      */
     private synchronized void disconnect() {

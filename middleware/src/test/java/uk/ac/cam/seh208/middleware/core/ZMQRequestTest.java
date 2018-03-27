@@ -13,6 +13,7 @@ import uk.ac.cam.seh208.middleware.core.network.RequestContext;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
 import uk.ac.cam.seh208.middleware.core.network.impl.ZMQRequestContext;
+import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
 
 
 /**
@@ -25,8 +26,8 @@ public class ZMQRequestTest {
         // Create two ZMQRequestContext objects, with different bound ports.
         int port1 = 8500;
         int port2 = 8501;
-        RequestContext context1 = new ZMQRequestContext(port1);
-        RequestContext context2 = new ZMQRequestContext(port2);
+        RequestContext context1 = new ZMQRequestContext(new ZMQSchemeConfiguration(port1));
+        RequestContext context2 = new ZMQRequestContext(new ZMQSchemeConfiguration(port2));
 
         // Compute the local address.
         ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
@@ -62,8 +63,8 @@ public class ZMQRequestTest {
         // Create two ZMQRequestContext objects, with different bound ports.
         int port1 = 8500;
         int port2 = 8501;
-        RequestContext context1 = new ZMQRequestContext(port1);
-        RequestContext context2 = new ZMQRequestContext(port2);
+        RequestContext context1 = new ZMQRequestContext(new ZMQSchemeConfiguration(port1));
+        RequestContext context2 = new ZMQRequestContext(new ZMQSchemeConfiguration(port2));
 
         // Compute the local address.
         ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();

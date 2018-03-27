@@ -210,6 +210,7 @@ public class MiddlewareService extends Service {
             try {
                 // Limit the execution of the task with a timeout.
                 future.get(RDC_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+                Log.i(getTag(), "Update tick completed successfully.");
 
                 // If we were successful, don't update on the next tick (unless
                 // another event invalidates our RDC entry).
@@ -238,7 +239,9 @@ public class MiddlewareService extends Service {
             // Construct an UPDATE control message with all endpoint details.
             ArrayList<EndpointDetails> details = new ArrayList<>();
             for (Endpoint endpoint : getEndpointSet()) {
-                details.add(endpoint.getDetails());
+                if (endpoint.isExposed()) {
+                    details.add(endpoint.getDetails());
+                }
             }
             UpdateControlMessage message = new UpdateControlMessage(getLocation(), details);
 
@@ -337,7 +340,7 @@ public class MiddlewareService extends Service {
             // Add the endpoint to the set.
             endpointSet.add(endpoint);
 
-            Log.i(getTag(), "Endpoint " + details + " created.");
+            Log.i(getTag(), "Endpoint [" + details.getEndpointId() + "] created.");
         }
 
         scheduleUpdateRDC();

@@ -28,7 +28,7 @@ import java8.util.function.Predicate;
  * from the available peer endpoints; unmap queries are applied
  * to locally held data on remote mappings.
  */
-public class Query implements Parcelable {
+public class Query implements Parcelable, JSONSerializable {
 
     /**
      * Builder object for immutable queries.
@@ -409,5 +409,10 @@ public class Query implements Parcelable {
 
         // Serialise the bundle into the parcel.
         dest.writeBundle(bundle);
+    }
+
+    @Override
+    public String toString() {
+        return toJSON();
     }
 }

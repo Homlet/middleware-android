@@ -8,9 +8,16 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import java8.util.Objects;
+import java8.util.stream.Collectors;
+import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
+import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.core.comms.ControlMessageHandler;
 import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestSwitch;
@@ -28,6 +35,24 @@ public class RDCService extends Service {
      * Switch handling communications at the transport and network layers.
      */
     private RequestSwitch requestSwitch;
+
+    // TODO: use persistent backing storage of resources.
+    /**
+     * Read-write lock for efficient use of the database.
+     */
+    private ReentrantReadWriteLock lock;
+
+    /**
+     * Map of locations by the endpoints known present there. Used for
+     * efficient discovery of locations exposing relevant resources.
+     */
+    private Map<EndpointDetails, Location> locationsByEndpoint;
+
+    /**
+     * Map of endpoints by the locations at which they are present. Used
+     * for efficient updating and removal of entries.
+     */
+    private Map<Location, List<EndpointDetails>> endpointsByLocation;
 
 
     /**
@@ -50,6 +75,10 @@ public class RDCService extends Service {
                     new ZMQSchemeConfiguration(ZMQSchemeConfiguration.DEFAULT_RDC_PORT)
                 ),
                 handler);
+
+        lock = new ReentrantReadWriteLock();
+        locationsByEndpoint = new HashMap<>();
+        endpointsByLocation = new HashMap<>();
 
         Log.i(getTag(), "RDC started successfully.");
         started = true;
@@ -86,6 +115,25 @@ public class RDCService extends Service {
         return null;
     }
 
+    public List<Location> discover(Query query) {
+        Log.i(getTag(), "Discovering with query \"" + query + "\"");
+
+        synchronized (lock.readLock()) {
+            // Remove any matches limit from the query.
+            Query modifiedQuery = new Query.Builder()
+                    .copy(query)
+                    .setMatches(Query.MATCH_INDEFINITELY)
+                    .build();
+
+            // Find all matching locations using a stream.
+            return StreamSupport.stream(locationsByEndpoint.keySet())
+                    .filter(modifiedQuery.getFilter())
+                    .map(locationsByEndpoint::get)
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+    }
+
     /**
      * Update the middleware instance record for the given location in the RDC state.
      *
@@ -93,7 +141,22 @@ public class RDCService extends Service {
      * @param details New list of endpoints exposed by that middleware instance.
      */
     public void update(Location location, List<EndpointDetails> details) {
-        // TODO: implement.
+        Log.i(getTag(), "Updating location " + location + " " +
+                "with " + details.size() + "exposed endpoints.");
+
+        synchronized (lock.writeLock()) {
+            // Remove the prior entry from the database.
+            removeQuiet(location);
+
+            // Repopulate the database with the new details.
+            List<EndpointDetails> nonNullDetails = StreamSupport.stream(details)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            endpointsByLocation.put(location, nonNullDetails);
+            for (EndpointDetails endpoint : nonNullDetails) {
+                locationsByEndpoint.put(endpoint, location);
+            }
+        }
     }
 
     /**
@@ -102,7 +165,29 @@ public class RDCService extends Service {
      * @param location Location indexing the middleware instance record to remove.
      */
     public void remove(Location location) {
-        // TODO: implement.
+        Log.i(getTag(), "Removing location " + location);
+        removeQuiet(location);
+    }
+
+    /**
+     * Perform the remove operation without logging.
+     */
+    private void removeQuiet(Location location) {
+        synchronized (lock.writeLock()) {
+            // Remove the endpoints list from the database.
+            List<EndpointDetails> details = endpointsByLocation.remove(location);
+
+            if (details == null) {
+                // The location was not present in the map.
+                return;
+            }
+
+            for (EndpointDetails endpoint : details) {
+                // We never put null values into endpointsByLocation lists in update
+                // so we can skip a null check here.
+                locationsByEndpoint.remove(endpoint);
+            }
+        }
     }
 
     private static String getTag() {

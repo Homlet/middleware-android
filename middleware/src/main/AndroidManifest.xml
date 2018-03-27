@@ -21,6 +21,13 @@
             android:description="@string/rdc_desc"
             android:exported="true" />
 
+
+        <!-- These should be in their own androidTest manifest, and are only here
+             as a workaround to gradle not correctly including both manifests. -->
+        <service android:name=".TestMiddlewareService" />
+
+        <service android:name=".TestRDCService" />
+
     </application>
 
 </manifest>

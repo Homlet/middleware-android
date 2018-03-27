@@ -8,7 +8,6 @@ package uk.ac.cam.seh208.middleware.core.network;
  * middlewares, as well as run commands on remote instances of the middleware.
  */
 public interface RequestContext {
-    // TODO: use location instead of address for versatility.
     /**
      * Return a request stream to a remote instance of the middleware. The stream
      * must be ready for sending asynchronous requests to the remote host.

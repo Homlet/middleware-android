@@ -8,12 +8,13 @@ import android.support.test.runner.AndroidJUnit4;
 
 import junit.framework.Assert;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeoutException;
 
@@ -32,19 +33,19 @@ import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
 @RunWith(AndroidJUnit4.class)
 public class RDCTest {
 
-    @Rule
-    public final ServiceTestRule mwServiceRule = new ServiceTestRule();
+    @ClassRule
+    public static final ServiceTestRule mwServiceRule = new ServiceTestRule();
 
-    @Rule
-    public final ServiceTestRule rdcServiceRule = new ServiceTestRule();
+    @ClassRule
+    public static final ServiceTestRule rdcServiceRule = new ServiceTestRule();
 
-    private MiddlewareService middleware;
+    private static MiddlewareService middleware;
 
-    private RDCService rdc;
+    private static RDCService rdc;
 
 
-    @Before
-    public void bind() throws TimeoutException, EndpointCollisionException,
+    @BeforeClass
+    public static void bind() throws TimeoutException, EndpointCollisionException,
                               BadSchemaException, InterruptedException {
         // Start and bind to the services.
         Intent mwIntent = new Intent(
@@ -62,7 +63,7 @@ public class RDCTest {
 
         // Configure the services.
         Address rdcAddress = new ZMQAddress.Builder()
-                .setHost("localhost")
+                .setHost("127.0.0.1")
                 .setPort(ZMQSchemeConfiguration.DEFAULT_RDC_PORT)
                 .build();
         Location rdcLocation = new Location(-1);
@@ -93,7 +94,7 @@ public class RDCTest {
         Query query = new Query.Builder().build();
 
         // Discover via the middleware.
-        Assert.assertEquals(middleware.getLocation(), middleware.discover(query));
+        Assert.assertEquals(Arrays.asList(middleware.getLocation()), middleware.discover(query));
     }
 
     @Test
@@ -105,7 +106,7 @@ public class RDCTest {
                 .build();
 
         // Discover via the middleware.
-        Assert.assertEquals(middleware.getLocation(), middleware.discover(query));
+        Assert.assertEquals(Arrays.asList(middleware.getLocation()), middleware.discover(query));
     }
 
     @Test
@@ -130,8 +131,8 @@ public class RDCTest {
         Assert.assertEquals(Collections.emptyList(), middleware.discover(query));
     }
 
-    @After
-    public void stop() {
+    @AfterClass
+    public static void unbind() {
         mwServiceRule.unbindService();
         rdcServiceRule.unbindService();
     }

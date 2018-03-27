@@ -48,7 +48,7 @@ public class ControlMessageHandler implements RequestHandler {
             ControlMessage.Response response = message.handle(service);
             return response.toJSON();
         } catch (IOException e) {
-            Log.e(getTag(), "Error parsing control message: \"" + request + "\"");
+            Log.e(getTag(), "Error handling control message: \"" + request + "\"");
             return null;
         }
     }
