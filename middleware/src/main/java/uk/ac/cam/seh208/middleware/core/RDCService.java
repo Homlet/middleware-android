@@ -142,7 +142,7 @@ public class RDCService extends Service {
      */
     public void update(Location location, List<EndpointDetails> details) {
         Log.i(getTag(), "Updating location " + location + " " +
-                "with " + details.size() + "exposed endpoints.");
+                "with " + details.size() + " exposed endpoint(s).");
 
         synchronized (lock.writeLock()) {
             // Remove the prior entry from the database.

@@ -6,12 +6,15 @@ import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import butterknife.ButterKnife;
 import uk.ac.cam.seh208.middleware.api.Middleware;
 import uk.ac.cam.seh208.middleware.api.RDC;
+import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -74,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
 
         // Connect to the middleware service.
-        middleware.bind();
+        middleware.bind(this::onMiddleware);
     }
 
     @Override
@@ -83,6 +86,16 @@ public class MainActivity extends AppCompatActivity {
 
         // Disconnect from the middleware service.
         middleware.unbind();
+    }
+
+    private void onMiddleware() {
+        try {
+            middleware.setRDCAddress("zmq://127.0.0.1:4854");
+        } catch (MiddlewareDisconnectedException e) {
+            Log.e(getTag(), "Middleware disconnected while configuring.");
+            Toast.makeText(this, R.string.error_contact_middleware, Toast.LENGTH_SHORT).show();
+            finish();
+        }
     }
 
     public Middleware getMiddleware() {

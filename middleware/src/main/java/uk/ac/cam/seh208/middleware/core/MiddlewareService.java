@@ -233,6 +233,11 @@ public class MiddlewareService extends Service {
      * Send an UPDATE control message to the RDC listing all currently exposed endpoints.
      */
     private void updateRDC() {
+        if (rdcLocation == null) {
+            Log.w(getTag(), "No RDC location set on update.");
+            return;
+        }
+
         try {
             Log.i(getTag(), "Sending update to the RDC.");
 
@@ -260,6 +265,11 @@ public class MiddlewareService extends Service {
      * is no longer discoverable.
      */
     private void removeRDC() {
+        if (rdcLocation == null) {
+            Log.w(getTag(), "No RDC location set on remove.");
+            return;
+        }
+
         try {
             Log.i(getTag(), "Sending removal request to the RDC.");
 
