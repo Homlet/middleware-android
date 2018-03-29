@@ -24,7 +24,9 @@ import uk.ac.cam.seh208.middleware.core.network.RequestStream;
         @JsonSubTypes.Type(value = CloseChannelControlMessage.class, name = "CLOSE_CHANNEL"),
         @JsonSubTypes.Type(value = QueryControlMessage.class, name = "QUERY"),
         @JsonSubTypes.Type(value = UpdateControlMessage.class, name = "UPDATE"),
-        @JsonSubTypes.Type(value = RemoveControlMessage.class, name = "REMOVE")
+        @JsonSubTypes.Type(value = RemoveControlMessage.class, name = "REMOVE"),
+        @JsonSubTypes.Type(value = MiddlewareCommandControlMessage.class, name = "MW_COMMAND"),
+        @JsonSubTypes.Type(value = EndpointCommandControlMessage.class, name = "EP_COMMAND")
 })
 public abstract class ControlMessage implements JSONSerializable {
 
@@ -47,7 +49,11 @@ public abstract class ControlMessage implements JSONSerializable {
             @JsonSubTypes.Type(value = UpdateControlMessage.Response.class,
                                name = "UPDATE.R"),
             @JsonSubTypes.Type(value = RemoveControlMessage.Response.class,
-                               name = "REMOVE.R")
+                               name = "REMOVE.R"),
+            @JsonSubTypes.Type(value = MiddlewareCommandControlMessage.Response.class,
+                               name = "MW_COMMAND.R"),
+            @JsonSubTypes.Type(value = EndpointCommandControlMessage.Response.class,
+                               name = "EP_COMMAND.R")
     })
     public static abstract class Response implements JSONSerializable { }
 

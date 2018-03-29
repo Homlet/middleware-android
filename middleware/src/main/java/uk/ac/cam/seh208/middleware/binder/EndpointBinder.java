@@ -38,7 +38,7 @@ public class EndpointBinder extends IEndpoint.Stub {
     private Endpoint endpoint;
 
 
-    public EndpointBinder(Endpoint endpoint) {
+    EndpointBinder(Endpoint endpoint) {
         this.endpoint = endpoint;
     }
 
@@ -47,7 +47,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      *
      * NOTE: after this call no further calls should be made.
      */
-    public void destroy() {
+    void destroy() {
         endpoint = null;
     }
 

@@ -1,11 +1,9 @@
 package uk.ac.cam.seh208.middleware.common;
 
-import static uk.ac.cam.seh208.middleware.common.Keys.Command.Options.*;
-
-import android.annotation.SuppressLint;
-import android.os.Bundle;
-import android.os.Parcel;
 import android.os.Parcelable;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 
 /**
@@ -15,131 +13,45 @@ import android.os.Parcelable;
  * spaces, by allowing third parties to manage connections between
  * different devices.
  */
-public abstract class Command implements Parcelable {
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.PROPERTY,
+        property = "tag"
+)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = MapCommand.class, name = "MAP"),
+        @JsonSubTypes.Type(value = MapToCommand.class, name = "MAP_TO"),
+        @JsonSubTypes.Type(value = UnmapAllCommand.class, name = "UNMAP_ALL"),
+        @JsonSubTypes.Type(value = CloseAllCommand.class, name = "CLOSE_ALL"),
+        @JsonSubTypes.Type(value = SetRDCAddressCommand.class, name = "SET_RDC_ADDRESS")
+})
+public abstract class Command implements Parcelable, JSONSerializable {
 
-    public enum CommandType {
-        MAP,
-        MAP_TO,
-        UNMAP,
-        UNMAP_FROM,
-        SET_EXPOSED
+    protected enum CommandType {
+        MAP(MapCommand.class),
+        MAP_TO(MapToCommand.class),
+        UNMAP_ALL(UnmapAllCommand.class),
+        CLOSE_ALL(CloseAllCommand.class),
+        SET_RDC_ADDRESS(SetRDCAddressCommand.class);
+
+
+        public Creator<? extends Command> creator;
+
+
+        CommandType(Class<? extends Command> clazz) {
+            try {
+                //noinspection unchecked
+                creator = (Creator<? extends Command>) clazz.getField("CREATOR").get(null);
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                // This should only be reachable in the case of a programming error.
+                e.printStackTrace();
+            }
+        }
     }
 
-
-    /**
-     * Construct and return a new command object describing a remote
-     * indirect (via-RDC) mapping command, filtered based on some query.
-     *
-     * @param query Endpoint query to send the RDC and any returned hosts.
-     *
-     * @return a newly constructed command object.
-     */
-    public static Command newMap(Query query) {
-        // Pack the query into an options bundle.
-        Bundle options = new Bundle();
-        options.putParcelable(QUERY, query);
-
-        return new EndpointCommand(CommandType.MAP, options);
-    }
-
-    /**
-     * Construct and return a new command object describing a remote
-     * direct mapping command, filtered based on some query.
-     *
-     * @param host Host to map to.
-     * @param query Endpoint query to send the host.
-     *
-     * @return a newly constructed command object.
-     */
-    public static Command newMapTo(String host, Query query) {
-        // Pack the query into an options bundle.
-        Bundle options = new Bundle();
-        options.putString(HOST, host);
-        options.putParcelable(QUERY, query);
-
-        return new EndpointCommand(CommandType.MAP_TO, options);
-    }
-
-    /**
-     * Construct and return a new command object describing a remote general
-     * (all connected hosts) unmapping command, filtered based on some query.
-     *
-     * @param query Endpoint query for selecting mappings to drop.
-     *
-     * @return a newly constructed command object.
-     */
-    public static Command newUnmap(Query query) {
-        // Pack the query into an options bundle.
-        Bundle options = new Bundle();
-        options.putParcelable(QUERY, query);
-
-        return new EndpointCommand(CommandType.UNMAP, options);
-    }
-
-    /**
-     * Construct and return a new command object describing a remote specific
-     * (single connected host) unmapping command, filtered based on some query.
-     *
-     * @param query Endpoint query for selecting mappings to drop.
-     *
-     * @return a newly constructed command object.
-     */
-    public static Command newUnmapFrom(String host, Query query) {
-        // Pack the query into an options bundle.
-        Bundle options = new Bundle();
-        options.putString(HOST, host);
-        options.putParcelable(QUERY, query);
-
-        return new EndpointCommand(CommandType.UNMAP_FROM, options);
-    }
-
-    /**
-     * Construct and return a new command object describing a command to change
-     * the exposed
-     */
-    public static Command newSetExposed(boolean exposed) {
-        // Pack the query into an options bundle.
-        Bundle options = new Bundle();
-        options.putBoolean(EXPOSED, exposed);
-
-        return new EndpointCommand(CommandType.SET_EXPOSED, options);
-    }
-
-
-    /**
-     * The type of command that should be run on the remote instance
-     * of the middleware.
-     */
-    private CommandType type;
-
-    /**
-     * Options for the command, stored as a bundle.
-     */
-    private Bundle options;
-
-
-    protected Command(CommandType type, Bundle options) {
-        this.type = type;
-        this.options = options;
-    }
-
-    protected Command(Parcel in) {
-        // Read the command type from the parcel.
-        type = (CommandType) in.readSerializable();
-
-        // Read the bundle from the parcel.
-        options = in.readBundle(getClass().getClassLoader());
-    }
 
     @Override
     public int describeContents() {
         return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        // Serialise the object contents into the parcel.
-        dest.writeSerializable(type);
-        dest.writeBundle(options);
     }
 }

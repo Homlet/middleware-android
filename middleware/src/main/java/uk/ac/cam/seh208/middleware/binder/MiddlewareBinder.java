@@ -9,7 +9,6 @@ import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
-import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
@@ -18,7 +17,6 @@ import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.Location;
-import uk.ac.cam.seh208.middleware.core.network.MessageSwitch;
 
 
 /**
@@ -40,7 +38,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     private final MiddlewareService service;
 
 
-    public MiddlewareBinder(MiddlewareService service) {
+    MiddlewareBinder(MiddlewareService service) {
         this.service = service;
     }
 
@@ -115,29 +113,45 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     /**
      * Run a general middleware command on a remote instance of the middleware.
      *
-     * @param remote The address of the device the middleware is accessible on.
+     * @param address The address of the device the middleware is accessible on.
      * @param command Object describing the command.
      *
      * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public void force(String remote, MiddlewareCommand command) throws BadHostException {
-        // TODO: implement.
+    public void force(String address, MiddlewareCommand command) throws BadHostException {
+        // TODO: work out whether locations should be exposed to the application developer.
+        try {
+            // TODO: use a real location instead.
+            Location location = new Location(-1);
+            location.addAddress(Address.make(address));
+            service.force(location, command);
+        } catch (MalformedAddressException e) {
+            Log.e(getTag(), "Malformed address string given when forcing command.");
+        }
     }
 
     /**
      * Run a command on a remote endpoint (an endpoint of a remote middleware instance).
      *
-     * @param remote The address of the device the middleware is accessible on.
+     * @param address The address of the device the middleware is accessible on.
      * @param name The name of the endpoint to run the command on.
      * @param command Object describing the command.
      *
      * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public void forceEndpoint(String remote, String name,
+    public void forceEndpoint(String address, String name,
                               EndpointCommand command) throws BadHostException {
-        // TODO: implement.
+        // TODO: work out whether locations should be exposed to the application developer.
+        try {
+            // TODO: use a real location instead.
+            Location location = new Location(-1);
+            location.addAddress(Address.make(address));
+            service.forceEndpoint(location, name, command);
+        } catch (MalformedAddressException e) {
+            Log.e(getTag(), "Malformed address string given when forcing endpoint command.");
+        }
     }
 
     /**
@@ -165,7 +179,6 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     public void setRDCAddress(String address) throws BadHostException {
         try {
             // Build an RDC location with negative ID.
-            // TODO: create location builder for this.
             Location location = new Location(-1);
             location.addAddress(Address.make(address));
             service.setRDCLocation(location);
@@ -186,27 +199,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
         service.setDiscoverable(discoverable);
     }
 
-    /**
-     * Send a new resource discovery query to the registered RDC. The result is a
-     * list of hostnames running middleware instances which expose endpoints
-     * matching the query.
-     *
-     * Note that for the purposes of resource discovery, the 'matches' field of the
-     * query, which limits the number of endpoint matches per filter, is ignored.
-     *
-     * @param query Query to send to the RDC. Note that the matches field is ignored.
-     *
-     * @return a list of hostnames corresponding to middleware instances.
-     *
-     * @throws BadHostException when the set RDC host is invalid.
-     */
-    @Override
-    public List<String> discover(Query query) throws BadHostException {
-        // TODO: implement.
-        return null;
-    }
-
     private static String getTag() {
-        return "MIDDLEWARE_BINDER";
+        return "MW_BINDER";
     }
 }

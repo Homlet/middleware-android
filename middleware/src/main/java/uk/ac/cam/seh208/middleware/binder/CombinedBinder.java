@@ -117,11 +117,6 @@ public class CombinedBinder extends ICombined.Stub {
     }
 
     @Override
-    public List<String> mw_discover(Query query) throws RemoteException {
-        return middlewareBinder.discover(query);
-    }
-
-    @Override
     public void ep_send(String name, String message) throws RemoteException {
         getEndpointBinder(name).send(message);
     }

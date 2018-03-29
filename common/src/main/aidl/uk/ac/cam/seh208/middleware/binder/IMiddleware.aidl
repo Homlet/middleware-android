@@ -28,6 +28,4 @@ interface IMiddleware {
     void setRDCAddress(String address);
     // @see MiddlewareBinder#setDiscoverable
     void setDiscoverable(boolean discoverable);
-    // @see MiddlewareBinder#discover
-    List<String> discover(in Query query);
 }

@@ -11,9 +11,9 @@ public class Keys {
     @SuppressWarnings("WeakerAccess")
     public static class Command {
         public static class Options {
-            public static final String HOST = "HOST";
+            public static final String ADDRESS = "ADDRESS";
             public static final String QUERY = "QUERY";
-            public static final String EXPOSED = "EXPOSED";
+            public static final String PERSISTENCE = "PERSISTENCE";
         }
     }
 

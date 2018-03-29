@@ -22,7 +22,13 @@ import java.util.concurrent.TimeoutException;
 import java8.util.stream.StreamSupport;
 
 import uk.ac.cam.seh208.middleware.binder.CombinedBinder;
+import uk.ac.cam.seh208.middleware.common.EndpointCommand;
+import uk.ac.cam.seh208.middleware.common.Keys;
+import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.common.SetRDCAddressCommand;
+import uk.ac.cam.seh208.middleware.core.comms.EndpointCommandControlMessage;
+import uk.ac.cam.seh208.middleware.core.comms.MiddlewareCommandControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.QueryControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
@@ -37,6 +43,7 @@ import uk.ac.cam.seh208.middleware.core.comms.Multiplexer;
 import uk.ac.cam.seh208.middleware.core.comms.MultiplexerPool;
 import uk.ac.cam.seh208.middleware.core.comms.RemoveControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.UpdateControlMessage;
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 import uk.ac.cam.seh208.middleware.core.exception.UnexpectedClosureException;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.Location;
@@ -158,7 +165,7 @@ public class MiddlewareService extends Service {
 
         // TODO: restore location from persistent storage.
         Random random = new Random(System.nanoTime());
-        location = new Location(random.nextLong());
+        location = new Location(random.nextLong() & 0x7FFFFFFFL);
 
         forceable = true;
         discoverable = true;
@@ -505,6 +512,86 @@ public class MiddlewareService extends Service {
         }
     }
 
+    /**
+     * Run a general middleware command on a remote instance of the middleware.
+     *
+     * @param address The location of the device the middleware is accessible on.
+     * @param command Object describing the command.
+     *
+     * @throws BadHostException if the given host is invalid.
+     */
+    public boolean force(Location address, MiddlewareCommand command) throws BadHostException {
+        // Construct a new control message around the command.
+        MiddlewareCommandControlMessage message = new MiddlewareCommandControlMessage(command);
+
+        // Open a new request stream to the remote location.
+        RequestStream stream = getRequestStream(address);
+
+        // Send the control message over the request stream, and return the result.
+        MiddlewareCommandControlMessage.Response response = message.getResponse(stream);
+        return response.getSuccess();
+    }
+
+    /**
+     * Run a command on a remote endpoint (an endpoint of a remote middleware instance).
+     *
+     * @param address The address of the device the middleware is accessible on.
+     * @param name The name of the endpoint to run the command on.
+     * @param command Object describing the command.
+     *
+     * @throws BadHostException if the given host is invalid.
+     */
+    public boolean forceEndpoint(Location address, String name, EndpointCommand command)
+            throws BadHostException {
+        // Construct a new control message around the command.
+        EndpointCommandControlMessage message = new EndpointCommandControlMessage(name, command);
+
+        // Open a new request stream to the remote location.
+        RequestStream stream = getRequestStream(address);
+
+        // Send the control message over the request stream, and return the result.
+        EndpointCommandControlMessage.Response response = message.getResponse(stream);
+        return response.getSuccess();
+    }
+
+    /**
+     * Execute the given command on the middleware.
+     *
+     * @param command Data representation of the command to run.
+     *
+     * @return whether the command ran successfully.
+     */
+    public boolean execute(MiddlewareCommand command) {
+        Log.d(getTag(), "Received command: \"" + command.toJSON() + "\"");
+
+        if (!forceable) {
+            Log.w(getTag(), "Received command ignored (not forceable).");
+            return false;
+        }
+
+        try {
+            if (command instanceof SetRDCAddressCommand) {
+                // Cast the command to extract the data.
+                SetRDCAddressCommand rdcCommand = (SetRDCAddressCommand) command;
+
+                // Build an RDC location with negative ID.
+                // TODO: create location builder for this.
+                Location location = new Location(-1);
+                location.addAddress(Address.make(rdcCommand.getAddress()));
+
+                // Set the RDC location.
+                setRDCLocation(location);
+                return true;
+            }
+
+            Log.e(getTag(), "Unsupported command received.");
+        } catch (MalformedAddressException e) {
+            Log.e(getTag(), "Error forcing command on middleware: ", e);
+        }
+
+        return false;
+    }
+
     public EndpointSet getEndpointSet() {
         // TODO: return unmodifiable view on the endpoint set.
         return endpointSet;
@@ -523,17 +610,9 @@ public class MiddlewareService extends Service {
         this.forceable = forceable;
     }
 
-    public Location getRDCLocation() {
-        return rdcLocation;
-    }
-
     public synchronized void setRDCLocation(Location location) {
         Log.i(getTag(), "RDC location set to " + location);
         this.rdcLocation = location;
-    }
-
-    public boolean isDiscoverable() {
-        return discoverable;
     }
 
     public synchronized void setDiscoverable(boolean discoverable) {

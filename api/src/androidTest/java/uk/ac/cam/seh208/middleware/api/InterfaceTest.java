@@ -5,6 +5,7 @@ import android.support.test.InstrumentationRegistry;
 
 import junit.framework.Assert;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -29,6 +30,7 @@ public class InterfaceTest {
     public static void bind() throws Exception {
         Context context = InstrumentationRegistry.getContext();
         middleware = new Middleware(context);
+        middleware.bind();
     }
 
     @Test
@@ -103,5 +105,10 @@ public class InterfaceTest {
 
         // Check that the endpoint details set matches the stored set.
         Assert.assertEquals(detailsBefore, new HashSet<>(middleware.getAllEndpointDetails()));
+    }
+
+    @AfterClass
+    public static void unbind() {
+        middleware.unbind();
     }
 }

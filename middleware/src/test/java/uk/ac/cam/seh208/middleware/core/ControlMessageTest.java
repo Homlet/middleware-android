@@ -10,11 +10,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
+import uk.ac.cam.seh208.middleware.common.MapToCommand;
+import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
+import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.common.SetRDCAddressCommand;
 import uk.ac.cam.seh208.middleware.core.comms.CloseChannelControlMessage;
+import uk.ac.cam.seh208.middleware.core.comms.EndpointCommandControlMessage;
+import uk.ac.cam.seh208.middleware.core.comms.MiddlewareCommandControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.QueryControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.core.comms.ControlMessage;
@@ -25,9 +32,6 @@ import uk.ac.cam.seh208.middleware.core.exception.InvalidControlMessageException
 import uk.ac.cam.seh208.middleware.core.network.Location;
 
 
-/**
- * Local test for JSON serialisation of control message objects.
- */
 public class ControlMessageTest {
 
     private static final Random random = new Random(System.nanoTime());
@@ -91,6 +95,12 @@ public class ControlMessageTest {
             new Location(random.nextLong()),
             new Location(random.nextLong())
     );
+
+    private static final MiddlewareCommand mwCommand =
+            new SetRDCAddressCommand("zmq://127.0.0.1:4854");
+
+    private static final EndpointCommand epCommand =
+            new MapToCommand("zmq://127.0.0.1:4852", query, Persistence.NONE);
 
 
     private static void testSerialise(JSONSerializable serializable,
@@ -173,5 +183,43 @@ public class ControlMessageTest {
         ControlMessage.Response response = RemoveControlMessage.Response.getInstance();
 
         testSerialise(response, ControlMessage.Response.class);
+    }
+
+    @Test
+    public void testSerialiseMiddlewareCommand()
+            throws InvalidControlMessageException, IOException {
+        ControlMessage message = new MiddlewareCommandControlMessage(mwCommand);
+
+        testSerialise(message, ControlMessage.class);
+    }
+
+    @Test
+    public void testSerialiseMiddlewareCommandResponse()
+            throws InvalidControlMessageException, IOException {
+        ControlMessage.Response response =
+                new MiddlewareCommandControlMessage.Response(random.nextBoolean());
+
+        testSerialise(response, ControlMessage.Response.class);
+    }
+
+    @Test
+    public void testSerialiseEndpointCommand()
+            throws InvalidControlMessageException, IOException {
+        ControlMessage message = new EndpointCommandControlMessage("test", epCommand);
+
+        testSerialise(message, ControlMessage.class);
+    }
+
+    @Test
+    public void testSerialiseEndpointCommandResponse()
+            throws InvalidControlMessageException, IOException {
+        ControlMessage.Response response =
+                new EndpointCommandControlMessage.Response(random.nextBoolean());
+
+        testSerialise(response, ControlMessage.Response.class);
+    }
+
+    private static String getTag() {
+        return "TEST";
     }
 }

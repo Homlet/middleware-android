@@ -24,7 +24,6 @@ interface ICombined {
 
     void mw_setRDCAddress(String address);
     void mw_setDiscoverable(boolean discoverable);
-    List<String> mw_discover(in Query query);
 
 
     /* ======== Beginning of endpoint interface ============================ */

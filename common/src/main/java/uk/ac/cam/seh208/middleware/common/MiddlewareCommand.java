@@ -1,14 +1,13 @@
 package uk.ac.cam.seh208.middleware.common;
 
-import android.os.Bundle;
+
 import android.os.Parcel;
 
-
 /**
- * 'Marker' class used to differentiate general commands from
+ * 'Marker' class used to differentiate general middleware commands from
  * those ran on specific endpoints.
  */
-public class MiddlewareCommand extends Command {
+public abstract class MiddlewareCommand extends Command {
 
     /**
      * This object is part of the Parcelable interface. It is used to instantiate
@@ -17,7 +16,8 @@ public class MiddlewareCommand extends Command {
     public static final Creator<MiddlewareCommand> CREATOR = new Creator<MiddlewareCommand>() {
         @Override
         public MiddlewareCommand createFromParcel(Parcel in) {
-            return new MiddlewareCommand(in);
+            CommandType type = (CommandType) in.readSerializable();
+            return (MiddlewareCommand) type.creator.createFromParcel(in);
         }
 
         @Override
@@ -25,13 +25,4 @@ public class MiddlewareCommand extends Command {
             return new MiddlewareCommand[size];
         }
     };
-
-
-    protected MiddlewareCommand(CommandType type, Bundle options) {
-        super(type, options);
-    }
-
-    protected MiddlewareCommand(Parcel in) {
-        super(in);
-    }
 }

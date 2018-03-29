@@ -19,14 +19,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import java8.util.J8Arrays;
 import java8.util.function.Predicate;
 import java8.util.stream.StreamSupport;
+import uk.ac.cam.seh208.middleware.common.CloseAllCommand;
+import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
+import uk.ac.cam.seh208.middleware.common.Keys;
+import uk.ac.cam.seh208.middleware.common.MapCommand;
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.common.UnmapAllCommand;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
@@ -36,7 +40,9 @@ import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 import uk.ac.cam.seh208.middleware.core.exception.UnexpectedClosureException;
+import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
@@ -126,10 +132,6 @@ public class Endpoint {
         channels = new LongSparseArray<>();
         mappings = new LongSparseArray<>();
         multiplexers = new LongSparseArray<>();
-    }
-
-    public Endpoint(MiddlewareService service, EndpointDetails details) throws BadSchemaException {
-        this(service, details, true, true);
     }
 
     /**
@@ -567,6 +569,51 @@ public class Endpoint {
     }
 
     /**
+     * Execute the given command on the endpoint.
+     *
+     * @param command Data representation of the command to run.
+     *
+     * @return whether the command ran successfully.
+     */
+    public boolean execute(EndpointCommand command) {
+        Log.d(getTag(), "Received command: \"" + command.toJSON() + "\"");
+
+        if (!forceable || !service.isForceable()) {
+            Log.w(getTag(), "Received command ignored (not forceable).");
+            return false;
+        }
+
+        try {
+            if (command instanceof MapCommand) {
+                // Cast the command to extract the data.
+                MapCommand mapCommand = (MapCommand) command;
+
+                // Run the map command.
+                map(mapCommand.getQuery(), mapCommand.getPersistence());
+                return true;
+            }
+
+            if (command instanceof UnmapAllCommand) {
+                // Run the unmap command.
+                unmapAll();
+                return true;
+            }
+
+            if (command instanceof CloseAllCommand) {
+                // Run the close all channels command.
+                closeAllChannels();
+                return true;
+            }
+
+            Log.e(getTag(), "Unsupported command received.");
+        } catch (BadQueryException | BadHostException | ProtocolException e) {
+            Log.e(getTag(), "Error forcing command on endpoint: ", e);
+        }
+
+        return false;
+    }
+
+    /**
      * Convenience method for getting the endpoint identifier from the details.
      *
      * @return the endpoint identifier.
@@ -610,10 +657,6 @@ public class Endpoint {
 
     public void setExposed(boolean exposed) {
         this.exposed = exposed;
-    }
-
-    public boolean isForceable() {
-        return forceable;
     }
 
     public void setForceable(boolean forceable) {
