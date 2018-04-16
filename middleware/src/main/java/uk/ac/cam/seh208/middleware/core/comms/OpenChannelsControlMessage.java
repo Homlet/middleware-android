@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -49,7 +50,9 @@ public class OpenChannelsControlMessage extends ControlMessage {
             }
             Response other = (Response) obj;
 
-            return Objects.equals(details, other.details);  // TODO: reintroduce HashSets.
+            return Objects.equals(
+                    new HashSet<>(details),
+                    new HashSet<>(other.details));
         }
     }
 

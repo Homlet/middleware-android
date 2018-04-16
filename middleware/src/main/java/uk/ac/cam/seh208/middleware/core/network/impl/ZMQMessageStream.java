@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
+import uk.ac.cam.seh208.middleware.core.network.Environment;
 import uk.ac.cam.seh208.middleware.core.network.MessageListener;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
 
@@ -18,6 +19,10 @@ import uk.ac.cam.seh208.middleware.core.network.MessageStream;
  */
 public class ZMQMessageStream extends MessageStream {
 
+    /**
+     * Reference to the environment owning this stream.
+     */
+    private Environment environment;
 
     /**
      * DEALER socket over which to send new messages.
@@ -29,16 +34,10 @@ public class ZMQMessageStream extends MessageStream {
      */
     private ZMQ.Context context;
 
-    // TODO: store a full location.
-    /**
-     * The ZeroMQ address on which the Harmony ROUTER socket resides.
-     */
-    private ZMQAddress localAddress;
-
     /**
      * The ZeroMQ address with which this stream communicates.
      */
-    private ZMQAddress remoteAddress;
+    private ZMQAddress remote;
 
     /**
      * Collection of listeners used to respond to messages.
@@ -46,11 +45,10 @@ public class ZMQMessageStream extends MessageStream {
     private List<MessageListener> listeners;
 
 
-    public ZMQMessageStream(ZMQ.Context context, ZMQAddress localAddress,
-                            ZMQAddress remoteAddress) {
+    ZMQMessageStream(Environment environment, ZMQ.Context context, ZMQAddress remote) {
+        this.environment = environment;
         this.context = context;
-        this.localAddress = localAddress;
-        this.remoteAddress = remoteAddress;
+        this.remote = remote;
         listeners = new ArrayList<>();
     }
 
@@ -155,12 +153,8 @@ public class ZMQMessageStream extends MessageStream {
         }
     }
 
-    public ZMQAddress getLocalAddress() {
-        return localAddress;
-    }
-
-    public ZMQAddress getRemoteAddress() {
-        return remoteAddress;
+    ZMQAddress getRemote() {
+        return remote;
     }
 
     /**
@@ -183,11 +177,11 @@ public class ZMQMessageStream extends MessageStream {
             dealer = context.socket(ZMQ.DEALER);
 
             // Attempt to connect the socket to the peer.
-            dealer.connect("tcp://" + remoteAddress.toCanonicalString());
+            dealer.connect("tcp://" + remote.toAddressString());
 
             // Attempt to send the initial message to the peer.
-            // TODO: send complete location string rather than address.
-            dealer.send(localAddress.toCanonicalString());
+            ZMQInitialMessage message = new ZMQInitialMessage(environment.getLocation());
+            dealer.send(message.toJSON());
         } catch (ZMQException e) {
             // The attempt failed. Close and release the new socket if open.
             if (dealer != null) {
@@ -195,7 +189,7 @@ public class ZMQMessageStream extends MessageStream {
                 dealer = null;
             }
 
-            throw new ConnectionFailedException(remoteAddress);
+            throw new ConnectionFailedException(remote);
         }
     }
 
@@ -215,6 +209,6 @@ public class ZMQMessageStream extends MessageStream {
     }
 
     String getTag() {
-        return "STREAM[" + localAddress + " | " + remoteAddress + "]";
+        return "STREAM[>" + remote + "]";
     }
 }

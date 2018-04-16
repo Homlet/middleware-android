@@ -4,7 +4,6 @@ import android.util.LongSparseArray;
 
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
-import uk.ac.cam.seh208.middleware.core.network.Location;
 
 
 /**
@@ -33,11 +32,12 @@ public class MultiplexerPool {
      * Get a multiplexer to a given remote location, constructing a new one if none
      * currently exist for the remote.
      *
-     * @param remote Remote location with which the multiplexer should exchange messages.
+     * @param remote Remote middleware instance with which the multiplexer
+     *               should exchange messages.
      *
      * @return a reference to a Multiplexer object.
      */
-    public synchronized Multiplexer getMultiplexer(Location remote) throws BadHostException {
+    public synchronized Multiplexer getMultiplexer(Middleware remote) throws BadHostException {
         if (multiplexers.indexOfKey(remote.getUUID()) >= 0) {
             // If a multiplexer already exists in the map for this remote location,
             // return this instead of constructing a new one.

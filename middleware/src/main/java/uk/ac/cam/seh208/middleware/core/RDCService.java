@@ -19,7 +19,7 @@ import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.core.comms.ControlMessageHandler;
-import uk.ac.cam.seh208.middleware.core.network.Location;
+import uk.ac.cam.seh208.middleware.core.comms.Middleware;
 import uk.ac.cam.seh208.middleware.core.network.RequestSwitch;
 import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
 
@@ -36,23 +36,22 @@ public class RDCService extends Service {
      */
     private RequestSwitch requestSwitch;
 
-    // TODO: use persistent backing storage of resources.
     /**
      * Read-write lock for efficient use of the database.
      */
     private ReentrantReadWriteLock lock;
 
     /**
-     * Map of locations by the endpoints known present there. Used for
+     * Map of middleware instances by the endpoints known present there. Used for
      * efficient discovery of locations exposing relevant resources.
      */
-    private Map<EndpointDetails, Location> locationsByEndpoint;
+    private Map<EndpointDetails, Middleware> middlewaresByEndpoint;
 
     /**
-     * Map of endpoints by the locations at which they are present. Used
+     * Map of endpoints by the middleware instances at which they are present. Used
      * for efficient updating and removal of entries.
      */
-    private Map<Location, List<EndpointDetails>> endpointsByLocation;
+    private Map<Middleware, List<EndpointDetails>> endpointsByMiddleware;
 
 
     /**
@@ -77,8 +76,8 @@ public class RDCService extends Service {
                 handler);
 
         lock = new ReentrantReadWriteLock();
-        locationsByEndpoint = new HashMap<>();
-        endpointsByLocation = new HashMap<>();
+        middlewaresByEndpoint = new HashMap<>();
+        endpointsByMiddleware = new HashMap<>();
 
         Log.i(getTag(), "RDC started successfully.");
         started = true;
@@ -115,7 +114,7 @@ public class RDCService extends Service {
         return null;
     }
 
-    public List<Location> discover(Query query) {
+    public List<Middleware> discover(Query query) {
         Log.i(getTag(), "Discovering with query \"" + query + "\"");
 
         synchronized (lock.readLock()) {
@@ -126,9 +125,9 @@ public class RDCService extends Service {
                     .build();
 
             // Find all matching locations using a stream.
-            return StreamSupport.stream(locationsByEndpoint.keySet())
+            return StreamSupport.stream(middlewaresByEndpoint.keySet())
                     .filter(modifiedQuery.getFilter())
-                    .map(locationsByEndpoint::get)
+                    .map(middlewaresByEndpoint::get)
                     .distinct()
                     .collect(Collectors.toList());
         }
@@ -137,24 +136,24 @@ public class RDCService extends Service {
     /**
      * Update the middleware instance record for the given location in the RDC state.
      *
-     * @param location Location indexing the middleware instance record.
+     * @param middleware Middleware instance indexing the record to update.
      * @param details New list of endpoints exposed by that middleware instance.
      */
-    public void update(Location location, List<EndpointDetails> details) {
-        Log.i(getTag(), "Updating location " + location + " " +
+    public void update(Middleware middleware, List<EndpointDetails> details) {
+        Log.i(getTag(), "Updating location " + middleware + " " +
                 "with " + details.size() + " exposed endpoint(s).");
 
         synchronized (lock.writeLock()) {
             // Remove the prior entry from the database.
-            removeQuiet(location);
+            removeQuiet(middleware);
 
             // Repopulate the database with the new details.
             List<EndpointDetails> nonNullDetails = StreamSupport.stream(details)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
-            endpointsByLocation.put(location, nonNullDetails);
+            endpointsByMiddleware.put(middleware, nonNullDetails);
             for (EndpointDetails endpoint : nonNullDetails) {
-                locationsByEndpoint.put(endpoint, location);
+                middlewaresByEndpoint.put(endpoint, middleware);
             }
         }
     }
@@ -162,20 +161,20 @@ public class RDCService extends Service {
     /**
      * Remove the middleware instance record for the given location in the RDC state.
      *
-     * @param location Location indexing the middleware instance record to remove.
+     * @param middleware Middleware instance indexing the record to remove.
      */
-    public void remove(Location location) {
-        Log.i(getTag(), "Removing location " + location);
-        removeQuiet(location);
+    public void remove(Middleware middleware) {
+        Log.i(getTag(), "Removing location " + middleware);
+        removeQuiet(middleware);
     }
 
     /**
      * Perform the remove operation without logging.
      */
-    private void removeQuiet(Location location) {
+    private void removeQuiet(Middleware middleware) {
         synchronized (lock.writeLock()) {
             // Remove the endpoints list from the database.
-            List<EndpointDetails> details = endpointsByLocation.remove(location);
+            List<EndpointDetails> details = endpointsByMiddleware.remove(middleware);
 
             if (details == null) {
                 // The location was not present in the map.
@@ -183,9 +182,9 @@ public class RDCService extends Service {
             }
 
             for (EndpointDetails endpoint : details) {
-                // We never put null values into endpointsByLocation lists in update
+                // We never put null values into endpointsByMiddleware lists in update
                 // so we can skip a null check here.
-                locationsByEndpoint.remove(endpoint);
+                middlewaresByEndpoint.remove(endpoint);
             }
         }
     }

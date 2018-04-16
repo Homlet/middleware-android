@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import java8.util.Lists;
 import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.JSONSerializable;
@@ -21,6 +22,7 @@ import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.SetRDCAddressCommand;
 import uk.ac.cam.seh208.middleware.core.comms.CloseChannelControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.EndpointCommandControlMessage;
+import uk.ac.cam.seh208.middleware.core.comms.Middleware;
 import uk.ac.cam.seh208.middleware.core.comms.MiddlewareCommandControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.QueryControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.RemoteEndpointDetails;
@@ -36,6 +38,13 @@ public class ControlMessageTest {
 
     private static final Random random = new Random(System.nanoTime());
 
+    private static final Middleware middleware = new Middleware(
+            random.nextLong(),
+            new Location(),
+            new Location());
+
+    private static final List<Middleware> middlewares = Lists.of(middleware);
+
     private static final Query query = new Query.Builder()
             .includeTag("test_tag")
             .setDescRegex("^test_regex.*$")
@@ -48,7 +57,7 @@ public class ControlMessageTest {
             Polarity.SOURCE,
             "{}",
             Collections.emptyList(),
-            new Location(random.nextLong())
+            middleware
     );
 
     private static final List<RemoteEndpointDetails> remoteEndpoints = Arrays.asList(
@@ -58,7 +67,7 @@ public class ControlMessageTest {
                     Polarity.SOURCE,
                     "{}",
                     Collections.emptyList(),
-                    new Location(random.nextLong())
+                    middleware
             ),
             new RemoteEndpointDetails(
                     "test2",
@@ -66,7 +75,7 @@ public class ControlMessageTest {
                     Polarity.SINK,
                     "{}",
                     Arrays.asList("tag1", "tag2"),
-                    new Location(random.nextLong())
+                    middleware
             )
     );
 
@@ -86,14 +95,6 @@ public class ControlMessageTest {
                     "{}",
                     Arrays.asList("tag1", "tag2")
             )
-    );
-
-    private static final Location location = new Location(random.nextLong());
-
-    private static final List<Location> locations = Arrays.asList(
-            new Location(random.nextLong()),
-            new Location(random.nextLong()),
-            new Location(random.nextLong())
     );
 
     private static final MiddlewareCommand mwCommand =
@@ -152,14 +153,14 @@ public class ControlMessageTest {
 
     @Test
     public void testSerialiseQueryResponse() throws InvalidControlMessageException, IOException {
-        ControlMessage.Response response = new QueryControlMessage.Response(locations);
+        ControlMessage.Response response = new QueryControlMessage.Response(middlewares);
 
         testSerialise(response, ControlMessage.Response.class);
     }
 
     @Test
     public void testSerialiseUpdate() throws InvalidControlMessageException, IOException {
-        ControlMessage message = new UpdateControlMessage(location, endpoints);
+        ControlMessage message = new UpdateControlMessage(middleware, endpoints);
 
         testSerialise(message, ControlMessage.class);
     }
@@ -173,7 +174,7 @@ public class ControlMessageTest {
 
     @Test
     public void testSerialiseRemove() throws InvalidControlMessageException, IOException {
-        ControlMessage message = new RemoveControlMessage(location);
+        ControlMessage message = new RemoveControlMessage(middleware);
 
         testSerialise(message, ControlMessage.class);
     }
@@ -217,9 +218,5 @@ public class ControlMessageTest {
                 new EndpointCommandControlMessage.Response(random.nextBoolean());
 
         testSerialise(response, ControlMessage.Response.class);
-    }
-
-    private static String getTag() {
-        return "TEST";
     }
 }

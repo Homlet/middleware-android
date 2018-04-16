@@ -1,6 +1,9 @@
 package uk.ac.cam.seh208.middleware.core.network;
 
 
+import java.net.SocketException;
+import java.util.List;
+
 /**
  * An interface to a request context, which maintains the state necessary to send
  * asynchronous requests to other middleware instances reliably. Requests are used
@@ -8,6 +11,11 @@ package uk.ac.cam.seh208.middleware.core.network;
  * middlewares, as well as run commands on remote instances of the middleware.
  */
 public interface RequestContext {
+    /**
+     * Return a list of addresses via which streams to the context may be opened.
+     */
+    List<Address> getInterfaceAddresses();
+
     /**
      * Return a request stream to a remote instance of the middleware. The stream
      * must be ready for sending asynchronous requests to the remote host.

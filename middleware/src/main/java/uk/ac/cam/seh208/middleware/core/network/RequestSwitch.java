@@ -2,6 +2,7 @@ package uk.ac.cam.seh208.middleware.core.network;
 
 import android.util.Log;
 
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -13,7 +14,13 @@ import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
  * Switchboard class aggregating many network implementations and switching between
  * them based on address type. This switch is specialised for message streams.
  */
-public class RequestSwitch {
+public class RequestSwitch implements Environment {
+
+    /**
+     * Enumeration of local interface addresses on which this environment
+     * is accessible.
+     */
+    private Location location;
 
     /**
      * Store of request contexts by scheme string.
@@ -26,16 +33,22 @@ public class RequestSwitch {
      */
     public RequestSwitch(List<SchemeConfiguration> configurations, RequestHandler handler) {
         contextsByScheme = new HashMap<>();
+        location = new Location();
 
         // Create contexts for the requested schemes.
         for (SchemeConfiguration configuration : configurations) {
             String scheme = configuration.getScheme();
             switch (scheme) {
                 case Address.SCHEME_ZMQ:
-                    RequestContext context = new ZMQRequestContext(
-                            (ZMQSchemeConfiguration) configuration);
-                    context.getResponder().setHandler(handler);
-                    contextsByScheme.put(scheme, context);
+                    try {
+                        RequestContext context = new ZMQRequestContext(
+                                (ZMQSchemeConfiguration) configuration);
+                        context.getResponder().setHandler(handler);
+                        location.addAddresses(context.getInterfaceAddresses());
+                        contextsByScheme.put(scheme, context);
+                    } catch (SocketException e) {
+                        e.printStackTrace();
+                    }
                     break;
 
                 // case SCHEME_BLUETOOTH etc...
@@ -58,8 +71,16 @@ public class RequestSwitch {
      *         depends on the request context implementation.
      */
     public RequestStream getStream(Address address) {
-        String scheme = Address.getScheme(address);
+        String scheme = Address.getSchemeString(address);
         return contextsByScheme.get(scheme).getRequestStream(address);
+    }
+
+    /**
+     * @return an enumeration of the local interface addresses on which this
+     *         environment is accessible.
+     */
+    public Location getLocation() {
+        return location;
     }
 
     private static String getTag() {

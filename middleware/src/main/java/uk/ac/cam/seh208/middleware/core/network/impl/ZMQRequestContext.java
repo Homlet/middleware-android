@@ -2,9 +2,16 @@ package uk.ac.cam.seh208.middleware.core.network.impl;
 
 import org.zeromq.ZMQ;
 
-import java.net.UnknownHostException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.RequestContext;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
@@ -18,11 +25,6 @@ import uk.ac.cam.seh208.middleware.core.network.Responder;
 public class ZMQRequestContext implements RequestContext {
 
     /**
-     * The default port on which the incoming control message socket resides.
-     */
-    private static final int PORT_DEFAULT = 4852;
-
-    /**
      * The number of I/O threads used by ZMQ to handle middleware communication.
      */
     private static final int IO_THREADS = 2;
@@ -34,6 +36,11 @@ public class ZMQRequestContext implements RequestContext {
     private final ZMQ.Context context;
 
     /**
+     * Port on which the request server is bound.
+     */
+    private final int port;
+
+    /**
      * Listener thread for the request context.
      */
     private final Thread requestServer;
@@ -41,12 +48,7 @@ public class ZMQRequestContext implements RequestContext {
     /**
      * Responder used for handling requests in the middleware layer.
      */
-    private Responder responder;
-
-    /**
-     * Address on which the ROUTER socket should be bound.
-     */
-    private ZMQAddress localAddress;
+    private final Responder responder;
 
     /**
      * Track whether the context has been terminated.
@@ -56,32 +58,58 @@ public class ZMQRequestContext implements RequestContext {
     /**
      * Lock for safe implementation of termination.
      */
-    private ReentrantReadWriteLock termLock;
+    private final ReentrantReadWriteLock termLock;
 
 
     /**
      * Instantiate a new context with the given port for the ROUTER socket.
      */
     public ZMQRequestContext(ZMQSchemeConfiguration configuration) {
+        port = configuration.getPort();
+
         // Create a new ZMQ context.
         context = ZMQ.context(IO_THREADS);
         termLock = new ReentrantReadWriteLock(true);
 
         // Compute the local address.
-        // TODO: determine all local interface addresses, and use a sub-location.
-        ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
-//        try {
-        addressBuilder.setHost("*");//ZMQAddress.getLocalHost());
-//        } catch (UnknownHostException e) {
-//            // Default to all interfaces.
-//            addressBuilder.setHost("*");
-//        }
-        localAddress = addressBuilder.setPort(configuration.getPort()).build();
 
         // Set-up the request/response context.
         responder = new Responder();
-        requestServer = ZMQRequestServer.makeThread(context, localAddress, responder);
+        requestServer = ZMQRequestServer.makeThread(context, responder, port);
         requestServer.start();
+    }
+
+    /**
+     * Return a list of addresses on which the request server is bound.
+     */
+    @Override
+    public List<Address> getInterfaceAddresses() {
+        List<Address> output = new ArrayList<>();
+
+        Enumeration<NetworkInterface> ifaces;
+        try {
+            ifaces = NetworkInterface.getNetworkInterfaces();
+        } catch (SocketException e) {
+            // If we could not retrieve the network interface list, we
+            // probably can't bind to any interface addresses either.
+            return Collections.emptyList();
+        }
+
+        for (NetworkInterface iface : Collections.list(ifaces)) {
+            // List the addresses associated with each interface.
+            Enumeration<InetAddress> addresses = iface.getInetAddresses();
+            for (InetAddress address : Collections.list(addresses)) {
+                try {
+                    // Make an address object from each interface address, and
+                    // add it to the output list.
+                    output.add(Address.make("zmq://" + address + ":" + port));
+                } catch (MalformedAddressException ignored) {
+                    // Should not be reachable.
+                }
+            }
+        }
+
+        return output;
     }
 
     /**
@@ -109,7 +137,7 @@ public class ZMQRequestContext implements RequestContext {
             ZMQAddress zmqAddress = (ZMQAddress) address;
 
             // Open a new request stream to the given remote host.
-            return new ZMQRequestStream(context, localAddress, zmqAddress);
+            return new ZMQRequestStream(context, zmqAddress);
         }
     }
 
@@ -135,6 +163,7 @@ public class ZMQRequestContext implements RequestContext {
             }
 
             context.term();
+
             requestServer.interrupt();
 
             terminated = true;

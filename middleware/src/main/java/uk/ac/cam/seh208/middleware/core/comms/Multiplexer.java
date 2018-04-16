@@ -34,9 +34,9 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
     private MessageStream messageStream;
 
     /**
-     * Location on which the remote instance of the middleware resides.
+     * Location and identifier of the remote instance of the middleware.
      */
-    private Location remote;
+    private Middleware remote;
 
     /**
      * Map of currently open channels carried by the multiplexer, indexed by their identifier.
@@ -58,8 +58,8 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
     private MessageListener listener;
 
 
-    public Multiplexer(MiddlewareService service, Location remote) throws BadHostException {
-        this.messageStream = service.getMessageStream(remote);
+    Multiplexer(MiddlewareService service, Middleware remote) throws BadHostException {
+        this.messageStream = service.getMessageStream(remote.getMessageLocation());
         this.remote = remote;
         channels = new LongSparseArray<>();
         channelsByLocalEndpoint = new LongSparseArray<>();
@@ -85,12 +85,12 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
      *
      * @return whether the channel was successfully carried.
      */
-    public synchronized boolean carryChannel(Channel channel) {
+    synchronized boolean carryChannel(Channel channel) {
         if (isClosed()) {
             return false;
         }
 
-        if (!Objects.equals(channel.getRemote().getLocation(), remote)) {
+        if (!Objects.equals(channel.getRemote().getMiddleware(), remote)) {
             Log.e(getTag(), "Attempted to carry an invalid channel.");
             return false;
         }
@@ -127,7 +127,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
      *
      * @return whether the channel was successfully dropped.
      */
-    public synchronized boolean dropChannel(Channel channel) {
+    private synchronized boolean dropChannel(Channel channel) {
         if (isClosed()) {
             return false;
         }
@@ -224,7 +224,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         super.close();
     }
 
-    public Location getRemote() {
+    public Middleware getRemote() {
         return remote;
     }
 

@@ -9,6 +9,8 @@ import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
+import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.RequestContext;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
@@ -22,7 +24,8 @@ import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
 public class ZMQRequestTest {
 
     @Test
-    public void testSimpleRequest() throws InterruptedException, UnknownHostException {
+    public void testSimpleRequest()
+            throws InterruptedException, UnknownHostException, MalformedAddressException {
         // Create two ZMQRequestContext objects, with different bound ports.
         int port1 = 8500;
         int port2 = 8501;
@@ -30,11 +33,10 @@ public class ZMQRequestTest {
         RequestContext context2 = new ZMQRequestContext(new ZMQSchemeConfiguration(port2));
 
         // Compute the local address.
-        ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
-        addressBuilder.setHost(ZMQAddress.getLocalHost());
+        Address address = Address.make("zmq://127.0.0.1:" + port2);
 
         // Create a request stream between the two contexts.
-        RequestStream stream = context1.getRequestStream(addressBuilder.setPort(port2).build());
+        RequestStream stream = context1.getRequestStream(address);
 
         // Set up the responder.
         context2.getResponder().setHandler(request -> request + "!!!");
@@ -59,7 +61,8 @@ public class ZMQRequestTest {
     }
 
     @Test
-    public void testNoHandler() throws InterruptedException, UnknownHostException {
+    public void testNoHandler()
+            throws InterruptedException, UnknownHostException, MalformedAddressException {
         // Create two ZMQRequestContext objects, with different bound ports.
         int port1 = 8500;
         int port2 = 8501;
@@ -67,11 +70,10 @@ public class ZMQRequestTest {
         RequestContext context2 = new ZMQRequestContext(new ZMQSchemeConfiguration(port2));
 
         // Compute the local address.
-        ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
-        addressBuilder.setHost(ZMQAddress.getLocalHost());
+        Address address = Address.make("zmq://127.0.0.1:" + port2);
 
         // Create a request stream between the two contexts.
-        RequestStream stream = context1.getRequestStream(addressBuilder.setPort(port2).build());
+        RequestStream stream = context1.getRequestStream(address);
 
         new Timer().schedule(new TimerTask() {
                                  @Override

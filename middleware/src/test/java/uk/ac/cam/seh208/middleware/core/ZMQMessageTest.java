@@ -8,6 +8,10 @@ import java.net.UnknownHostException;
 import java.util.HashSet;
 
 import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
+import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
+import uk.ac.cam.seh208.middleware.core.network.Address;
+import uk.ac.cam.seh208.middleware.core.network.Environment;
+import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.MessageContext;
 import uk.ac.cam.seh208.middleware.core.network.MessageListener;
 import uk.ac.cam.seh208.middleware.core.network.MessageStream;
@@ -86,6 +90,7 @@ public class ZMQMessageTest {
          * Notify the waiting thread of a seen message.
          */
         private synchronized void seeMessage(String message) {
+            System.out.println("SEEN " + message);
             seen.add(message);
             notified = true;
             notify();
@@ -114,7 +119,8 @@ public class ZMQMessageTest {
      * Block until the specified message is received over a stream. Throw an
      * AssertionFailedError if the message is not received.
      */
-    private static void assertRecv(MessageStreamClosure closure, String message, int timeoutMillis) {
+    private static void assertRecv(MessageStreamClosure closure, String message,
+                                   int timeoutMillis) {
         Assert.assertTrue(closure.expectMessage(message, timeoutMillis));
     }
 
@@ -129,30 +135,45 @@ public class ZMQMessageTest {
         }
     }
 
+    private static Environment environmentWithPort(int port) {
+        return () -> {
+            Location location = new Location();
+            try {
+                location.addAddress(Address.make("zmq://127.0.0.1:" + port));
+            } catch (MalformedAddressException e) {
+                Assert.fail("Couldn't create environment.");
+            }
+            return location;
+        };
+    }
+
     @Test
     public void testSimpleMessageComms()
-            throws InterruptedException, UnknownHostException, ConnectionFailedException {
-        // Create two ZMQMessageContext objects, with different message ports.
+            throws InterruptedException, UnknownHostException,
+                   ConnectionFailedException, MalformedAddressException {
+        // Compute the local addresses.
         int port1 = 8000;
         int port2 = 8001;
-        MessageContext context1 = new ZMQMessageContext(new ZMQSchemeConfiguration(port1));
-        MessageContext context2 = new ZMQMessageContext(new ZMQSchemeConfiguration(port2));
+        Address address1 = Address.make("zmq://127.0.0.1:" + port1);
+        Address address2 = Address.make("zmq://127.0.0.1:" + port2);
 
-        // Compute the local address.
-        ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
-        addressBuilder.setHost(ZMQAddress.getLocalHost());
+        // Create two ZMQMessageContext objects, with different message ports.
+        MessageContext context1 = new ZMQMessageContext(
+                environmentWithPort(port1), new ZMQSchemeConfiguration(port1));
+        MessageContext context2 = new ZMQMessageContext(
+                environmentWithPort(port2), new ZMQSchemeConfiguration(port2));
 
         // Create a message stream between the two contexts.
-        MessageStream stream1 = context1.getMessageStream(addressBuilder.setPort(port2).build());
-        MessageStreamClosure closure1 = streamSetup(stream1);
-        MessageStream stream2 = context2.getMessageStream(addressBuilder.setPort(port1).build());
-        MessageStreamClosure closure2 = streamSetup(stream2);
+        MessageStream stream1To2 = context1.getMessageStream(address2);
+        MessageStreamClosure closure1 = streamSetup(stream1To2);
+        MessageStream stream2To1 = context2.getMessageStream(address1);
+        MessageStreamClosure closure2 = streamSetup(stream2To1);
 
         // Send messages across the two contexts.
         String message1To2 = "1 --> 2";
         String message2To1 = "2 --> 1";
-        stream1.send(message1To2);
-        stream2.send(message2To1);
+        stream1To2.send(message1To2);
+        stream2To1.send(message2To1);
 
         // Assert that the messages are received.
         assertRecv(closure1, message2To1, 2000);
@@ -160,12 +181,12 @@ public class ZMQMessageTest {
 
         // Close the message streams and terminate the contexts.
         streamClearup(closure1);
-        stream1.close();
+        stream1To2.close();
         streamClearup(closure2);
 
         // Check that stream 2 was closed by stream 1's FIN message.
         Thread.sleep(500);
-        Assert.assertTrue(stream2.isClosed());
+        Assert.assertTrue(stream2To1.isClosed());
 
         // Terminate the context.
         context1.term();
@@ -179,12 +200,14 @@ public class ZMQMessageTest {
         int basePort = 9000;
         MessageContext[] contexts = new MessageContext[4];
         for (int i = 0; i < contexts.length; i++) {
-            contexts[i] = new ZMQMessageContext(new ZMQSchemeConfiguration(basePort + i));
+            contexts[i] = new ZMQMessageContext(
+                    environmentWithPort(basePort + i),
+                    new ZMQSchemeConfiguration(basePort + i));
         }
 
         // Compute the local address.
         ZMQAddress.Builder addressBuilder = new ZMQAddress.Builder();
-        addressBuilder.setHost(ZMQAddress.getLocalHost());
+        addressBuilder.setHost("127.0.0.1");
 
         // Create a forwarding network of message streams between the contexts.
         MessageStream[] streams = new MessageStream[6];

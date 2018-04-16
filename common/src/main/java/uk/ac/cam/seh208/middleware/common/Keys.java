@@ -24,7 +24,7 @@ public class Keys {
         public static final String POLARITY = "POLARITY";
         public static final String SCHEMA = "SCHEMA";
         public static final String TAGS = "TAGS";
-        public static final String LOCATION = "LOCATION";
+        public static final String MIDDLEWARE = "MIDDLEWARE";
     }
 
     @SuppressWarnings("WeakerAccess")

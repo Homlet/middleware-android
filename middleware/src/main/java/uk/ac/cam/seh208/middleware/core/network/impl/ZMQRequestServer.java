@@ -5,8 +5,6 @@ import android.util.Log;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
-import java.io.IOException;
-import java.nio.channels.ClosedByInterruptException;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -29,13 +27,13 @@ public class ZMQRequestServer implements Runnable {
      * a new Thread using its behaviour.
      *
      * @param context Context in which to open the ROUTER socket.
-     * @param localAddress Address on which the ROUTER socket should bind.
      * @param responder Responder used to handle incoming requests.
+     * @param port Port on which the ROUTER socket should bind.
      *
      * @return a newly instantiated Thread object.
      */
-    static Thread makeThread(ZMQ.Context context, ZMQAddress localAddress, Responder responder) {
-        return new Thread(new ZMQRequestServer(context, localAddress, responder));
+    static Thread makeThread(ZMQ.Context context, Responder responder, int port) {
+        return new Thread(new ZMQRequestServer(context, responder, port));
     }
 
 
@@ -50,20 +48,22 @@ public class ZMQRequestServer implements Runnable {
     private Responder responder;
 
     /**
-     * Interface address on which the ROUTER should be bound.
+     * Port on which the ROUTER socket should be bound.
      */
-    private ZMQAddress localAddress;
+    private int port;
 
 
     /**
      * Store the passed parameters in preparation for operation.
      *
      * @param context Context in which to open the ROUTER socket.
+     * @param responder Responder used to handle incoming requests.
+     * @param port Port on which the ROUTER socket should bind.
      */
-    private ZMQRequestServer(ZMQ.Context context, ZMQAddress localAddress, Responder responder) {
+    private ZMQRequestServer(ZMQ.Context context, Responder responder, int port) {
         this.context = context;
         this.responder = responder;
-        this.localAddress = localAddress;
+        this.port = port;
     }
 
     /**
@@ -82,7 +82,7 @@ public class ZMQRequestServer implements Runnable {
              ZMQ.Socket dealer = context.socket(ZMQ.DEALER)) {
             // Set up the outward facing ROUTER socket.
             router.setRouterMandatory(true);
-            router.bind("tcp://" + localAddress);
+            router.bind("tcp://*:" + port);
 
             // Set up the inward facing DEALER socket.
             Random random = new Random(System.nanoTime());
@@ -145,6 +145,6 @@ public class ZMQRequestServer implements Runnable {
     }
 
     private String getTag() {
-        return "REQ_SERVER[" + localAddress + "]";
+        return "REQ_SERVER[" + port + "]";
     }
 }

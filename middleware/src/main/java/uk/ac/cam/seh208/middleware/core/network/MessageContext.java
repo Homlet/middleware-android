@@ -1,6 +1,9 @@
 package uk.ac.cam.seh208.middleware.core.network;
 
 
+import java.net.SocketException;
+import java.util.List;
+
 /**
  * An interface to a socket context, which maintains the state necessary to open
  * and maintain MessageStream objects. Message streams allow two-way communication
@@ -8,6 +11,12 @@ package uk.ac.cam.seh208.middleware.core.network;
  * and internally queued.
  */
 public interface MessageContext {
+
+    /**
+     * Return a list of addresses via which streams to the context may be opened.
+     */
+    List<Address> getInterfaceAddresses();
+
     /**
      * Return a socket for communication with a particular remote middleware. The
      * socket must be ready for use, at least opaquely via set-up procedures run

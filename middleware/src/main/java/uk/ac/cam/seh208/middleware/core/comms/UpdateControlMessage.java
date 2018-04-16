@@ -40,10 +40,7 @@ public class UpdateControlMessage extends ControlMessage {
 
         @Override
         public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            return obj != null && getClass() == obj.getClass();
+            return this == obj || obj != null && getClass() == obj.getClass();
         }
     }
 
@@ -51,20 +48,20 @@ public class UpdateControlMessage extends ControlMessage {
     /**
      * Location of the middleware instance.
      */
-    private Location location;
+    private Middleware middleware;
 
     /**
-     * List of endpoint details exposed by the middleware at that location.
+     * List of endpoint details exposed by the middleware at that middleware.
      */
     private List<EndpointDetails> details;
 
 
     /**
-     * Instantiate a new immutable UPDATE control message for the given location.
+     * Instantiate a new immutable UPDATE control message for the given middleware.
      */
-    public UpdateControlMessage(@JsonProperty("location") Location location,
+    public UpdateControlMessage(@JsonProperty("middleware") Middleware middleware,
                                 @JsonProperty("details") List<EndpointDetails> details) {
-        this.location = location;
+        this.middleware = middleware;
         this.details = new ArrayList<>(details);
     }
 
@@ -83,7 +80,7 @@ public class UpdateControlMessage extends ControlMessage {
         }
 
         RDCService rdc = (RDCService) service;
-        rdc.update(location, details);
+        rdc.update(middleware, details);
 
         return Response.getInstance();
     }
@@ -103,6 +100,6 @@ public class UpdateControlMessage extends ControlMessage {
         }
         UpdateControlMessage other = (UpdateControlMessage) obj;
 
-        return Objects.equals(location, other.location);
+        return Objects.equals(middleware, other.middleware);
     }
 }

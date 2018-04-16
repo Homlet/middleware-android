@@ -91,14 +91,14 @@ public class CombinedBinder extends ICombined.Stub {
     }
 
     @Override
-    public void mw_force(String remote, MiddlewareCommand command) throws RemoteException {
-        middlewareBinder.force(remote, command);
+    public void mw_force(long uuid, MiddlewareCommand command) throws RemoteException {
+        middlewareBinder.force(uuid, command);
     }
 
     @Override
-    public void mw_forceEndpoint(String remote, String name, EndpointCommand command)
+    public void mw_forceEndpoint(long uuid, String name, EndpointCommand command)
             throws RemoteException {
-        middlewareBinder.forceEndpoint(remote, name, command);
+        middlewareBinder.forceEndpoint(uuid, name, command);
     }
 
     @Override

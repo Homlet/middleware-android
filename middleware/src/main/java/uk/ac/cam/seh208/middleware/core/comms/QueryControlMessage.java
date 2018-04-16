@@ -1,18 +1,17 @@
 package uk.ac.cam.seh208.middleware.core.comms;
 
 import android.app.Service;
-import android.util.Log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.core.RDCService;
-import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
 
@@ -28,17 +27,17 @@ public class QueryControlMessage extends ControlMessage {
      */
     public static class Response extends ControlMessage.Response {
 
-        private List<Location> locations;
+        private List<Middleware> middlewares;
 
 
-        public Response(@JsonProperty("locations") List<Location> locations) {
+        public Response(@JsonProperty("middlewares") List<Middleware> middlewares) {
             // Copy the passed details list so the internal state of this
             // immutable object cannot be modified.
-            this.locations = new ArrayList<>(locations);
+            this.middlewares = new ArrayList<>(middlewares);
         }
 
-        public List<Location> getLocations() {
-            return Collections.unmodifiableList(locations);
+        public List<Middleware> getMiddlewares() {
+            return Collections.unmodifiableList(middlewares);
         }
 
         @Override
@@ -51,7 +50,9 @@ public class QueryControlMessage extends ControlMessage {
             }
             QueryControlMessage.Response other = (QueryControlMessage.Response) obj;
 
-            return Objects.equals(locations, other.locations);  // TODO: reintroduce HashSets.
+            return Objects.equals(
+                    new HashSet<>(middlewares),
+                    new HashSet<>(other.middlewares));
         }
     }
 

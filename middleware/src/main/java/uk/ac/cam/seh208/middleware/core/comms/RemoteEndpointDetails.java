@@ -11,11 +11,9 @@ import java.util.List;
 import java.util.Objects;
 
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
-import uk.ac.cam.seh208.middleware.common.JSONSerializable;
 import uk.ac.cam.seh208.middleware.common.Polarity;
-import uk.ac.cam.seh208.middleware.core.network.Location;
 
-import static uk.ac.cam.seh208.middleware.common.Keys.EndpointDetails.LOCATION;
+import static uk.ac.cam.seh208.middleware.common.Keys.EndpointDetails.MIDDLEWARE;
 
 
 /**
@@ -46,7 +44,7 @@ public class RemoteEndpointDetails extends EndpointDetails {
     /**
      * Location on which the endpoint is accessible.
      */
-    private Location location;
+    private Middleware middleware;
 
 
     /**
@@ -58,26 +56,26 @@ public class RemoteEndpointDetails extends EndpointDetails {
             @JsonProperty("polarity") Polarity polarity,
             @JsonProperty("schema") String schema,
             @JsonProperty("tags") List<String> tags,
-            @JsonProperty("location") Location location) {
+            @JsonProperty("location") Middleware middleware) {
         super(name, desc, polarity, schema, tags);
 
-        this.location = location;
+        this.middleware = middleware;
     }
 
     /**
      * Construct a new immutable remote endpoint details object taking parameters from
      * the given endpoint details object.
      */
-    public RemoteEndpointDetails(EndpointDetails details, Location location) {
+    RemoteEndpointDetails(EndpointDetails details, Middleware middleware) {
         this(details.getName(),
              details.getDesc(),
              details.getPolarity(),
              details.getSchema(),
              details.getTags(),
-             location);
+             middleware);
     }
 
-    protected RemoteEndpointDetails(Parcel in) {
+    private RemoteEndpointDetails(Parcel in) {
         // Extract the base details from the parcel.
         super(in);
 
@@ -86,14 +84,14 @@ public class RemoteEndpointDetails extends EndpointDetails {
         Bundle bundle = in.readBundle();
 
         // Extract the fields from the bundle.
-        location = bundle.getParcelable(LOCATION);
+        middleware = bundle.getParcelable(MIDDLEWARE);
     }
 
     /**
-     * @return the location on which the endpoint is accessible.
+     * @return the middleware instance on which the endpoint is accessible.
      */
-    public Location getLocation() {
-        return location;
+    public Middleware getMiddleware() {
+        return middleware;
     }
 
     @Override
@@ -103,7 +101,7 @@ public class RemoteEndpointDetails extends EndpointDetails {
 
         // Pack the additional details.
         Bundle bundle = new Bundle();
-        bundle.putParcelable(LOCATION, location);
+        bundle.putParcelable(MIDDLEWARE, middleware);
 
         // Serialise the bundle into the parcel.
         dest.writeBundle(bundle);
@@ -119,6 +117,6 @@ public class RemoteEndpointDetails extends EndpointDetails {
         }
         RemoteEndpointDetails other = (RemoteEndpointDetails) obj;
 
-        return (super.equals(obj) && Objects.equals(location, other.location));
+        return (super.equals(obj) && Objects.equals(middleware, other.middleware));
     }
 }

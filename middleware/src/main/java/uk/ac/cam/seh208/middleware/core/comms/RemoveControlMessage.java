@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 import uk.ac.cam.seh208.middleware.core.RDCService;
-import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
 
@@ -36,25 +35,22 @@ public class RemoveControlMessage extends ControlMessage {
 
         @Override
         public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            return obj != null && getClass() == obj.getClass();
+            return this == obj || obj != null && getClass() == obj.getClass();
         }
     }
 
 
     /**
-     * Location of the middleware instance.
+     * Object describing the middleware instance.
      */
-    private Location location;
+    private Middleware middleware;
 
 
     /**
      * Instantiate a new immutable REMOVE control message for the given location.
      */
-    public RemoveControlMessage(@JsonProperty("location") Location location) {
-        this.location = location;
+    public RemoveControlMessage(@JsonProperty("middleware") Middleware middleware) {
+        this.middleware = middleware;
     }
 
     /**
@@ -72,7 +68,7 @@ public class RemoveControlMessage extends ControlMessage {
         }
 
         RDCService rdc = (RDCService) service;
-        rdc.remove(location);
+        rdc.remove(middleware);
 
         return Response.getInstance();
     }
@@ -92,6 +88,6 @@ public class RemoveControlMessage extends ControlMessage {
         }
         RemoveControlMessage other = (RemoveControlMessage) obj;
 
-        return Objects.equals(location, other.location);
+        return Objects.equals(middleware, other.middleware);
     }
 }

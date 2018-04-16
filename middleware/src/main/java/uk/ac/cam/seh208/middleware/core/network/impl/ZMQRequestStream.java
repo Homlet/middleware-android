@@ -3,7 +3,6 @@ package uk.ac.cam.seh208.middleware.core.network.impl;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
-import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
 
@@ -22,22 +21,14 @@ public class ZMQRequestStream extends RequestStream {
      */
     private ZMQ.Context context;
 
-    // TODO: store a full location.
-    /**
-     * The ZeroMQ address on which this middleware instance resides.
-     */
-    private ZMQAddress localAddress;
-
     /**
      * The ZeroMQ address with which this stream communicates.
      */
     private ZMQAddress remoteAddress;
 
 
-    public ZMQRequestStream(ZMQ.Context context, ZMQAddress localAddress,
-                            ZMQAddress remoteAddress) {
+    ZMQRequestStream(ZMQ.Context context, ZMQAddress remoteAddress) {
         this.context = context;
-        this.localAddress = localAddress;
         this.remoteAddress = remoteAddress;
     }
 
@@ -91,15 +82,6 @@ public class ZMQRequestStream extends RequestStream {
         }
     }
 
-    public ZMQAddress getLocalAddress() {
-        return localAddress;
-    }
-
-    public ZMQAddress getRemoteAddress() {
-        return remoteAddress;
-    }
-
-
     /**
      * Open the REQ socket to the peer if this has not already been done.
      *
@@ -122,7 +104,7 @@ public class ZMQRequestStream extends RequestStream {
             socket = context.socket(ZMQ.REQ);
 
             // Attempt to connect the socket to the peer.
-            socket.connect("tcp://" + remoteAddress.toCanonicalString());
+            socket.connect("tcp://" + remoteAddress.toAddressString());
         } catch (ZMQException e) {
             // Close and release the new socket.
             if (socket != null) {

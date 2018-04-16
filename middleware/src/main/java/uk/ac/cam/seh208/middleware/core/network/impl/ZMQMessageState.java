@@ -21,68 +21,51 @@ class ZMQMessageState {
      */
     private HashMap<String, ZMQMessageStream> streamsByAddress;
 
-    /**
-     * ZMQ address on which the ROUTER socket is bound.
-     *
-     * TODO: reference tcp://0.0.0.0:port sub-location instead.
-     */
-    private ZMQAddress localAddress;
-
 
     /**
      * Instantiate the address and stream maps.
      */
-    ZMQMessageState(ZMQAddress localAddress) {
+    ZMQMessageState() {
         streamsByIdentity = new HashMap<>();
         streamsByAddress = new HashMap<>();
-        this.localAddress = localAddress;
     }
 
     /**
-     * Insert a new message stream into the state. If the stream already exists in the
-     * state, return false.
+     * Insert a new message stream into the state.
      *
      * @param address ZeroMQ address of the stream.
      * @param stream Reference to the stream to insert.
-     *
-     * @return whether the message stream was inserted.
      */
-    synchronized boolean insertStreamByAddress(ZMQAddress address, ZMQMessageStream stream) {
+    synchronized void insertStreamByAddress(ZMQAddress address, ZMQMessageStream stream) {
         String addressString = address.toCanonicalString();
 
         if (streamsByAddress.containsKey(addressString)) {
             // The stream is present in the address map already.
-            return false;
+            return;
         }
 
         // Put the stream in the address map.
         streamsByAddress.put(addressString, stream);
 
         // Subscribe to stream closure, removing the stream by address.
-        stream.subscribe(s -> removeStreamByAddress(((ZMQMessageStream) s).getRemoteAddress()));
-
-        return true;
+        stream.subscribe(s -> removeStreamByAddress(((ZMQMessageStream) s).getRemote()));
     }
 
     /**
      * Insert a new message stream into the state, associating it with a particular ROUTER
-     * identity. If that identity already has an associated stream,
+     * identity.
      *
      * @param identity ROUTER identity of the stream.
      * @param stream Reference to the stream to insert.
-     *
-     * @return whether the message stream was inserted.
      */
-    synchronized boolean insertStreamByIdentity(String identity, ZMQMessageStream stream) {
+    synchronized void insertStreamByIdentity(String identity, ZMQMessageStream stream) {
         if (streamsByIdentity.containsKey(identity)) {
             // The stream is present in the identity map already.
-            return false;
+            return;
         }
 
         // Put the stream in the identity map.
         streamsByIdentity.put(identity, stream);
-
-        return true;
     }
 
     /**
@@ -142,12 +125,5 @@ class ZMQMessageState {
         for (MessageStream stream : streamsByAddress.values()) {
             stream.close();
         }
-    }
-
-    /**
-     * @return the local ZMQAddress associated with the ROUTER socket.
-     */
-    ZMQAddress getLocalAddress() {
-        return localAddress;
     }
 }

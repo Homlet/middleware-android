@@ -8,6 +8,7 @@ import uk.ac.cam.seh208.middleware.core.CloseableSubject;
  * for responses.
  */
 public abstract class RequestStream extends CloseableSubject<RequestStream> {
+
     /**
      * Send a request message to the remote host, blocking until a response
      * is received. Should the stream be closed, or the remote host respond

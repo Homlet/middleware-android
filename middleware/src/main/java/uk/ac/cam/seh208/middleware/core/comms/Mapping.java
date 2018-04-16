@@ -63,7 +63,7 @@ public class Mapping extends CloseableSubject<Mapping> {
      * @param persistence Persistence level determining restoration strategy.
      * @param channels List of channels which should be included as part of the mapping.
      */
-    public Mapping(Endpoint local, Query query, Persistence persistence, List<Channel> channels) {
+    Mapping(Endpoint local, Query query, Persistence persistence, List<Channel> channels) {
         this.mappingId = new Random(System.nanoTime()).nextLong();
         this.local = local;
         this.query = query;
@@ -83,7 +83,7 @@ public class Mapping extends CloseableSubject<Mapping> {
      *
      * @param channel Reference to the channel to add.
      */
-    public synchronized void addChannel(Channel channel) {
+    private synchronized void addChannel(Channel channel) {
         if (channel == null) {
             // We cannot subscribe to a null object.
             return;
@@ -94,7 +94,7 @@ public class Mapping extends CloseableSubject<Mapping> {
 
         // Attempt to subscribe to the channel. If the channel was closed
         // prior to this point, continue with no action.
-        if (channel.subscribeIfOpen(this::onChannelClose)) {
+        if (!channel.subscribeIfOpen(this::onChannelClose)) {
             channels.remove(channel.getChannelId());
         }
     }
@@ -137,6 +137,7 @@ public class Mapping extends CloseableSubject<Mapping> {
         // Switch restoration strategy depending on persistence level.
         switch (persistence) {
             case NONE:
+                // Do nothing.
                 return;
 
             case RESEND_QUERY:

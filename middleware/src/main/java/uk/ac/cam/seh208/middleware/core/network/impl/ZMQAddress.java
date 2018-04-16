@@ -1,12 +1,7 @@
 package uk.ac.cam.seh208.middleware.core.network.impl;
 
-import android.os.AsyncTask;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,33 +15,9 @@ import uk.ac.cam.seh208.middleware.core.network.AddressBuilder;
  */
 public class ZMQAddress extends Address {
 
-    private static class GetLocalHostTask extends AsyncTask<Void, Void, String> {
-        @Override
-        protected String doInBackground(Void... voids) {
-//            try {
-                return "127.0.0.1";
-//                return InetAddress.getLocalHost().getHostAddress();
-//            } catch (UnknownHostException e) {
-//                return null;
-//            }
-        }
-    }
-
-    /**
-     * Return the public IP of the local host.
-     *
-     * @return a String formatted IP address.
-     */
-    public static String getLocalHost() throws UnknownHostException {
-        try {
-            return new GetLocalHostTask().get();
-        } catch (InterruptedException | ExecutionException e) {
-            return null;
-        }
-    }
-
-
     public static class Builder implements AddressBuilder {
+
+        private int priority;
 
         private String host;
 
@@ -54,8 +25,14 @@ public class ZMQAddress extends Address {
 
 
         public Builder() {
+            priority = 0;
             host = "*";
             port = 0;
+        }
+
+        public Builder setPriority(int priority) {
+            this.priority = priority;
+            return this;
         }
 
         public Builder setHost(String host) {
@@ -82,7 +59,7 @@ public class ZMQAddress extends Address {
             String ipv4Expr = "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}):(\\d+|\\*)";
             String ipv6Expr = "\\[([a-zA-Z0-9:]+)]:(\\d+|\\*)";
             String hostnameExpr = "([\\w.\\-]+):(\\d+|\\*)";
-            String wildcardExpr = "\\*:(\\d+|\\*)";
+            String wildcardExpr = "(\\*):(\\d+|\\*)";
 
             // Merge the patterns into a single matcher for the input string.
             Pattern pattern = Pattern.compile(
@@ -122,7 +99,7 @@ public class ZMQAddress extends Address {
          */
         @Override
         public ZMQAddress build() {
-            return new ZMQAddress(host, port);
+            return new ZMQAddress(priority, host, port);
         }
     }
 
@@ -130,23 +107,26 @@ public class ZMQAddress extends Address {
     /**
      * Host (IPv4, IPv6, or hostname) on which the addressee resides.
      */
-    public final String host;
+    private final String host;
 
     /**
      * Port on which the addressee resides.
      */
-    public final int port;
+    private final int port;
 
 
     /**
      * Construct a new immutable address with the given parameters.
      *
+     * @param priority The priority of the address.
      * @param host The host of the address (IPv4 address, IPv6 address, or hostname).
      * @param port The port of the address.
      */
     protected ZMQAddress(
+            @JsonProperty("priority") int priority,
             @JsonProperty("host") String host,
             @JsonProperty("port") int port) {
+        super(priority);
         this.host = host;
         this.port = port;
     }
@@ -157,7 +137,7 @@ public class ZMQAddress extends Address {
      * @return a String object reference.
      */
     @Override
-    public String toCanonicalString() {
+    protected String toAddressString() {
         if (port == 0) {
             return host + ":*";
         }

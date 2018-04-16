@@ -60,11 +60,11 @@ public class CloseChannelControlMessage extends ControlMessage {
     }
 
     /**
-     * Open channels via the service, and encapsulate the result in a response object.
+     * Close the channel via the service, and encapsulate the result in a response object.
      *
      * @param service A reference to the middleware service receiving the message.
      *
-     * @return a response containing the details of the opened channels.
+     * @return a response containing the details of success.
      */
     @Override
     public Response handle(Service service) {

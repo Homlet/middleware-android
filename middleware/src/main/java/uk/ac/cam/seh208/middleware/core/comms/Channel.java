@@ -73,13 +73,13 @@ public class Channel extends CloseableSubject<Channel> {
      * @param local Reference to the endpoint object at the local end of the channel.
      * @param remote Details of the remote endpoint, including the host on which it resides.
      */
-    public Channel(Endpoint local, RemoteEndpointDetails remote) {
+    Channel(Endpoint local, RemoteEndpointDetails remote) {
         channelId = generateId(local.getDetails(), remote);
         this.local = local;
         this.remote = remote;
     }
 
-    public long getChannelId() {
+    long getChannelId() {
         return channelId;
     }
 

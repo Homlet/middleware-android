@@ -113,45 +113,29 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     /**
      * Run a general middleware command on a remote instance of the middleware.
      *
-     * @param address The address of the device the middleware is accessible on.
+     * @param uuid UUID of the middleware to force.
      * @param command Object describing the command.
      *
      * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public void force(String address, MiddlewareCommand command) throws BadHostException {
-        // TODO: work out whether locations should be exposed to the application developer.
-        try {
-            // TODO: use a real location instead.
-            Location location = new Location(-1);
-            location.addAddress(Address.make(address));
-            service.force(location, command);
-        } catch (MalformedAddressException e) {
-            Log.e(getTag(), "Malformed address string given when forcing command.");
-        }
+    public void force(long uuid, MiddlewareCommand command) throws BadHostException {
+        // TODO: implement.
     }
 
     /**
      * Run a command on a remote endpoint (an endpoint of a remote middleware instance).
      *
-     * @param address The address of the device the middleware is accessible on.
+     * @param uuid UUID of the middleware on which the endpoint resides.
      * @param name The name of the endpoint to run the command on.
      * @param command Object describing the command.
      *
      * @throws BadHostException if the given host is invalid.
      */
     @Override
-    public void forceEndpoint(String address, String name,
+    public void forceEndpoint(long uuid, String name,
                               EndpointCommand command) throws BadHostException {
-        // TODO: work out whether locations should be exposed to the application developer.
-        try {
-            // TODO: use a real location instead.
-            Location location = new Location(-1);
-            location.addAddress(Address.make(address));
-            service.forceEndpoint(location, name, command);
-        } catch (MalformedAddressException e) {
-            Log.e(getTag(), "Malformed address string given when forcing endpoint command.");
-        }
+        // TODO: implement.
     }
 
     /**
@@ -178,8 +162,8 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     @Override
     public void setRDCAddress(String address) throws BadHostException {
         try {
-            // Build an RDC location with negative ID.
-            Location location = new Location(-1);
+            // Build an RDC location with a single address.
+            Location location = new Location();
             location.addAddress(Address.make(address));
             service.setRDCLocation(location);
         } catch (MalformedAddressException ignored) {

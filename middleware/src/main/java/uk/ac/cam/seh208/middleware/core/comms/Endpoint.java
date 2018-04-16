@@ -25,7 +25,6 @@ import uk.ac.cam.seh208.middleware.common.CloseAllCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
-import uk.ac.cam.seh208.middleware.common.Keys;
 import uk.ac.cam.seh208.middleware.common.MapCommand;
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Polarity;
@@ -40,10 +39,7 @@ import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
-import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 import uk.ac.cam.seh208.middleware.core.exception.UnexpectedClosureException;
-import uk.ac.cam.seh208.middleware.core.network.Address;
-import uk.ac.cam.seh208.middleware.core.network.Location;
 import uk.ac.cam.seh208.middleware.core.network.RequestStream;
 
 
@@ -259,8 +255,8 @@ public class Endpoint {
      */
     public Mapping map(Query query, Persistence persistence)
         throws BadQueryException, BadHostException, ProtocolException {
-        List<Location> hosts = service.discover(query);
-        return establishMapping(hosts, query, persistence);
+        List<Middleware> remotes = service.discover(query);
+        return establishMapping(remotes, query, persistence);
     }
 
     /**
@@ -273,7 +269,7 @@ public class Endpoint {
      *
      * The return value is a list of the endpoints that were successfully mapped to.
      *
-     * @param host Location on which the peer is accessible.
+     * @param remote Remote middleware instance with which to map.
      * @param query An endpoint query object for filtering remote endpoints.
      * @param persistence Persistence level to use for the resultant mapping.
      *
@@ -282,9 +278,9 @@ public class Endpoint {
      *
      * @throws BadQueryException if either of the schema or polarity fields are set in the query.
      */
-    public Mapping mapTo(Location host, Query query, Persistence persistence)
+    public Mapping mapTo(Middleware remote, Query query, Persistence persistence)
             throws BadQueryException {
-        return establishMapping(Collections.singletonList(host), query, persistence);
+        return establishMapping(Collections.singletonList(remote), query, persistence);
     }
 
     /**
@@ -369,7 +365,7 @@ public class Endpoint {
      *
      * The return value is a list of the endpoints that were successfully mapped to.
      *
-     * @param hosts List of hostnames on which remote middleware instances reside.
+     * @param remotes List of remote middleware instances with which to open channels.
      * @param query An endpoint query object for filtering remote endpoints.
      * @param persistence Persistence level to use for the resultant mapping.
      *
@@ -378,7 +374,8 @@ public class Endpoint {
      *
      * @throws BadQueryException if either of the schema or polarity fields are set in the query.
      */
-    private Mapping establishMapping(List<Location> hosts, Query query, Persistence persistence)
+    private Mapping establishMapping(List<Middleware> remotes, Query query,
+                                     Persistence persistence)
         throws BadQueryException {
         // Check that the query is properly formed.
         if (query.schema != null || query.polarity != null) {
@@ -386,7 +383,6 @@ public class Endpoint {
         }
 
         // Set the schema and polarity fields in the query.
-        // TODO: more elegant solution to finding polarity complement.
         Polarity complement = (details.getPolarity() == Polarity.SOURCE) ? Polarity.SINK
                                                                          : Polarity.SOURCE;
         query = new Query.Builder()
@@ -400,7 +396,7 @@ public class Endpoint {
 
         synchronized (this) {
             // Establish channels with each host in turn.
-            for (Location remote : hosts) {
+            for (Middleware remote : remotes) {
                 // If we have accepted the maximum number of channels, we need not
                 // contact the remaining remote hosts.
                 if (mapChannels.size() == query.matches) {
@@ -417,7 +413,8 @@ public class Endpoint {
                 try {
                     mapChannels.addAll(establishChannels(remote, modifiedQuery));
                 } catch (BadHostException e) {
-                    Log.w(getTag(), "Unable to establish channels to host (" + remote + ").");
+                    Log.w(getTag(), "Unable to establish channels to host (" +
+                            remote.toJSON() + ").");
                 }
             }
 
@@ -442,14 +439,15 @@ public class Endpoint {
      * they are automatically added to the channels map. However, they are not
      * automatically associated with a mapping.
      *
-     * @param host Location on which the remote instance of the middleware resides.
+     * @param remote Remote instance of the middleware to open channels with.
      * @param query Query used to filter the remote endpoints.
      */
-    private List<Channel> establishChannels(Location host, Query query) throws BadHostException {
+    private List<Channel> establishChannels(Middleware remote, Query query)
+            throws BadHostException {
         // Send an OPEN-CHANNELS control message to the remote host.
         OpenChannelsControlMessage message =
                 new OpenChannelsControlMessage(getRemoteDetails(), query);
-        RequestStream stream = service.getRequestStream(host);
+        RequestStream stream = service.getRequestStream(remote.getRequestLocation());
         OpenChannelsControlMessage.Response response = message.getResponse(stream);
 
         // Synchronise to prevent messages being sent to an incomplete mapping.
@@ -458,15 +456,15 @@ public class Endpoint {
             // endpoint-details from which channels were opened. Open local
             // counterparts to these channels and track them in the returned list.
             List<Channel> establishedChannels = new ArrayList<>();
-            for (RemoteEndpointDetails remote : response.getDetails()) {
+            for (RemoteEndpointDetails endpoint : response.getDetails()) {
                 try {
-                    establishedChannels.add(openChannel(remote));
+                    establishedChannels.add(openChannel(endpoint));
                 } catch (UnexpectedClosureException e) {
                     // Do nothing; whilst the remote currently believes this channel to be
                     // open, any attempt to communicate over it will either lead to a
                     // ConnectionFailedException or a CLOSE-CHANNEL control response.
                     Log.w(getTag(), "Couldn't establish channel to remote endpoint due to " +
-                            "unexpected closure (" + remote.getEndpointId() + ")");
+                            "unexpected closure (" + endpoint.getEndpointId() + ")");
                 }
             }
 
@@ -489,8 +487,8 @@ public class Endpoint {
 
         synchronized (this) {
             // Get the multiplexer to the remote location.
-            long uuid = remote.getLocation().getUUID();
-            Multiplexer multiplexer = service.getMultiplexer(remote.getLocation());
+            long uuid = remote.getMiddleware().getUUID();
+            Multiplexer multiplexer = service.getMultiplexer(remote.getMiddleware());
             multiplexers.put(uuid, multiplexer);
 
             if (multiplexer.subscribeIfOpen(m -> multiplexers.remove(uuid))) {
@@ -531,7 +529,7 @@ public class Endpoint {
      *                  was received.
      * @param message The newly received message string.
      */
-    public synchronized void onMessage(long channelId, String message) {
+    synchronized void onMessage(long channelId, String message) {
         if (channels.indexOfKey(channelId) < 0) {
             // If the channel identifier is not in the channel set, this
             // message shouldn't have ended up here.
@@ -575,7 +573,7 @@ public class Endpoint {
      *
      * @return whether the command ran successfully.
      */
-    public boolean execute(EndpointCommand command) {
+    boolean execute(EndpointCommand command) {
         Log.d(getTag(), "Received command: \"" + command.toJSON() + "\"");
 
         if (!forceable || !service.isForceable()) {
@@ -636,7 +634,7 @@ public class Endpoint {
      *
      * @return the endpoint polarity.
      */
-    public Polarity getPolarity() {
+    Polarity getPolarity() {
         return details.getPolarity();
     }
 
@@ -648,7 +646,7 @@ public class Endpoint {
      * @return a newly constructed RemoteEndpointDetails object referencing
      */
     public RemoteEndpointDetails getRemoteDetails() {
-        return new RemoteEndpointDetails(details, service.getLocation());
+        return new RemoteEndpointDetails(details, service.getMiddleware());
     }
 
     public boolean isExposed() {

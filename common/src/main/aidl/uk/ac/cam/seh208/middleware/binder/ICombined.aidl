@@ -18,8 +18,8 @@ interface ICombined {
     EndpointDetails mw_getEndpointDetails(String name);
     List<EndpointDetails> mw_getAllEndpointDetails();
 
-    void mw_force(String remote, in MiddlewareCommand command);
-    void mw_forceEndpoint(String remote, String name, in EndpointCommand command);
+    void mw_force(long uuid, in MiddlewareCommand command);
+    void mw_forceEndpoint(long uuid, String name, in EndpointCommand command);
     void mw_setForceable(boolean forceable);
 
     void mw_setRDCAddress(String address);

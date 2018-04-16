@@ -23,11 +23,11 @@ import java8.util.stream.StreamSupport;
 
 import uk.ac.cam.seh208.middleware.binder.CombinedBinder;
 import uk.ac.cam.seh208.middleware.common.EndpointCommand;
-import uk.ac.cam.seh208.middleware.common.Keys;
 import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.SetRDCAddressCommand;
 import uk.ac.cam.seh208.middleware.core.comms.EndpointCommandControlMessage;
+import uk.ac.cam.seh208.middleware.core.comms.Middleware;
 import uk.ac.cam.seh208.middleware.core.comms.MiddlewareCommandControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.QueryControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.RemoteEndpointDetails;
@@ -44,6 +44,7 @@ import uk.ac.cam.seh208.middleware.core.comms.MultiplexerPool;
 import uk.ac.cam.seh208.middleware.core.comms.RemoveControlMessage;
 import uk.ac.cam.seh208.middleware.core.comms.UpdateControlMessage;
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
+import uk.ac.cam.seh208.middleware.core.exception.NoValidAddressException;
 import uk.ac.cam.seh208.middleware.core.exception.UnexpectedClosureException;
 import uk.ac.cam.seh208.middleware.core.network.Address;
 import uk.ac.cam.seh208.middleware.core.network.Location;
@@ -79,6 +80,11 @@ public class MiddlewareService extends Service {
     private CombinedBinder binder;
 
     /**
+     * The universally unique identity of this middleware instance.
+     */
+    private Middleware middleware;
+
+    /**
      * Set of endpoints currently active in the middleware.
      */
     private EndpointSet endpointSet;
@@ -97,11 +103,6 @@ public class MiddlewareService extends Service {
      * Switch handling message-based communications at the transport and network layers.
      */
     private RequestSwitch requestSwitch;
-
-    /**
-     * Stores the location of this middleware instance.
-     */
-    private Location location;
 
     /**
      * Indicates whether it should be possible for remote instances of the
@@ -163,9 +164,12 @@ public class MiddlewareService extends Service {
                 ),
                 handler);
 
-        // TODO: restore location from persistent storage.
+        // TODO: restore UUID from persistent storage.
         Random random = new Random(System.nanoTime());
-        location = new Location(random.nextLong() & 0x7FFFFFFFL);
+        middleware = new Middleware(
+                random.nextLong() & 0x7FFFFFFFL,
+                messageSwitch.getLocation(),
+                requestSwitch.getLocation());
 
         forceable = true;
         discoverable = true;
@@ -255,7 +259,7 @@ public class MiddlewareService extends Service {
                     details.add(endpoint.getDetails());
                 }
             }
-            UpdateControlMessage message = new UpdateControlMessage(getLocation(), details);
+            UpdateControlMessage message = new UpdateControlMessage(middleware, details);
 
             // Get a request stream to the RDC location.
             RequestStream stream = getRequestStream(rdcLocation);
@@ -281,7 +285,7 @@ public class MiddlewareService extends Service {
             Log.i(getTag(), "Sending removal request to the RDC.");
 
             // Construct an REMOVE control message.
-            RemoveControlMessage message = new RemoveControlMessage(getLocation());
+            RemoveControlMessage message = new RemoveControlMessage(middleware);
 
             // Get a request stream to the RDC location.
             RequestStream stream = getRequestStream(rdcLocation);
@@ -394,14 +398,14 @@ public class MiddlewareService extends Service {
     /**
      * Return the unique pooled multiplexer for the given remote location.
      *
-     * @param remote Remote location with which the multiplexer communicates.
+     * @param remote Remote middleware instance with which the multiplexer communicates.
      *
      * @return a reference to a Multiplexer object.
      *
      * @throws BadHostException if it was impossible to create an underlying message
      *                          stream to the given host.
      */
-    public Multiplexer getMultiplexer(Location remote) throws BadHostException {
+    public Multiplexer getMultiplexer(Middleware remote) throws BadHostException {
         return multiplexerPool.getMultiplexer(remote);
     }
 
@@ -417,16 +421,11 @@ public class MiddlewareService extends Service {
      *                          given host.
      */
     public MessageStream getMessageStream(Location remote) throws BadHostException {
-        // TODO: more intelligent implementation.
-
-        Address preferredAddress = remote.getAddresses().get(0);
-
-        if (preferredAddress == null) {
-            // If the location is empty or contains corrupt data, throw an exception.
+        try {
+            return messageSwitch.getStream(remote.priorityAddress());
+        } catch (NoValidAddressException e) {
             throw new BadHostException(remote.toString());
         }
-
-        return messageSwitch.getStream(preferredAddress);
     }
 
     /**
@@ -441,28 +440,23 @@ public class MiddlewareService extends Service {
      *                          given host.
      */
     public RequestStream getRequestStream(Location remote) throws BadHostException {
-        // TODO: more intelligent implementation.
-
-        Address preferredAddress = remote.getAddresses().get(0);
-
-        if (preferredAddress == null) {
-            // If the location is empty or contains corrupt data, throw an exception.
+        try {
+            return requestSwitch.getStream(remote.priorityAddress());
+        } catch (NoValidAddressException e) {
             throw new BadHostException(remote.toString());
         }
-
-        return requestSwitch.getStream(preferredAddress);
     }
 
     /**
      * Send a QUERY control message to the registered RDC, returning the resultant
-     * list of remote locations. If no locations match the query, an empty list is
-     * returned; if something went wrong contacting the RDC, null is returned.
+     * list of middleware instances. If no instances match the query, an empty list is
+     * returned.
      *
      * @return a list of locations exposing endpoints which match the query.
      *
      * @throws BadHostException if the middleware fails to connect to the RDC location.
      */
-    public List<Location> discover(Query query) throws BadHostException {
+    public List<Middleware> discover(Query query) throws BadHostException {
         Log.i(getTag(), "Querying RDC for peers matching " + query);
 
         // Construct a QUERY control message with the given query.
@@ -473,7 +467,7 @@ public class MiddlewareService extends Service {
 
         // Send the control message over the stream, and return the response from the RDC.
         QueryControlMessage.Response response = message.getResponse(stream);
-        return response.getLocations();
+        return response.getMiddlewares();
     }
 
     /**
@@ -574,9 +568,8 @@ public class MiddlewareService extends Service {
                 // Cast the command to extract the data.
                 SetRDCAddressCommand rdcCommand = (SetRDCAddressCommand) command;
 
-                // Build an RDC location with negative ID.
-                // TODO: create location builder for this.
-                Location location = new Location(-1);
+                // Build an RDC location with a single address.
+                Location location = new Location();
                 location.addAddress(Address.make(rdcCommand.getAddress()));
 
                 // Set the RDC location.
@@ -592,13 +585,12 @@ public class MiddlewareService extends Service {
         return false;
     }
 
-    public EndpointSet getEndpointSet() {
-        // TODO: return unmodifiable view on the endpoint set.
-        return endpointSet;
+    public Middleware getMiddleware() {
+        return middleware;
     }
 
-    public Location getLocation() {
-        return location;
+    public EndpointSet getEndpointSet() {
+        return endpointSet;
     }
 
     public boolean isForceable() {

@@ -30,6 +30,12 @@ public abstract class Address implements JSONSerializable {
      */
     public static final String SCHEME_ZMQ = "zmq";
 
+    /**
+     * Priority used for determining which interface addresses should be
+     * preferred for connections when multiple are available.
+     */
+    private int priority;
+
 
     /**
      * Build a new address object from the given string in scheme://address
@@ -75,7 +81,7 @@ public abstract class Address implements JSONSerializable {
      *
      * @return a scheme string.
      */
-    public static String getScheme(Address address) {
+    static String getSchemeString(Address address) {
         if (address instanceof ZMQAddress) {
             return SCHEME_ZMQ;
         }
@@ -84,15 +90,32 @@ public abstract class Address implements JSONSerializable {
         return null;
     }
 
+    protected Address(int priority) {
+        this.priority = priority;
+    }
+
+    int getPriority() {
+        return priority;
+    }
 
     /**
      * Return a reference to a string representing the address in its
-     * canonical form. For instance, an IPv6 implementation would
-     * return "::" for addresses loaded as "0::" or "0:0:0:0::" etc.
+     * canonical form, preceded by the scheme string in the fully
+     * unique format (scheme://address)
+     */
+    public final String toCanonicalString() {
+        return getSchemeString(this) + "://" + toAddressString();
+    }
+
+    /**
+     * Return a reference to a string representing the address in a
+     * form reversible if the scheme is known in advance. For instance,
+     * an IPv6 implementation would return "::" for addresses loaded as
+     * "0::" or "0:0:0:0::" etc.
      *
      * @return a reference to a String object.
      */
-    public abstract String toCanonicalString();
+    protected abstract String toAddressString();
 
     /**
      * Use the canonical string function for translating to string,
@@ -102,7 +125,7 @@ public abstract class Address implements JSONSerializable {
      */
     @Override
     public final String toString() {
-        return toCanonicalString();
+        return toAddressString();
     }
 
     /**
