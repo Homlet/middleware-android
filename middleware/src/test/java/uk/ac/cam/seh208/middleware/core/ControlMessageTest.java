@@ -20,18 +20,18 @@ import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.SetRDCAddressCommand;
-import uk.ac.cam.seh208.middleware.core.comms.CloseChannelControlMessage;
-import uk.ac.cam.seh208.middleware.core.comms.EndpointCommandControlMessage;
-import uk.ac.cam.seh208.middleware.core.comms.Middleware;
-import uk.ac.cam.seh208.middleware.core.comms.MiddlewareCommandControlMessage;
-import uk.ac.cam.seh208.middleware.core.comms.QueryControlMessage;
-import uk.ac.cam.seh208.middleware.core.comms.RemoteEndpointDetails;
-import uk.ac.cam.seh208.middleware.core.comms.ControlMessage;
-import uk.ac.cam.seh208.middleware.core.comms.OpenChannelsControlMessage;
-import uk.ac.cam.seh208.middleware.core.comms.RemoveControlMessage;
-import uk.ac.cam.seh208.middleware.core.comms.UpdateControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.CloseChannelControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.EndpointCommandControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.Middleware;
+import uk.ac.cam.seh208.middleware.core.control.MiddlewareCommandControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.QueryControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.RemoteEndpointDetails;
+import uk.ac.cam.seh208.middleware.core.control.ControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.OpenChannelsControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.RemoveControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.UpdateControlMessage;
 import uk.ac.cam.seh208.middleware.core.exception.InvalidControlMessageException;
-import uk.ac.cam.seh208.middleware.core.network.Location;
+import uk.ac.cam.seh208.middleware.core.comms.Location;
 
 
 public class ControlMessageTest {

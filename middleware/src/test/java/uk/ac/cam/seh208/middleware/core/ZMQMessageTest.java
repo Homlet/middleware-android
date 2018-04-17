@@ -9,15 +9,15 @@ import java.util.HashSet;
 
 import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
-import uk.ac.cam.seh208.middleware.core.network.Address;
-import uk.ac.cam.seh208.middleware.core.network.Environment;
-import uk.ac.cam.seh208.middleware.core.network.Location;
-import uk.ac.cam.seh208.middleware.core.network.MessageContext;
-import uk.ac.cam.seh208.middleware.core.network.MessageListener;
-import uk.ac.cam.seh208.middleware.core.network.MessageStream;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQMessageContext;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
+import uk.ac.cam.seh208.middleware.core.comms.Address;
+import uk.ac.cam.seh208.middleware.core.comms.Environment;
+import uk.ac.cam.seh208.middleware.core.comms.Location;
+import uk.ac.cam.seh208.middleware.core.comms.MessageContext;
+import uk.ac.cam.seh208.middleware.core.comms.MessageListener;
+import uk.ac.cam.seh208.middleware.core.comms.MessageStream;
+import uk.ac.cam.seh208.middleware.core.comms.impl.ZMQAddress;
+import uk.ac.cam.seh208.middleware.core.comms.impl.ZMQMessageContext;
+import uk.ac.cam.seh208.middleware.core.comms.impl.ZMQSchemeConfiguration;
 
 
 /**

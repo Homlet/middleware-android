@@ -1,6 +1,6 @@
 package uk.ac.cam.seh208.middleware.core.exception;
 
-import uk.ac.cam.seh208.middleware.core.network.Address;
+import uk.ac.cam.seh208.middleware.core.comms.Address;
 
 public class ConnectionFailedException extends Exception {
     public ConnectionFailedException(Address address) {

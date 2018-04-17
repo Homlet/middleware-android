@@ -18,10 +18,10 @@ import java8.util.stream.Collectors;
 import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.core.comms.ControlMessageHandler;
-import uk.ac.cam.seh208.middleware.core.comms.Middleware;
-import uk.ac.cam.seh208.middleware.core.network.RequestSwitch;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
+import uk.ac.cam.seh208.middleware.core.control.ControlMessageHandler;
+import uk.ac.cam.seh208.middleware.core.control.Middleware;
+import uk.ac.cam.seh208.middleware.core.comms.RequestSwitch;
+import uk.ac.cam.seh208.middleware.core.comms.impl.ZMQSchemeConfiguration;
 
 
 public class RDCService extends Service {

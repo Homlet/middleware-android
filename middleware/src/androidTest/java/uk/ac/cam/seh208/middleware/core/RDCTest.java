@@ -24,10 +24,10 @@ import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
-import uk.ac.cam.seh208.middleware.core.network.Address;
-import uk.ac.cam.seh208.middleware.core.network.Location;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
+import uk.ac.cam.seh208.middleware.core.comms.Address;
+import uk.ac.cam.seh208.middleware.core.comms.Location;
+import uk.ac.cam.seh208.middleware.core.comms.impl.ZMQAddress;
+import uk.ac.cam.seh208.middleware.core.comms.impl.ZMQSchemeConfiguration;
 
 
 @RunWith(AndroidJUnit4.class)

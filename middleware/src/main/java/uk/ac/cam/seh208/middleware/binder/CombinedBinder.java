@@ -13,7 +13,7 @@ import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
-import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
+import uk.ac.cam.seh208.middleware.core.control.Endpoint;
 
 
 /**

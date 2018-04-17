@@ -12,7 +12,7 @@ import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
 import uk.ac.cam.seh208.middleware.common.exception.WrongPolarityException;
-import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
+import uk.ac.cam.seh208.middleware.core.control.Endpoint;
 
 
 /**

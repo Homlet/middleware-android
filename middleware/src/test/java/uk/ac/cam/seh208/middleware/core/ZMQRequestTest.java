@@ -10,12 +10,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
-import uk.ac.cam.seh208.middleware.core.network.Address;
-import uk.ac.cam.seh208.middleware.core.network.RequestContext;
-import uk.ac.cam.seh208.middleware.core.network.RequestStream;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQAddress;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQRequestContext;
-import uk.ac.cam.seh208.middleware.core.network.impl.ZMQSchemeConfiguration;
+import uk.ac.cam.seh208.middleware.core.comms.Address;
+import uk.ac.cam.seh208.middleware.core.comms.RequestContext;
+import uk.ac.cam.seh208.middleware.core.comms.RequestStream;
+import uk.ac.cam.seh208.middleware.core.comms.impl.ZMQRequestContext;
+import uk.ac.cam.seh208.middleware.core.comms.impl.ZMQSchemeConfiguration;
 
 
 /**

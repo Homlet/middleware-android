@@ -12,11 +12,11 @@ import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointCollisionException;
 import uk.ac.cam.seh208.middleware.common.exception.EndpointNotFoundException;
-import uk.ac.cam.seh208.middleware.core.comms.Endpoint;
+import uk.ac.cam.seh208.middleware.core.control.Endpoint;
 import uk.ac.cam.seh208.middleware.core.MiddlewareService;
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
-import uk.ac.cam.seh208.middleware.core.network.Address;
-import uk.ac.cam.seh208.middleware.core.network.Location;
+import uk.ac.cam.seh208.middleware.core.comms.Address;
+import uk.ac.cam.seh208.middleware.core.comms.Location;
 
 
 /**
