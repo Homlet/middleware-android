@@ -40,14 +40,10 @@ public class MessageSwitch implements Environment {
             String scheme = configuration.getScheme();
             switch (scheme) {
                 case Address.SCHEME_ZMQ:
-                    try {
-                        MessageContext context = new ZMQMessageContext(
-                                this, (ZMQSchemeConfiguration) configuration);
-                        location.addAddresses(context.getInterfaceAddresses());
-                        contextsByScheme.put(scheme, context);
-                    } catch (SocketException e) {
-                        e.printStackTrace();
-                    }
+                    MessageContext context = new ZMQMessageContext(
+                            this, (ZMQSchemeConfiguration) configuration);
+                    location.addAddresses(context.getInterfaceAddresses());
+                    contextsByScheme.put(scheme, context);
                     break;
 
                 // case SCHEME_BLUETOOTH etc...

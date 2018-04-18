@@ -40,15 +40,11 @@ public class RequestSwitch implements Environment {
             String scheme = configuration.getScheme();
             switch (scheme) {
                 case Address.SCHEME_ZMQ:
-                    try {
-                        RequestContext context = new ZMQRequestContext(
-                                (ZMQSchemeConfiguration) configuration);
-                        context.getResponder().setHandler(handler);
-                        location.addAddresses(context.getInterfaceAddresses());
-                        contextsByScheme.put(scheme, context);
-                    } catch (SocketException e) {
-                        e.printStackTrace();
-                    }
+                    RequestContext context = new ZMQRequestContext(
+                            (ZMQSchemeConfiguration) configuration);
+                    context.getResponder().setHandler(handler);
+                    location.addAddresses(context.getInterfaceAddresses());
+                    contextsByScheme.put(scheme, context);
                     break;
 
                 // case SCHEME_BLUETOOTH etc...

@@ -66,7 +66,7 @@ public class RDCTest {
                 .setHost("127.0.0.1")
                 .setPort(ZMQSchemeConfiguration.DEFAULT_RDC_PORT)
                 .build();
-        Location rdcLocation = new Location(-1);
+        Location rdcLocation = new Location();
         rdcLocation.addAddress(rdcAddress);
         middleware.setRDCLocation(rdcLocation);
 
@@ -94,7 +94,9 @@ public class RDCTest {
         Query query = new Query.Builder().build();
 
         // Discover via the middleware.
-        Assert.assertEquals(Arrays.asList(middleware.getLocation()), middleware.discover(query));
+        Assert.assertEquals(
+                Arrays.asList(middleware.getMiddleware()),
+                middleware.discover(query));
     }
 
     @Test
@@ -106,7 +108,9 @@ public class RDCTest {
                 .build();
 
         // Discover via the middleware.
-        Assert.assertEquals(Arrays.asList(middleware.getLocation()), middleware.discover(query));
+        Assert.assertEquals(
+                Arrays.asList(middleware.getMiddleware()),
+                middleware.discover(query));
     }
 
     @Test

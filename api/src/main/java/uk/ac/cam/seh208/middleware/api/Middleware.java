@@ -128,14 +128,14 @@ public class Middleware {
         return callSafe(() -> connection.waitForBinder().mw_getAllEndpointDetails());
     }
 
-    private void force(String remote, MiddlewareCommand command)
+    private void force(long uuid, MiddlewareCommand command)
             throws MiddlewareDisconnectedException {
-        callSafe(() -> connection.waitForBinder().mw_force(remote, command));
+        callSafe(() -> connection.waitForBinder().mw_force(uuid, command));
     }
 
-    private void forceEndpoint(String remote, String name, EndpointCommand command)
+    private void forceEndpoint(long uuid, String name, EndpointCommand command)
             throws MiddlewareDisconnectedException, BadHostException {
-        callSafe(() -> connection.waitForBinder().mw_forceEndpoint(remote, name, command));
+        callSafe(() -> connection.waitForBinder().mw_forceEndpoint(uuid, name, command));
     }
 
     public void setForceable(boolean forceable) throws MiddlewareDisconnectedException {
