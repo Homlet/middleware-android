@@ -8,6 +8,7 @@ import java.util.Random;
 import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Query;
+import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 
 
@@ -54,6 +55,11 @@ public class Mapping extends CloseableSubject<Mapping> {
      */
     private LongSparseArray<Channel> channels;
 
+    /**
+     * Original number of channels constituent to the mapping.
+     */
+    private int capacity;
+
 
     /**
      * Construct a new mapping object, subscribing to every channel from the given
@@ -75,6 +81,8 @@ public class Mapping extends CloseableSubject<Mapping> {
             return;
         }
         StreamSupport.stream(channels).forEach(this::addChannel);
+
+        capacity = this.channels.size();
     }
 
     /**
@@ -127,13 +135,21 @@ public class Mapping extends CloseableSubject<Mapping> {
      */
     private synchronized void onChannelClose(Channel channel) {
         channels.remove(channel.getChannelId());
-        restore();
+
+        try {
+            // Attempt to restore channels; if
+            restore();
+        } catch (BadHostException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * Implementation of mapping restoration logic.
+     *
+     * @throws BadHostException when the RDC is unreachable.
      */
-    private void restore() {
+    private void restore() throws BadHostException {
         // Switch restoration strategy depending on persistence level.
         switch (persistence) {
             case NONE:
@@ -142,12 +158,28 @@ public class Mapping extends CloseableSubject<Mapping> {
 
             case RESEND_QUERY:
                 if (channels.size() == 0) {
-                    // TODO: implement.
+                    // If there are no channels remaining, restore the mapping
+                    // by re-sending the query.
+                    List<Middleware> remotes = local.getService().discover(query);
+                    List<Channel> establishedChannels = local.establishChannels(remotes, query);
+                    for (Channel channel : establishedChannels) {
+                        addChannel(channel);
+                    }
                 }
                 return;
 
             case RESEND_QUERY_INDIVIDUAL:
-                // TODO: implement.
+                // Send a modified query to restore the remaining channels.
+                Query modifiedQuery = new Query.Builder()
+                        .copy(query)
+                        .setMatches(capacity - channels.size())
+                        .build();
+                List<Middleware> remotes = local.getService().discover(query);
+                List<Channel> establishedChannels =
+                        local.establishChannels(remotes, modifiedQuery);
+                for (Channel channel : establishedChannels) {
+                    addChannel(channel);
+                }
                 return;
 
             default:

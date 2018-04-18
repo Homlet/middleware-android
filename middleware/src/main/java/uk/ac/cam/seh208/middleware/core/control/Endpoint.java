@@ -391,32 +391,9 @@ public class Endpoint {
                 .setPolarity(complement)
                 .build();
 
-        // Keep track of the currently established channels.
-        List<Channel> mapChannels = new ArrayList<>();
-
         synchronized (this) {
-            // Establish channels with each host in turn.
-            for (Middleware remote : remotes) {
-                // If we have accepted the maximum number of channels, we need not
-                // contact the remaining remote hosts.
-                if (mapChannels.size() == query.matches) {
-                    break;
-                }
-
-                // Modify the sent query to only accept the remaining number of channels.
-                Query modifiedQuery = new Query.Builder()
-                        .copy(query)
-                        .setMatches(query.matches - mapChannels.size())
-                        .build();
-
-                // Establish channels to endpoints on the remote host, and add them to our list.
-                try {
-                    mapChannels.addAll(establishChannels(remote, modifiedQuery));
-                } catch (BadHostException e) {
-                    Log.w(getTag(), "Unable to establish channels to host (" +
-                            remote.toJSON() + ").");
-                }
-            }
+            // Keep track of the currently established channels.
+            List<Channel> mapChannels = establishChannels(remotes, query);
 
             // Build the mapping object.
             Mapping mapping = new Mapping(this, query, persistence, mapChannels);
@@ -429,6 +406,46 @@ public class Endpoint {
 
             return mapping;
         }
+    }
+
+    /**
+     * Establish some number of channels to a collection of remote instances of the
+     * middleware by sending a OPEN-CHANNELS control message, containing the given query.
+     *
+     * The established channels are opened using the openChannel method, meaning
+     * they are automatically added to the channels map. However, they are not
+     * automatically associated with a mapping.
+     *
+     * @param remotes List of remote instances of the middleware to open channels with.
+     * @param query Query used to filter the remote endpoints.
+     */
+    List<Channel> establishChannels(List<Middleware> remotes, Query query) {
+        List<Channel> establishedChannels = new ArrayList<>();
+
+        // Establish channels with each host in turn.
+        for (Middleware remote : remotes) {
+            // If we have accepted the maximum number of channels, we need not
+            // contact the remaining remote hosts.
+            if (establishedChannels.size() == query.matches) {
+                break;
+            }
+
+            // Modify the sent query to only accept the remaining number of channels.
+            Query modifiedQuery = new Query.Builder()
+                    .copy(query)
+                    .setMatches(query.matches - establishedChannels.size())
+                    .build();
+
+            // Establish channels to endpoints on the remote host, and add them to our list.
+            try {
+                establishedChannels.addAll(establishChannels(remote, modifiedQuery));
+            } catch (BadHostException e) {
+                Log.w(getTag(), "Unable to establish channels to host (" +
+                        remote.toJSON() + ").");
+            }
+        }
+
+        return establishedChannels;
     }
 
     /**
@@ -659,6 +676,9 @@ public class Endpoint {
 
     public void setForceable(boolean forceable) {
         this.forceable = forceable;
+    }
+    MiddlewareService getService() {
+        return service;
     }
 
     /**
