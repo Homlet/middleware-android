@@ -113,10 +113,18 @@ class ZMQMessageServer implements Runnable {
                     // If the peer identity is not tracked in the state, this
                     // must be an initial message.
                     try {
+                        Log.v(getTag(), "INIT: \"" + data + "\"");
                         ZMQInitialMessage initialMessage =
                                 JSONSerializable.fromJSON(data, ZMQInitialMessage.class);
 
                         stream = resolve(initialMessage);
+
+                        if (stream == null) {
+                            Log.w(getTag(), "Couldn't resolve stream for incoming message.");
+                            continue;
+                        }
+
+                        Log.d(getTag(), "Resolved stream " + stream.getRemote());
 
                         // Now we have resolved the stream, associate it with the ROUTER identity.
                         state.insertStreamByIdentity(identity, stream);
@@ -136,12 +144,14 @@ class ZMQMessageServer implements Runnable {
 
                         // Close the stream if not already closed, logging the FIN event.
                         if (stream.isClosed()) {
-                            Log.d(stream.getTag(), "FIN (ACK)");
+                            Log.v(stream.getTag(), "FIN (ACK)");
                         } else {
-                            Log.d(stream.getTag(), "FIN");
+                            Log.v(stream.getTag(), "FIN");
                             stream.close();
                         }
                     } else {
+                        Log.v(getTag(), "MSG: \"" + data + "\"");
+
                         // Otherwise, direct the message to the listeners of the stream.
                         stream.onMessage(data);
                     }

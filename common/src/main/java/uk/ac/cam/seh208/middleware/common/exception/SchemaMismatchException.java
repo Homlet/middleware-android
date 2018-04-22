@@ -4,7 +4,7 @@ import android.os.RemoteException;
 
 
 public class SchemaMismatchException extends RemoteException {
-    public SchemaMismatchException() {
-        super("Message does not match endpoint schema.");
+    public SchemaMismatchException(String message, String schema) {
+        super("Message \"" + message + "\" does not match endpoint schema \"" + schema + "\"");
     }
 }

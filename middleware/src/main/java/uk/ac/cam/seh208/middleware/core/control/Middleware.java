@@ -109,4 +109,8 @@ public class Middleware implements Parcelable, JSONSerializable {
     public int hashCode() {
         return Longs.hashCode(uuid);
     }
+
+    public String toString() {
+        return "[" + getUUID() + "]";
+    }
 }

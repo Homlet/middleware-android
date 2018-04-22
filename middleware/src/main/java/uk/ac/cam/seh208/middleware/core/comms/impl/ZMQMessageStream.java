@@ -12,6 +12,7 @@ import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 import uk.ac.cam.seh208.middleware.core.comms.Environment;
 import uk.ac.cam.seh208.middleware.core.comms.MessageListener;
 import uk.ac.cam.seh208.middleware.core.comms.MessageStream;
+import uk.ac.cam.seh208.middleware.core.exception.NoValidAddressException;
 
 
 /**
@@ -141,11 +142,9 @@ public class ZMQMessageStream extends MessageStream {
         // If we are closed, all messages should be ignored. Eventually
         // FIN will be received and we can release this object.
         if (isClosed()) {
-            Log.d(getTag(), "DROP: \"" + message + "\"");
+            Log.d(getTag(), "Dropped message \"" + message + "\"");
             return;
         }
-
-        Log.d(getTag(), "MSG: \"" + message + "\"");
 
         // Dispatch the message to all registered listeners.
         for (MessageListener listener : listeners) {
@@ -209,6 +208,10 @@ public class ZMQMessageStream extends MessageStream {
     }
 
     String getTag() {
-        return "STREAM[>" + remote + "]";
+        try {
+            return "STREAM[" + environment.getLocation().priorityAddress() + " > " + remote + "]";
+        } catch (NoValidAddressException e) {
+            return "STREAM[ > " + remote + "]";
+        }
     }
 }

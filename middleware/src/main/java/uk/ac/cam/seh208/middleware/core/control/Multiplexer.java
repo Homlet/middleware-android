@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import uk.ac.cam.seh208.middleware.common.EndpointDetails;
+import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.core.BuildConfig;
 import uk.ac.cam.seh208.middleware.core.CloseableSubject;
@@ -31,6 +33,17 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
      * MessageStream implementor providing the underlying communications to the remote middleware.
      */
     private MessageStream messageStream;
+
+
+    /**
+     * Back-reference to the owning service.
+     */
+    private MiddlewareService service;
+
+    /**
+     * Indicator of whether this is a local loopback multiplexer.
+     */
+    private boolean loopback;
 
     /**
      * Location and identifier of the remote instance of the middleware.
@@ -58,10 +71,14 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
 
 
     Multiplexer(MiddlewareService service, Middleware remote) throws BadHostException {
+        this.service = service;
         this.messageStream = service.getMessageStream(remote.getMessageLocation());
         this.remote = remote;
         channels = new LongSparseArray<>();
         channelsByLocalEndpoint = new LongSparseArray<>();
+
+        // If the local and remote middlewares are equal, this is a loopback multiplexer.
+        loopback = service.getMiddleware().equals(remote);
 
         // Register the onMessage method as a message listener for the message stream.
         listener = this::onMessage;
@@ -69,7 +86,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
 
         // Attempt to subscribe to message stream closure, closing the
         // multiplexer when this occurs.
-        if (!messageStream.subscribeIfOpen(s -> this.close())) {
+        if (!messageStream.subscribeIfOpen(s -> close())) {
             // If the message stream is already closed, close the multiplexer.
             close();
         }
@@ -139,14 +156,15 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         // Remove the channel from the channels map.
         channels.remove(channel.getChannelId());
 
-        // Get the channel list associated with the channel's local endpoint,
-        // and remove the channel from it.
-        long localId = channel.getLocal().getEndpointId();
-        List<Channel> channelList = channelsByLocalEndpoint.get(localId);
-        channelList.remove(channel);
-        if (channelList.isEmpty()) {
-            // If the list is now empty, remove it from the map.
-            channelsByLocalEndpoint.remove(localId);
+        // Remove the channel from the channelsByLocalEndpoint list associated with
+        // its local endpoint identifier.
+        removeChannelByEndpoint(channel, channel.getLocal().getDetails());
+
+        if (loopback) {
+            // In the special case that both endpoints reside on the same middleware,
+            // we must also remove the channel from the channelsByLocalEndpoint list
+            // associated with its remote endpoint identifier.
+            removeChannelByEndpoint(channel, channel.getRemote());
         }
 
         if (channels.size() == 0) {
@@ -160,6 +178,24 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         }
 
         return true;
+    }
+
+    /**
+     * Convenience procedure for removing a channel from the channelsByLocalEndpoint collection.
+     * The given channel will (obviously) only be removed from the list pertaining to the given
+     * endpoint if the endpoint actually resides in that list.
+     *
+     * @param channel The channel to remove.
+     * @param details Details of the endpoint the channel is associated with.
+     */
+    private synchronized void removeChannelByEndpoint(Channel channel, EndpointDetails details) {
+        long endpointId = details.getEndpointId();
+        List<Channel> channelList = channelsByLocalEndpoint.get(endpointId);
+        channelList.remove(channel);
+        if (channelList.isEmpty()) {
+            // If the list is now empty, remove it from the map.
+            channelsByLocalEndpoint.remove(endpointId);
+        }
     }
 
     /**
@@ -184,7 +220,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
                 // For each channel sharing the given local endpoint, prepend the
                 // channel identifier to the message.
                 message.append(channel.getChannelId());
-                message.append("\n");
+                message.append("|");
             }
 
             if (BuildConfig.DEBUG && message.toString().isEmpty()) {
@@ -192,7 +228,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
             }
 
             // Delimit the prefix from the message data using a second newline.
-            message.append("\n");
+            message.append("|");
             message.append(data);
 
             // Send the newly built message over the associated message stream.
@@ -236,8 +272,8 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
             return;
         }
 
-        int divider = message.indexOf("\n\n");
-        String[] parts = message.substring(0, divider).split("\n");
+        int divider = message.indexOf("||");
+        String[] parts = message.substring(0, divider).split("\\|");
         String data = message.substring(divider + 2);
 
         // Dispatch the message type and separated channel identifier to the local
@@ -248,14 +284,25 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
             if (channels.indexOfKey(channelId) < 0) {
                 // If the channels map does not contain the channel id, we
                 // probably shouldn't have received it.
-                // TODO: stop dropping messages here when the channel has just been set up.
+                // TODO: stop dropping messages here when the channel has just been set up/closed.
                 // TODO: respond telling remote to close the erroneous channel.
                 Log.w(getTag(), "Received message for unknown channel (" + channelId + ")");
                 continue;
             }
 
+            Endpoint sink = channels.get(channelId).getLocal();
+            if (loopback) {
+                // If this is a loopback multiplexer, choose the endpoint having the sink
+                // polarity. This is a bit of a hack, and the state space of the multiplexer
+                // would have to be changed in the future to support more exotic polarities.
+                if (sink.getPolarity() != Polarity.SINK) {
+                    EndpointDetails details = channels.get(channelId).getRemote();
+                    sink = service.getEndpointSet().getEndpointByName(details.getName());
+                }
+            }
+
             // Delegate to the message handler of the channel's local endpoint.
-            channels.get(channelId).getLocal().onMessage(channelId, data);
+            sink.onMessage(channelId, data);
         }
     }
 

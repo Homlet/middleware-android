@@ -90,4 +90,18 @@ public class Channel extends CloseableSubject<Channel> {
     public RemoteEndpointDetails getRemote() {
         return remote;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+
+        Channel other = (Channel) obj;
+
+        return channelId == other.channelId;
+    }
 }

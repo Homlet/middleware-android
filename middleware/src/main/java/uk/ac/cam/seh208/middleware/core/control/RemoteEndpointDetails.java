@@ -51,13 +51,14 @@ public class RemoteEndpointDetails extends EndpointDetails {
      * Construct a new immutable remote endpoint details object with the given parameters.
      */
     public RemoteEndpointDetails(
+            @JsonProperty("endpointId") long endpointId,
             @JsonProperty("name") @NonNull String name,
             @JsonProperty("desc") String desc,
             @JsonProperty("polarity") Polarity polarity,
             @JsonProperty("schema") String schema,
             @JsonProperty("tags") List<String> tags,
-            @JsonProperty("location") Middleware middleware) {
-        super(name, desc, polarity, schema, tags);
+            @JsonProperty("middleware") Middleware middleware) {
+        super(endpointId, name, desc, polarity, schema, tags);
 
         this.middleware = middleware;
     }
@@ -67,7 +68,8 @@ public class RemoteEndpointDetails extends EndpointDetails {
      * the given endpoint details object.
      */
     RemoteEndpointDetails(EndpointDetails details, Middleware middleware) {
-        this(details.getName(),
+        this(details.getEndpointId(),
+             details.getName(),
              details.getDesc(),
              details.getPolarity(),
              details.getSchema(),

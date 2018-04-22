@@ -2,7 +2,6 @@ package uk.ac.cam.seh208.middleware.core.comms;
 
 import android.util.Log;
 
-import java.net.SocketException;
 import java.util.HashMap;
 import java.util.List;
 

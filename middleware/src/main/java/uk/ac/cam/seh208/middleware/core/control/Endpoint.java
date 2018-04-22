@@ -162,7 +162,7 @@ public class Endpoint {
         }
 
         if (!validate(message)) {
-            throw new SchemaMismatchException();
+            throw new SchemaMismatchException(message, details.getSchema());
         }
 
         synchronized (this) {
@@ -499,6 +499,9 @@ public class Endpoint {
      */
     public Channel openChannel(RemoteEndpointDetails remote)
             throws BadHostException, UnexpectedClosureException {
+        Log.i(getTag(), "Opening channel to endpoint " + remote.toLogString() +
+                " on middleware [" + remote.getMiddleware().getUUID() + "]");
+
         // Create a new channel from this endpoint to the remote endpoint.
         Channel channel = new Channel(this, remote);
 
@@ -508,7 +511,7 @@ public class Endpoint {
             Multiplexer multiplexer = service.getMultiplexer(remote.getMiddleware());
             multiplexers.put(uuid, multiplexer);
 
-            if (multiplexer.subscribeIfOpen(m -> multiplexers.remove(uuid))) {
+            if (!multiplexer.subscribeIfOpen(m -> multiplexers.remove(uuid))) {
                 // Remove this multiplexer.
                 multiplexers.remove(uuid);
 
@@ -703,6 +706,11 @@ public class Endpoint {
      * Get the Android logcat tag for this endpoint.
      */
     private String getTag() {
-        return "ENDPOINT:" + getName();
+        return "ENDPOINT" + this;
+    }
+
+    @Override
+    public String toString() {
+        return details.toLogString();
     }
 }

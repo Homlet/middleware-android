@@ -2,7 +2,7 @@
     <string name="app_name">Middleware Demo</string>
     <string name="title_endpoints">Endpoints</string>
     <string name="title_resources">Resources</string>
-    <string name="title_remote">Remote</string>
+    <string name="title_metrics">Metrics</string>
     <string name="title_view_endpoint">View endpoint</string>
     <string name="title_create_endpoint">Create endpoint</string>
     <string name="action_set_rdc_address">Set RDC address</string>
@@ -25,4 +25,8 @@
     <string name="label_schema">Schema</string>
     <string name="error_contact_middleware">Error contacting middleware</string>
     <string name="message_endpoint_created">Endpoint created</string>
+    <string name="label_tcp_ip_server">TCP/IP server</string>
+    <string name="label_zeromq_server">ZeroMQ server</string>
+    <string name="label_middleware_server">Middleware server</string>
+    <string name="run_middleware_metrics">Run middleware metrics</string>
 </resources>

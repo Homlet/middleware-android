@@ -89,8 +89,6 @@ public class EndpointDetails implements Parcelable, JSONSerializable {
             @JsonProperty("polarity") Polarity polarity,
             @JsonProperty("schema") String schema,
             @JsonProperty("tags") List<String> tags) {
-        // TODO: validate schema string.
-
         this.endpointId = endpointId;
         this.name = name;
         this.desc = desc;
@@ -196,5 +194,9 @@ public class EndpointDetails implements Parcelable, JSONSerializable {
     @Override
     public String toString() {
         return toJSON();
+    }
+
+    public String toLogString() {
+        return "(" + getEndpointId() + ":" + getName() + ")";
     }
 }

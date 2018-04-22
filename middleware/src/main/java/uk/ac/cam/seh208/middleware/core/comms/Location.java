@@ -136,10 +136,12 @@ public class Location implements Iterable<Address>, Parcelable, JSONSerializable
      */
     public Address priorityAddress()
             throws NoValidAddressException {
-        return StreamSupport.stream(addresses)
+        Address priorityAddress = StreamSupport.stream(addresses)
                 .sorted((a, b) -> b.getPriority() - a.getPriority())
                 .findFirst()
                 .get();
+        Log.d(getTag(), "Chose priority address \"" + priorityAddress.toCanonicalString() + "\"");
+        return priorityAddress;
     }
 
     /**

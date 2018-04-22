@@ -59,7 +59,18 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     @Override
     public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
             throws EndpointCollisionException, BadSchemaException {
-        service.createEndpoint(details, exposed, forceable);
+        // Strip the generated id from the endpoint details object (this is a bit of a bodge).
+        // This is done to prevent malicious clients trying to create endpoints with duplicate
+        // endpoint ids. A proper solution would use different objects to serialise endpoint
+        // details to clients and peers.
+        EndpointDetails safeDetails = new EndpointDetails(
+                details.getName(),
+                details.getDesc(),
+                details.getPolarity(),
+                details.getSchema(),
+                details.getTags());
+
+        service.createEndpoint(safeDetails, exposed, forceable);
     }
 
     /**

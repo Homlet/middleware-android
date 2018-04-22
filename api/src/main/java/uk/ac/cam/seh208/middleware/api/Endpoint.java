@@ -1,5 +1,7 @@
 package uk.ac.cam.seh208.middleware.api;
 
+import android.os.RemoteException;
+
 import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
@@ -46,14 +48,23 @@ public class Endpoint {
         callSafe(() -> connection.waitForBinder().ep_send(name, message));
     }
 
-    public void registerListener(IMessageListener listener)
+    public MessageListenerToken registerListener(MessageListener method)
             throws MiddlewareDisconnectedException {
+        IMessageListener listener = new IMessageListener.Stub() {
+            @Override
+            public void onMessage(String message) throws RemoteException {
+                method.onMessage(message);
+            }
+        };
+
         callSafe(() -> connection.waitForBinder().ep_registerListener(name, listener));
+
+        return new MessageListenerToken(listener);
     }
 
-    public void unregisterListener(IMessageListener listener)
+    public void unregisterListener(MessageListenerToken token)
             throws MiddlewareDisconnectedException {
-        callSafe(() -> connection.waitForBinder().ep_unregisterListener(name, listener));
+        callSafe(() -> connection.waitForBinder().ep_unregisterListener(name, token.listener));
     }
 
     public void clearListeners() throws MiddlewareDisconnectedException {

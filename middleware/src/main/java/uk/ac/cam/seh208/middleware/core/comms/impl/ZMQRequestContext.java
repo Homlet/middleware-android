@@ -102,7 +102,7 @@ public class ZMQRequestContext implements RequestContext {
                 try {
                     // Make an address object from each interface address, and
                     // add it to the output list.
-                    output.add(Address.make("zmq://" + address + ":" + port));
+                    output.add(Address.make("zmq://" + address.getHostAddress() + ":" + port));
                 } catch (MalformedAddressException ignored) {
                     // Should not be reachable.
                 }

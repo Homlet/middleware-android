@@ -340,14 +340,14 @@ public class MiddlewareService extends Service {
      */
     public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
             throws EndpointCollisionException, BadSchemaException {
+        Log.d(getTag(), "Creating endpoint from details " + details);
+
         Endpoint endpoint = new Endpoint(this, details, exposed, forceable);
 
         // Synchronise on the endpoint set to prevent interleaving endpoint
         // destruction and creation/another destruction.
         //noinspection SynchronizeOnNonFinalField
         synchronized (endpointSet) {
-            Log.i(getTag(), "Creating endpoint " + details);
-
             if (endpointSet.getEndpointByName(details.getName()) != null) {
                 // An endpoint of this name already exists!
                 Log.w(getTag(), "Endpoint with name \"" + details.getName() +
@@ -361,7 +361,7 @@ public class MiddlewareService extends Service {
             // Add the endpoint to the set.
             endpointSet.add(endpoint);
 
-            Log.i(getTag(), "Endpoint [" + details.getEndpointId() + "] created.");
+            Log.i(getTag(), "Endpoint " + endpoint + " created.");
         }
 
         scheduleUpdateRDC();
@@ -480,8 +480,8 @@ public class MiddlewareService extends Service {
      * @return a list of endpoint-details for the opened channels.
      */
     public List<RemoteEndpointDetails> openChannels(Query query, RemoteEndpointDetails remote) {
-        Log.i(getTag(), "Opening channels to " + remote +
-                " from local endpoints matching " + query);
+        Log.i(getTag(), "Opening channels to " + remote.toLogString() + " on middleware " +
+                remote.getMiddleware() + " from local endpoints matching " + query);
 
         // Keep track of endpoints returned.
         List<RemoteEndpointDetails> endpoints = new ArrayList<>();
@@ -496,8 +496,7 @@ public class MiddlewareService extends Service {
                             e.openChannel(remote);
                             endpoints.add(e.getRemoteDetails());
                         } catch (BadHostException | UnexpectedClosureException ex) {
-                            Log.w(getTag(), "Error opening channel on endpoint (" +
-                                    e.getEndpointId() + ")");
+                            Log.w(getTag(), "Error opening channel on endpoint " + e, ex);
                         }
                     });
 

@@ -1,5 +1,8 @@
 package uk.ac.cam.seh208.middleware.demo;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.IdRes;
 import android.support.design.widget.BottomNavigationView;
@@ -11,13 +14,24 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import java.lang.ref.WeakReference;
+
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import uk.ac.cam.seh208.middleware.api.Middleware;
 import uk.ac.cam.seh208.middleware.api.RDC;
 import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
+import uk.ac.cam.seh208.middleware.metrics.Metrics;
+import uk.ac.cam.seh208.middleware.metrics.MetricsClient;
+import uk.ac.cam.seh208.middleware.metrics.MiddlewareClient;
+import uk.ac.cam.seh208.middleware.metrics.MiddlewareServer;
+import uk.ac.cam.seh208.middleware.metrics.TCPServer;
+import uk.ac.cam.seh208.middleware.metrics.ZMQServer;
+import uk.ac.cam.seh208.middleware.metrics.exception.IncompleteMetricsException;
 
 
 public class MainActivity extends AppCompatActivity {
+
 
     /**
      * Instance of the middleware interface bound to this activity.
@@ -25,9 +39,25 @@ public class MainActivity extends AppCompatActivity {
     private Middleware middleware;
 
     /**
+     * Instance of the middleware metrics server which runs on this activity.
+     */
+    private MiddlewareServer middlewareServer;
+
+    /**
+     * Instance of the ZeroMQ metrics server which runs on this activity.
+     */
+    private ZMQServer zmqServer;
+
+    /**
+     * Instance of the TCP/IP metrics server which runs on this activity.
+     */
+    private TCPServer tcpServer;
+
+    /**
      * Reference to the bottom navigation bar view.
      */
-    private BottomNavigationView navigation;
+    @BindView(R.id.navigation)
+    BottomNavigationView navigation;
 
     /**
      * Callback for when an item on the bottom navigation bar is selected.
@@ -59,7 +89,6 @@ public class MainActivity extends AppCompatActivity {
         ButterKnife.bind(this);
 
         // Configure the bottom navigation bar.
-        navigation = findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(listener);
 
         // Load the endpoints page.
@@ -67,6 +96,11 @@ public class MainActivity extends AppCompatActivity {
 
         // Instantiate the middleware interface.
         middleware = new Middleware(this);
+
+        // Create the metrics servers.
+        middlewareServer = new MiddlewareServer(middleware);
+        zmqServer = new ZMQServer(this);
+        tcpServer = new TCPServer(this);
 
         // Start the RDC if not started already.
         RDC.start(this);
@@ -77,18 +111,23 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
 
         // Connect to the middleware service.
-        middleware.bind(this::onMiddleware);
+        middleware.bind(this::onMiddlewareBind);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
 
+        // Stop the metrics servers (if running).
+        middlewareServer.stop();
+        zmqServer.stop();
+        tcpServer.stop();
+
         // Disconnect from the middleware service.
         middleware.unbind();
     }
 
-    private void onMiddleware() {
+    private void onMiddlewareBind() {
         try {
             middleware.setRDCAddress("zmq://127.0.0.1:4854");
         } catch (MiddlewareDisconnectedException e) {
@@ -154,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
             case R.id.page_resources:
                 return new Fragment();  // TODO: create fragment for resources page.
             case R.id.page_remote:
-                return new Fragment();  // TODO: create fragment for remote page.
+                return new MetricsFragment();
             default:
                 return null;
         }
@@ -174,10 +213,83 @@ public class MainActivity extends AppCompatActivity {
             case R.id.page_resources:
                 return getString(R.string.title_resources);
             case R.id.page_remote:
-                return getString(R.string.title_remote);
+                return getString(R.string.title_metrics);
             default:
                 return null;
         }
+    }
+
+    public MiddlewareServer getMiddlewareServer() {
+        return middlewareServer;
+    }
+
+    public ZMQServer getZMQServer() {
+        return zmqServer;
+    }
+
+    public TCPServer getTCPServer() {
+        return tcpServer;
+    }
+
+    private static class MetricsTask extends AsyncTask<Object, Void, Metrics> {
+
+        private WeakReference<Context> context;
+
+
+        @Override
+        protected Metrics doInBackground(Object... objects) {
+            // Unpack the closure arguments.
+            MetricsClient client = (MetricsClient) objects[0];
+            int messages = (Integer) objects[1];
+            int delayMillis = (Integer) objects[2];
+            context = (WeakReference<Context>) objects[3];
+
+            // Run metrics on the client.
+            client.connect();
+            client.runLatency(messages, delayMillis);
+            client.runThroughput(messages);
+            client.disconnect();
+
+            try {
+                return client.getMetrics();
+            } catch (IncompleteMetricsException e) {
+                Log.w(getTag(), "Metrics were incomplete; something went wrong gathering.");
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Metrics metrics) {
+            if (metrics == null) {
+                return;
+            }
+
+            Context context = this.context.get();
+            if (context == null) {
+                return;
+            }
+
+            new AlertDialog.Builder(context)
+                    .setTitle("Metrics")
+                    .setMessage("Latency: " + (int) metrics.latency + " \u00B5s\n" +
+                                "Throughput:" + (int) metrics.throughput + " messages per second")
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+        }
+    }
+
+    public void runMiddlewareMetrics(int messages, int delayMillis) {
+        if (middleware == null) {
+            Log.w(getTag(), "Tried to run middleware metrics while middleware unbound.");
+            return;
+        }
+
+        MetricsTask task = new MetricsTask();
+        task.execute(
+                new MiddlewareClient(middleware),
+                messages,
+                delayMillis,
+                new WeakReference<>(this));
     }
 
     public static String getTag() {
