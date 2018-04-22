@@ -6,6 +6,8 @@ import android.util.LongSparseArray;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.Polarity;
@@ -32,42 +34,48 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
     /**
      * MessageStream implementor providing the underlying communications to the remote middleware.
      */
-    private MessageStream messageStream;
+    private final MessageStream messageStream;
 
 
     /**
      * Back-reference to the owning service.
      */
-    private MiddlewareService service;
+    private final MiddlewareService service;
 
     /**
      * Indicator of whether this is a local loopback multiplexer.
      */
-    private boolean loopback;
+    private final boolean loopback;
 
     /**
      * Location and identifier of the remote instance of the middleware.
      */
-    private Middleware remote;
+    private final Middleware remote;
 
     /**
      * Map of currently open channels carried by the multiplexer, indexed by their identifier.
      * This is used to determine whether a timeout closure of the multiplexer should be
      * scheduled on channel closure, and to de-multiplex incoming messages between endpoints.
      */
-    private LongSparseArray<Channel> channels;
+    private final LongSparseArray<Channel> channels;
 
     /**
      * Map of currently open channels carried by the multiplexer, grouped by the identifier
      * of their local endpoint. This is used to determine which channel identifiers should be
      * prepended to each message for multiplexing purposes.
      */
-    private LongSparseArray<List<Channel>> channelsByLocalEndpoint;
+    private final LongSparseArray<List<Channel>> channelsByLocalEndpoint;
 
     /**
      * Lambda reference to the onMessage method for registering with the message stream.
      */
-    private MessageListener listener;
+    private final MessageListener listener;
+
+    /**
+     * Lock used to prevent handlers of sending and receiving from seeing partially
+     * updated multiplexer state.
+     */
+    private final ReadWriteLock stateLock;
 
 
     Multiplexer(MiddlewareService service, Middleware remote) throws BadHostException {
@@ -76,6 +84,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         this.remote = remote;
         channels = new LongSparseArray<>();
         channelsByLocalEndpoint = new LongSparseArray<>();
+        stateLock = new ReentrantReadWriteLock(true);
 
         // If the local and remote middlewares are equal, this is a loopback multiplexer.
         loopback = service.getMiddleware().equals(remote);
@@ -101,7 +110,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
      *
      * @return whether the channel was successfully carried.
      */
-    synchronized boolean carryChannel(Channel channel) {
+    boolean carryChannel(Channel channel) {
         if (isClosed()) {
             return false;
         }
@@ -111,6 +120,10 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
             return false;
         }
 
+        // Acquire the state write lock.
+        stateLock.writeLock().lock();
+
+        // Add the channel to the channels map.
         channels.put(channel.getChannelId(), channel);
 
         // Find the channel list associated with the channel's local endpoint,
@@ -134,6 +147,9 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
             return false;
         }
 
+        // Release the state lock.
+        stateLock.writeLock().unlock();
+
         return true;
     }
 
@@ -143,10 +159,13 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
      *
      * @return whether the channel was successfully dropped.
      */
-    private synchronized boolean dropChannel(Channel channel) {
+    private boolean dropChannel(Channel channel) {
         if (isClosed()) {
             return false;
         }
+
+        // Acquire the state write lock.
+        stateLock.writeLock().lock();
 
         if (channels.indexOfKey(channel.getChannelId()) < 0) {
             Log.e(getTag(), "Attempted to remove channel not carried.");
@@ -177,6 +196,9 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
             // TODO: timeoutClose();
         }
 
+        // Release the state lock.
+        stateLock.writeLock().unlock();
+
         return true;
     }
 
@@ -188,7 +210,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
      * @param channel The channel to remove.
      * @param details Details of the endpoint the channel is associated with.
      */
-    private synchronized void removeChannelByEndpoint(Channel channel, EndpointDetails details) {
+    private void removeChannelByEndpoint(Channel channel, EndpointDetails details) {
         long endpointId = details.getEndpointId();
         List<Channel> channelList = channelsByLocalEndpoint.get(endpointId);
         channelList.remove(channel);
@@ -202,10 +224,13 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
      * Send the message along the associated message stream, prepending the ids of all
      * carried channels associated with the originator endpoint.
      */
-    public synchronized void send(Endpoint local, String data) {
+    public void send(Endpoint local, String data) {
         if (isClosed()) {
             return;
         }
+
+        // Acquire the state read lock.
+        stateLock.readLock().lock();
 
         if (channelsByLocalEndpoint.indexOfKey(local.getEndpointId()) < 0) {
             Log.e(getTag(), "Attempted to send a message from a local endpoint with no " +
@@ -236,6 +261,9 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         } catch (ConnectionFailedException e) {
             close();
         }
+
+        // Release the state lock.
+        stateLock.readLock().unlock();
     }
 
     @Override
@@ -243,6 +271,9 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         if (isClosed()) {
             return;
         }
+
+        // Acquire the state write lock.
+        stateLock.writeLock().lock();
 
         // Close (and thus drop) all remaining channels.
         // Channels being migrated to another multiplexer should be
@@ -256,6 +287,9 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         // Remove the message listener from the message stream.
         messageStream.unregisterListener(listener);
 
+        // Release the state lock.
+        stateLock.writeLock().unlock();
+
         super.close();
     }
 
@@ -267,7 +301,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
      * On received raw message, split into prefix and data, and dispatch the data to
      * all local endpoints referenced by the channel identifiers in the prefix.
      */
-    private synchronized void onMessage(String message) {
+    private void onMessage(String message) {
         if (isClosed()) {
             return;
         }
@@ -275,6 +309,9 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         int divider = message.indexOf("||");
         String[] parts = message.substring(0, divider).split("\\|");
         String data = message.substring(divider + 2);
+
+        // Acquire the state read lock.
+        stateLock.readLock().lock();
 
         // Dispatch the message type and separated channel identifier to the local
         // endpoint of each of the addressed channels.
@@ -284,12 +321,13 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
             if (channels.indexOfKey(channelId) < 0) {
                 // If the channels map does not contain the channel id, we
                 // probably shouldn't have received it.
-                // TODO: stop dropping messages here when the channel has just been set up/closed.
+                // TODO: stop dropping messages here when the channel was just set up/closed.
                 // TODO: respond telling remote to close the erroneous channel.
                 Log.w(getTag(), "Received message for unknown channel (" + channelId + ")");
                 continue;
             }
 
+            // Find the local sink endpoint associated with this channel.
             Endpoint sink = channels.get(channelId).getLocal();
             if (loopback) {
                 // If this is a loopback multiplexer, choose the endpoint having the sink
@@ -304,6 +342,9 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
             // Delegate to the message handler of the channel's local endpoint.
             sink.onMessage(channelId, data);
         }
+
+        // Release the state lock.
+        stateLock.readLock().unlock();
     }
 
     private String getTag() {

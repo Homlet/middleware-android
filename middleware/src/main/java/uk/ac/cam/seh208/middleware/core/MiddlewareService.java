@@ -335,8 +335,7 @@ public class MiddlewareService extends Service {
 
     /**
      * Create a new endpoint within the middleware, having the given details and settings.
-     * The endpoint will have a freshly generated endpoint identifier, and is initialised
-     * after creation.
+     * The endpoint will have a freshly generated endpoint identifier.
      */
     public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
             throws EndpointCollisionException, BadSchemaException {
@@ -354,9 +353,6 @@ public class MiddlewareService extends Service {
                         "\" already exists.");
                 throw new EndpointCollisionException(details.getName());
             }
-
-            // Perform initialisation routines for the endpoint.
-            endpoint.initialise();
 
             // Add the endpoint to the set.
             endpointSet.add(endpoint);

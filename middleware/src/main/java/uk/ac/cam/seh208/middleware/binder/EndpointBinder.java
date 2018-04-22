@@ -6,7 +6,6 @@ import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
-import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.MappingNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.Query;
@@ -97,12 +96,9 @@ public class EndpointBinder extends IEndpoint.Stub {
      * listener will no longer be invoked when new messages arrive on the endpoint.
      *
      * @param listener Object previously remoted and registered as a listener.
-     *
-     * @throws ListenerNotFoundException when the passed listener is not currently
-     *                                   registered with the bound endpoint.
      */
     @Override
-    public void unregisterListener(IMessageListener listener) throws ListenerNotFoundException {
+    public void unregisterListener(IMessageListener listener) throws RemoteException {
         endpoint.unregisterListener(listener);
     }
 

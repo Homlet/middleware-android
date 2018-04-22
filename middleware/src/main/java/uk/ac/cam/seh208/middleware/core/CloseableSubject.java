@@ -2,6 +2,7 @@ package uk.ac.cam.seh208.middleware.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
 /**
@@ -13,7 +14,7 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
     /**
      * Stores the current state of the object. Objects begin in the open state.
      */
-    private boolean closed;
+    private volatile boolean closed;
 
     /**
      * References all observers of the object.
@@ -94,7 +95,7 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
     }
 
     @Override
-    public synchronized boolean isClosed() {
+    public boolean isClosed() {
         return closed;
     }
 }

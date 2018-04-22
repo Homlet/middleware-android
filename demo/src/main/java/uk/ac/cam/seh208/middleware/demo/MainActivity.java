@@ -241,17 +241,13 @@ public class MainActivity extends AppCompatActivity {
             // Unpack the closure arguments.
             MetricsClient client = (MetricsClient) objects[0];
             int messages = (Integer) objects[1];
-            int delayMillis = (Integer) objects[2];
+            int length = (Integer) objects[2];
+            //noinspection unchecked
             context = (WeakReference<Context>) objects[3];
 
-            // Run metrics on the client.
-            client.connect();
-            client.runLatency(messages, delayMillis);
-            client.runThroughput(messages);
-            client.disconnect();
-
             try {
-                return client.getMetrics();
+                // Run metrics on the client.
+                return client.runMetrics(messages, length);
             } catch (IncompleteMetricsException e) {
                 Log.w(getTag(), "Metrics were incomplete; something went wrong gathering.");
                 return null;
@@ -278,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void runMiddlewareMetrics(int messages, int delayMillis) {
+    public void runMiddlewareMetrics(int messages, int length) {
         if (middleware == null) {
             Log.w(getTag(), "Tried to run middleware metrics while middleware unbound.");
             return;
@@ -288,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
         task.execute(
                 new MiddlewareClient(middleware),
                 messages,
-                delayMillis,
+                length,
                 new WeakReference<>(this));
     }
 

@@ -35,14 +35,14 @@ public class MiddlewareServer {
             middleware.createSource(
                     ENDPOINT_SOURCE,
                     "The source endpoint that sends message receipts back to the metrics test.",
-                    "{\"type\": \"number\"}",
+                    "{\"type\":\"array\", \"items\":[{\"type\":\"number\"}, {\"type\":\"string\"}]}",
                     Lists.of("metrics", "source", "receipt", "server"),
                     true,
                     false);
             middleware.createSink(
                     ENDPOINT_SINK,
                     "The sink endpoint that accepts messages from the metrics test.",
-                    "{\"type\": \"number\"}",
+                    "{\"type\":\"array\", \"items\":[{\"type\":\"number\"}, {\"type\":\"string\"}]}",
                     Lists.of("metrics", "sink", "input", "server"),
                     true,
                     false);

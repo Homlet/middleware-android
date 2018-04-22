@@ -104,7 +104,8 @@ public class MetricsFragment extends Fragment {
     }
 
     @OnClick(R.id.button_middleware_metrics)
-    void onMiddlewareButtonClicked() {
-        mainActivity.runMiddlewareMetrics(100, 50);
+    void onMiddlewareButtonClicked(View button) {
+        button.setEnabled(false);
+        mainActivity.runMiddlewareMetrics(1000, 50);
     }
 }

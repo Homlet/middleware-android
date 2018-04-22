@@ -4,6 +4,7 @@ import android.util.Log;
 
 import java8.util.Lists;
 import uk.ac.cam.seh208.middleware.api.Endpoint;
+import uk.ac.cam.seh208.middleware.api.MessageListener;
 import uk.ac.cam.seh208.middleware.api.MessageListenerToken;
 import uk.ac.cam.seh208.middleware.api.Middleware;
 import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
@@ -12,7 +13,6 @@ import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.metrics.exception.IncompleteMetricsException;
 
 
-// TODO: use principles from ZeroMQ guide.
 public class MiddlewareClient implements MetricsClient {
 
     @SuppressWarnings("FieldCanBeLocal")
@@ -24,164 +24,170 @@ public class MiddlewareClient implements MetricsClient {
 
     private Middleware middleware;
 
-    private float latency;
+    private Endpoint source;
 
-    private int latencyCount;
-
-    private float throughput;
-
-    private int throughputCount;
-
-    private int length;
-
-    private boolean connected;
+    private Endpoint sink;
 
 
     public MiddlewareClient(Middleware middleware) {
         this.middleware = middleware;
-        latency = -1;
-        latencyCount = 0;
-        throughput = -1;
-        throughputCount = 0;
-        length = -1;
-        connected = false;
+        source = middleware.getEndpoint(ENDPOINT_SOURCE);
+        sink = middleware.getEndpoint(ENDPOINT_SINK);
     }
 
-    public void connect() {
-        if (connected) {
-            return;
+    private void connect() throws MiddlewareDisconnectedException {
+        Log.i(getTag(), "Connecting to the middleware metrics server.");
+
+        // Create the metrics client endpoints.
+        middleware.createSource(
+                ENDPOINT_SOURCE,
+                "A source endpoint which sends messages to the metrics server.",
+                "{\"type\":\"array\", \"items\":[{\"type\":\"number\"}, {\"type\":\"string\"}]}",
+                Lists.of("metrics", "source", "client"),
+                false,
+                false);
+        middleware.createSink(
+                ENDPOINT_SINK,
+                "A sink endpoint which accepts message receipts from the metrics server.",
+                "{\"type\":\"array\", \"items\":[{\"type\":\"number\"}, {\"type\":\"string\"}]}",
+                Lists.of("metrics", "sink", "receipt", "client"),
+                false,
+                false);
+
+        // Map the endpoints to the server.
+        // TODO: map the sink to the same peer using mapTo.
+        source.map(
+                new Query.Builder()
+                        .setMatches(1)
+                        .includeTag("metrics")
+                        .includeTag("server")
+                        .build(),
+                Persistence.NONE);
+        sink.map(
+                new Query.Builder()
+                        .setMatches(1)
+                        .includeTag("metrics")
+                        .includeTag("server")
+                        .build(),
+                Persistence.NONE);
+    }
+
+    private Metrics run(int messages, int length) throws MiddlewareDisconnectedException {
+        if (length < minLength(messages, length)) {
+            throw new IllegalArgumentException("The minimum length for sending " + messages +
+                    "metrics messages is " + minLength(messages, length) + " chars due to " +
+                    "formatting overheads.");
         }
 
+        Log.i(getTag(), "Running metrics (" + messages + "messages, length " + length + "chars)");
+
+        // Store the in and out times of every message.
+        long[] timeSend = new long[messages];
+        long[] timeRecv = new long[messages];
+
+        // Register the message listener.
+        MessageListenerToken token = sink.registerListener(makeListener(timeRecv));
+
+        // Send the metrics messages.
+        sendMessages(messages, length, timeSend);
+
         try {
-            // Create the metrics client endpoints.
-            middleware.createSource(
-                    ENDPOINT_SOURCE,
-                    "A source endpoint which sends messages to the metrics server.",
-                    "{\"type\": \"number\"}",
-                    Lists.of("metrics", "source", "client"),
-                    false,
-                    false);
-            middleware.createSink(
-                    ENDPOINT_SINK,
-                    "A sink endpoint which accepts message receipts from the metrics server.",
-                    "{\"type\": \"number\"}",
-                    Lists.of("metrics", "sink", "receipt", "client"),
-                    false,
-                    false);
-            Endpoint source = middleware.getEndpoint(ENDPOINT_SOURCE);
-            Endpoint sink = middleware.getEndpoint(ENDPOINT_SINK);
+            Thread.sleep(1000);
+            sink.unregisterListener(token);
+        } catch (InterruptedException e) {
+            return null;
+        }
 
-            // Map the endpoints to the server.
-            // TODO: map the sink to the same peer using mapTo.
-            source.map(
-                    new Query.Builder()
-                            .setMatches(1)
-                            .includeTag("metrics")
-                            .includeTag("server")
-                            .build(),
-                    Persistence.NONE);
-            sink.map(
-                    new Query.Builder()
-                            .setMatches(1)
-                            .includeTag("metrics")
-                            .includeTag("server")
-                            .build(),
-                    Persistence.NONE);
+        // Perform standard analyses on metrics.
+        // TODO: implement.
 
-            connected = true;
+        return new Metrics(timeRecv[50] - timeSend[50], 1.0f / (timeRecv[50] - timeRecv[49]), 0);
+    }
+
+    private MessageListener makeListener(long[] timeRecv) {
+        return message -> {
+            // Record the receive time for the message sequence number.
+            int seq = Integer.parseInt(message.split("[\\[,]")[1].trim());
+            timeRecv[seq] = System.nanoTime();
+        };
+    }
+
+    private void sendMessages(int messages, int length, long[] timeSend) throws MiddlewareDisconnectedException {
+        // Work out and insert the amount of string padding required for the message format.
+        int padding = length - minLength(messages, length);
+        String format = "[,\"";
+        for (int i = 0; i < padding; i++) {
+            //noinspection StringConcatenationInLoop
+            format += "P";
+        }
+        format += "\"]";
+
+        // Create a string builder to use as a prototype for efficient message building.
+        StringBuilder msgBuilderPrototype = new StringBuilder(format);
+
+        // Send all messages in turn.
+        for (int seq = 0; seq < messages; seq++) {
+            // Create a new string builder for the message, and insert the sequence number.
+            StringBuilder msgBuilder = new StringBuilder(msgBuilderPrototype);
+            msgBuilder.insert(1, seq);
+
+            // Space pad the sequence number up to the correct message length.
+            int zeroes = length - msgBuilder.length();
+            for (int j = 0; j < zeroes; j++) {
+                msgBuilder.insert(1, " ");
+            }
+
+            timeSend[seq] = System.nanoTime();
+            source.send(msgBuilder.toString());
+        }
+    }
+
+    private void disconnect() throws MiddlewareDisconnectedException {
+        Log.i(getTag(), "Disconnecting from the middleware metrics server.");
+
+        // Close the mappings and destroy the endpoints.
+        source.unmapAll();
+        sink.unmapAll();
+        middleware.destroyEndpoint(ENDPOINT_SOURCE);
+        middleware.destroyEndpoint(ENDPOINT_SINK);
+    }
+
+    @Override
+    public Metrics runMetrics(int messages, int length) throws IncompleteMetricsException {
+        try {
+            // Connect to the metrics server.
+            connect();
         } catch (MiddlewareDisconnectedException e) {
             Log.e(getTag(), "Couldn't map to metrics server due to middleware disconnection.");
+            throw new IncompleteMetricsException();
         }
-    }
 
-    public void disconnect() {
-        Endpoint source = middleware.getEndpoint(ENDPOINT_SOURCE);
-        Endpoint sink = middleware.getEndpoint(ENDPOINT_SINK);
+        // Run the metrics, keeping the result.
+        Metrics metrics;
+        try {
+            metrics = run(messages, length);
+        } catch (MiddlewareDisconnectedException e) {
+            Log.e(getTag(), "Failed to run metrics due to middleware disconnection.");
+            throw new IncompleteMetricsException();
+        }
 
         try {
-            // Close the mappings and destroy the endpoints.
-            source.unmapAll();
-            sink.unmapAll();
-            middleware.destroyEndpoint(ENDPOINT_SOURCE);
-            middleware.destroyEndpoint(ENDPOINT_SINK);
-
-            connected = false;
+            // Disconnect from the metrics server.
+            disconnect();
         } catch (MiddlewareDisconnectedException e) {
             Log.w(getTag(), "Middleware disconnected while closing metrics client.");
         }
+
+        return metrics;
     }
 
-    public void runLatency(int messages, int delayMillis) {
-        if (!connected) {
-            // If we are not connected to the metrics server, we cannot run metrics.
-            Log.w(getTag(), "Attempted to run metrics while not connected to server.");
-            return;
-        }
-
-        Endpoint source = middleware.getEndpoint(ENDPOINT_SOURCE);
-        Endpoint sink = middleware.getEndpoint(ENDPOINT_SINK);
-
-        try {
-            // Create a message listener for measuring message parameters.
-            int[] seen = new int[1];
-            MessageListenerToken token = sink.registerListener(message -> {
-                // Get the current timestamp.
-                long now = System.nanoTime();
-
-                // Extract the timestamp from the message.
-                long then = Long.parseLong(message);
-
-                float measurement = (now - then) / 1000;
-                Log.v(getTag(), "Latency: " + measurement + "us");
-                latency *= latencyCount / (latencyCount + 1);
-                latency += measurement * (1.0f / (latencyCount + 1));
-
-                // Increment the seen message counter.
-                seen[0]++;
-            });
-
-            for (int i = 0; i < messages; i++) {
-                Thread.sleep(delayMillis);
-
-                // Send the current time.
-                source.send(String.valueOf(System.nanoTime()));
-            }
-
-            // Wait for receipt messages to arrive.
-            Thread.sleep(50);
-
-            // Unregister the message listener from the sink for future use.
-            sink.unregisterListener(token);
-
-            Log.i(getTag(), "Gathered middleware latency metrics (" +
-                    (messages - seen[0]) + " dropped messages)");
-        } catch (MiddlewareDisconnectedException e) {
-            Log.e(getTag(), "Couldn't run latency metrics due to middleware disconnection.");
-        } catch (InterruptedException e) {
-            Log.w(getTag(), "Latency test was interrupted before completion.");
-        }
-    }
-
-    @Override
-    public void runThroughput(int messages) {
-        if (!connected) {
-            // If we are not connected to the metrics server, we cannot run metrics.
-            Log.w(getTag(), "Attempted to run metrics while not connected to server.");
-            return;
-        }
-
-        // TODO: implement.
-    }
-
-    @Override
-    public Metrics getMetrics() throws IncompleteMetricsException {
-//        if (latency < 0 || throughput < 0 || length < 0) {
-//            // If the running averages have not been initialised, the metrics are incomplete.
-//            throw new IncompleteMetricsException();
-//        }
-
-        // Construct a new immutable metrics object with the stored running averages.
-        return new Metrics(latency, throughput, length);
+    /**
+     * @return the minimum message length as is dependent on the maximum sequence number.
+     */
+    private static int minLength(int messages, int length) {
+        // Messages are formatted as JSON lists: [seq,"padding..."]. Therefore, there
+        // is a minimum length dependent on the maximum sequence number.
+        return (int) Math.ceil(Math.log10(messages)) + 5;
     }
 
     private static String getTag() {

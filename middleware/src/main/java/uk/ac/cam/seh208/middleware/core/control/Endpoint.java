@@ -33,7 +33,6 @@ import uk.ac.cam.seh208.middleware.common.UnmapAllCommand;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
 import uk.ac.cam.seh208.middleware.common.exception.BadQueryException;
 import uk.ac.cam.seh208.middleware.common.exception.BadSchemaException;
-import uk.ac.cam.seh208.middleware.common.exception.ListenerNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.MappingNotFoundException;
 import uk.ac.cam.seh208.middleware.common.exception.ProtocolException;
 import uk.ac.cam.seh208.middleware.common.exception.SchemaMismatchException;
@@ -80,29 +79,29 @@ public class Endpoint {
      * Compiled schema validator for checking that outgoing/incoming messages
      * match the schema.
      */
-    private JsonSchema validator;
+    private final JsonSchema validator;
 
     /**
      * Collection of application listeners used to respond to messages.
      */
-    private Set<IMessageListener> listeners;
+    private final Set<IMessageListener> listeners;
 
     /**
      * Map of channels owned by the endpoint; i.e. having the
      * endpoint at their near end, addressed by their unique identifier.
      */
-    private LongSparseArray<Channel> channels;
+    private final LongSparseArray<Channel> channels;
 
     /**
      * Map of mappings established from this endpoint, indexed by their unique identifier.
      */
-    private LongSparseArray<Mapping> mappings;
+    private final LongSparseArray<Mapping> mappings;
 
     /**
      * Map of multiplexers carrying channels from this endpoint, indexed by the UUID
      * of their remote location.
      */
-    private LongSparseArray<Multiplexer> multiplexers;
+    private final LongSparseArray<Multiplexer> multiplexers;
 
 
     /**
@@ -131,17 +130,9 @@ public class Endpoint {
     }
 
     /**
-     * Initialisation routine run after the endpoint has been integrated into the middleware
-     * instance (i.e. after we have ensured there was no name or uuid collision).
-     */
-    public synchronized void initialise() {
-        // TODO: work out what needs to be done (if anything), and implement.
-    }
-
-    /**
      * Close all active mappings, and all remaining channels.
      */
-    public synchronized void destroy() {
+    public void destroy() {
         unmapAll();
         closeAllChannels();
     }
@@ -193,14 +184,9 @@ public class Endpoint {
             throw new WrongPolarityException(getPolarity());
         }
 
-        synchronized (this) {
-            // On death of its host process, remove the listener from the list (in a
-            // synchronised manner so as not to interfere with existing iterators).
-            IBinder.DeathRecipient recipient = () -> {
-                synchronized (this) {
-                    listeners.remove(listener);
-                }
-            };
+        synchronized (listeners) {
+            // On death of its host process, remove the listener from the list.
+            IBinder.DeathRecipient recipient = () -> unregisterListener(listener);
             listener.asBinder().linkToDeath(recipient, 0);
             listeners.add(listener);
         }
@@ -211,22 +197,20 @@ public class Endpoint {
      * listener will no longer be invoked when new messages arrive on the endpoint.
      *
      * @param listener Object previously remoted and registered as a listener.
-     *
-     * @throws ListenerNotFoundException when the passed listener is not currently
-     *                                   registered with the endpoint.
      */
-    public synchronized void unregisterListener(IMessageListener listener)
-            throws ListenerNotFoundException {
-        if (!listeners.remove(listener)) {
-            throw new ListenerNotFoundException();
+    public void unregisterListener(IMessageListener listener)  {
+        synchronized (listeners) {
+            listeners.remove(listener);
         }
     }
 
     /**
      * Remove all message listeners from the listeners list.
      */
-    public synchronized void clearListeners() {
-        listeners.clear();
+    public void clearListeners() {
+        synchronized (listeners) {
+            listeners.clear();
+        }
     }
 
     /**
@@ -467,26 +451,23 @@ public class Endpoint {
         RequestStream stream = service.getRequestStream(remote.getRequestLocation());
         OpenChannelsControlMessage.Response response = message.getResponse(stream);
 
-        // Synchronise to prevent messages being sent to an incomplete mapping.
-        synchronized (this) {
-            // The response to the OPEN-CHANNELS message contains a list of remote
-            // endpoint-details from which channels were opened. Open local
-            // counterparts to these channels and track them in the returned list.
-            List<Channel> establishedChannels = new ArrayList<>();
-            for (RemoteEndpointDetails endpoint : response.getDetails()) {
-                try {
-                    establishedChannels.add(openChannel(endpoint));
-                } catch (UnexpectedClosureException e) {
-                    // Do nothing; whilst the remote currently believes this channel to be
-                    // open, any attempt to communicate over it will either lead to a
-                    // ConnectionFailedException or a CLOSE-CHANNEL control response.
-                    Log.w(getTag(), "Couldn't establish channel to remote endpoint due to " +
-                            "unexpected closure (" + endpoint.getEndpointId() + ")");
-                }
+        // The response to the OPEN-CHANNELS message contains a list of remote
+        // endpoint-details from which channels were opened. Open local
+        // counterparts to these channels and track them in the returned list.
+        List<Channel> establishedChannels = new ArrayList<>();
+        for (RemoteEndpointDetails endpoint : response.getDetails()) {
+            try {
+                establishedChannels.add(openChannel(endpoint));
+            } catch (UnexpectedClosureException e) {
+                // Do nothing; whilst the remote currently believes this channel to be
+                // open, any attempt to communicate over it will either lead to a
+                // ConnectionFailedException or a CLOSE-CHANNEL control response.
+                Log.w(getTag(), "Couldn't establish channel to remote endpoint due to " +
+                        "unexpected closure (" + endpoint.getEndpointId() + ")");
             }
-
-            return establishedChannels;
         }
+
+        return establishedChannels;
     }
 
     /**
@@ -549,7 +530,7 @@ public class Endpoint {
      *                  was received.
      * @param message The newly received message string.
      */
-    synchronized void onMessage(long channelId, String message) {
+    void onMessage(long channelId, String message) {
         if (channels.indexOfKey(channelId) < 0) {
             // If the channel identifier is not in the channel set, this
             // message shouldn't have ended up here.
@@ -573,11 +554,13 @@ public class Endpoint {
         // Dispatch the message to each of the listeners' onMessage methods
         // in turn, logging the case where a remote error occurs.
         int failures = 0;
-        for (IMessageListener listener : listeners) {
-            try {
-                listener.onMessage(message);
-            } catch (RemoteException e) {
-                failures++;
+        synchronized (listeners) {
+            for (IMessageListener listener : listeners) {
+                try {
+                    listener.onMessage(message);
+                } catch (RemoteException e) {
+                    failures++;
+                }
             }
         }
         if (failures > 0) {
@@ -636,6 +619,7 @@ public class Endpoint {
      *
      * @return the endpoint identifier.
      */
+    @SuppressWarnings("WeakerAccess")
     public long getEndpointId() {
         return details.getEndpointId();
     }
@@ -680,6 +664,7 @@ public class Endpoint {
     public void setForceable(boolean forceable) {
         this.forceable = forceable;
     }
+
     MiddlewareService getService() {
         return service;
     }

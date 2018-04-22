@@ -52,6 +52,7 @@ public class ControlMessageTest {
             .build();
 
     private static final RemoteEndpointDetails endpoint = new RemoteEndpointDetails(
+            0,
             "test",
             "desc",
             Polarity.SOURCE,
@@ -62,6 +63,7 @@ public class ControlMessageTest {
 
     private static final List<RemoteEndpointDetails> remoteEndpoints = Arrays.asList(
             new RemoteEndpointDetails(
+                    0,
                     "test1",
                     "desc a",
                     Polarity.SOURCE,
@@ -70,6 +72,7 @@ public class ControlMessageTest {
                     middleware
             ),
             new RemoteEndpointDetails(
+                    0,
                     "test2",
                     "desc b",
                     Polarity.SINK,

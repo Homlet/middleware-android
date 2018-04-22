@@ -7,6 +7,8 @@ import org.zeromq.ZMQException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 import uk.ac.cam.seh208.middleware.core.comms.Environment;
@@ -23,7 +25,7 @@ public class ZMQMessageStream extends MessageStream {
     /**
      * Reference to the environment owning this stream.
      */
-    private Environment environment;
+    private final Environment environment;
 
     /**
      * DEALER socket over which to send new messages.
@@ -33,17 +35,23 @@ public class ZMQMessageStream extends MessageStream {
     /**
      * ZeroMQ context in which to open the DEALER socket.
      */
-    private ZMQ.Context context;
+    private final ZMQ.Context context;
 
     /**
      * The ZeroMQ address with which this stream communicates.
      */
-    private ZMQAddress remote;
+    private final ZMQAddress remote;
 
     /**
      * Collection of listeners used to respond to messages.
      */
-    private List<MessageListener> listeners;
+    private final List<MessageListener> listeners;
+
+    /**
+     * Lock used to prevent handlers of sending and receiving from seeing partially
+     * updated multiplexer state.
+     */
+    private final ReadWriteLock stateLock;
 
 
     ZMQMessageStream(Environment environment, ZMQ.Context context, ZMQAddress remote) {
@@ -51,6 +59,7 @@ public class ZMQMessageStream extends MessageStream {
         this.context = context;
         this.remote = remote;
         listeners = new ArrayList<>();
+        stateLock = new ReentrantReadWriteLock(true);
     }
 
     @Override
@@ -60,10 +69,27 @@ public class ZMQMessageStream extends MessageStream {
             return;
         }
 
+        // Connect to the peer (if not already) to send the FIN message.
         try {
-            // Connect to the peer (if not already) to send the FIN message.
-            connect();
+            // Acquire the state write lock.
+            stateLock.readLock().lock();
+
+            while (dealer == null) {
+                // Release the read lock around the connect call, so that connect
+                // can attain the write lock.
+                stateLock.readLock().unlock();
+                connect();
+                stateLock.readLock().lock();
+
+                // TODO: throw after n failed attempts.
+            }
+
+            // Send the message over the DEALER socket.
             dealer.send("");
+
+            // Release the state lock.
+            stateLock.readLock().unlock();
+
             disconnect();
         } catch (ConnectionFailedException ignored) {
             // This is very unlikely to happen due to the way ZeroMQ
@@ -75,19 +101,37 @@ public class ZMQMessageStream extends MessageStream {
     }
 
     @Override
-    public synchronized void send(String message) throws ConnectionFailedException {
+    public void send(String message) throws ConnectionFailedException {
         // We cannot send from a closed stream.
         if (isClosed()) {
             return;
         }
 
+        // Acquire the state write lock.
+        stateLock.readLock().lock();
+
         // If the DEALER socket has not been opened, do so now.
-        if (dealer == null) {
+        while (dealer == null) {
+            // Release the read lock around the connect call, so that connect
+            // can attain the write lock. The connect call will double check
+            // the dealer is still null before proceeding, so there is no race
+            // condition with other send calls having reached this point.
+            stateLock.readLock().unlock();
             connect();
+            stateLock.readLock().lock();
+
+            // TODO: throw after n failed attempts.
         }
 
         // Send the message over the DEALER socket.
-        dealer.send(message);
+        boolean success = dealer.send(message);
+
+        if (!success) {
+            Log.w(getTag(), "Failed to send: \"" + message + "\"");
+        }
+
+        // Release the state lock.
+        stateLock.readLock().unlock();
     }
 
     /**
@@ -98,7 +142,7 @@ public class ZMQMessageStream extends MessageStream {
      * @param listener A MessageListener implementor to be registered.
      */
     @Override
-    public synchronized void registerListener(MessageListener listener) {
+    public void registerListener(MessageListener listener) {
         // Don't allow registering of listeners after the stream has closed.
         if (isClosed()) {
             return;
@@ -109,7 +153,9 @@ public class ZMQMessageStream extends MessageStream {
             return;
         }
 
+        stateLock.writeLock().lock();
         listeners.add(listener);
+        stateLock.writeLock().unlock();
     }
 
     /**
@@ -120,8 +166,10 @@ public class ZMQMessageStream extends MessageStream {
      * @param listener A MessageListener implementor to be unregistered.
      */
     @Override
-    public synchronized void unregisterListener(MessageListener listener) {
+    public void unregisterListener(MessageListener listener) {
+        stateLock.writeLock().lock();
         listeners.remove(listener);
+        stateLock.writeLock().unlock();
     }
 
     /**
@@ -129,8 +177,10 @@ public class ZMQMessageStream extends MessageStream {
      * received after clearing will be dropped.
      */
     @Override
-    public synchronized void clearListeners() {
+    public void clearListeners() {
+        stateLock.writeLock().lock();
         listeners.clear();
+        stateLock.writeLock().unlock();
     }
 
     /**
@@ -138,7 +188,7 @@ public class ZMQMessageStream extends MessageStream {
      *
      * @param message The newly received string message.
      */
-    public synchronized void onMessage(String message) {
+    public void onMessage(String message) {
         // If we are closed, all messages should be ignored. Eventually
         // FIN will be received and we can release this object.
         if (isClosed()) {
@@ -146,25 +196,29 @@ public class ZMQMessageStream extends MessageStream {
             return;
         }
 
+        // Acquire the state read lock.
+        stateLock.readLock().lock();
+
         // Dispatch the message to all registered listeners.
         for (MessageListener listener : listeners) {
             listener.onMessage(message);
         }
-    }
 
-    ZMQAddress getRemote() {
-        return remote;
+        // Release the state lock.
+        stateLock.readLock().unlock();
     }
 
     /**
      * Open the DEALER socket to the peer if this has not already been done. After
      * opening, an initialisation message is sent containing the local host.
      */
-    private synchronized void connect() throws ConnectionFailedException {
+    private void connect() throws ConnectionFailedException {
         // We cannot re-establish a DEALER after the stream has been closed.
         if (isClosed()) {
             return; //throw new ConnectionFailedException(remoteAddress);
         }
+
+        stateLock.writeLock().lock();
 
         // If the DEALER socket has already been opened, do not open another.
         if (dealer != null) {
@@ -174,6 +228,7 @@ public class ZMQMessageStream extends MessageStream {
         try {
             // Open a new DEALER socket.
             dealer = context.socket(ZMQ.DEALER);
+            dealer.setSendTimeOut(0);
 
             // Attempt to connect the socket to the peer.
             dealer.connect("tcp://" + remote.toAddressString());
@@ -189,6 +244,8 @@ public class ZMQMessageStream extends MessageStream {
             }
 
             throw new ConnectionFailedException(remote);
+        } finally {
+            stateLock.writeLock().unlock();
         }
     }
 
@@ -196,7 +253,9 @@ public class ZMQMessageStream extends MessageStream {
      * Close the DEALER socket to the peer if it is currently open, breaking
      * the connection to the peer.
      */
-    private synchronized void disconnect() {
+    private void disconnect() {
+        stateLock.writeLock().lock();
+
         // If the DEALER does not exist, there's nothing to close.
         if (dealer == null) {
             return;
@@ -205,6 +264,12 @@ public class ZMQMessageStream extends MessageStream {
         // Close and release the socket.
         dealer.close();
         dealer = null;
+
+        stateLock.writeLock().unlock();
+    }
+
+    ZMQAddress getRemote() {
+        return remote;
     }
 
     String getTag() {
