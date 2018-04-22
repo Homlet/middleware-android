@@ -7,8 +7,6 @@ import org.zeromq.ZMQException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 import uk.ac.cam.seh208.middleware.core.comms.Environment;
@@ -22,15 +20,66 @@ import uk.ac.cam.seh208.middleware.core.exception.NoValidAddressException;
  */
 public class ZMQMessageStream extends MessageStream {
 
+    private class DealerThread extends Thread {
+
+        /**
+         * DEALER socket that sends messages to the remote Harmony server.
+         */
+        private ZMQ.Socket dealerExternal;
+
+        /**
+         * DEALER socket that receives messages from other threads within
+         * the process to forward along the external DEALER socket.
+         */
+        private ZMQ.Socket dealerInternal;
+
+
+        @Override
+        public void run() {
+            try {
+                // Open a new DEALER socket.
+                dealerExternal = context.socket(ZMQ.DEALER);
+
+                // Attempt to connect the socket to the peer.
+                dealerExternal.connect("tcp://" + remote.toAddressString());
+
+                // Attempt to send the initial message to the peer.
+                ZMQInitialMessage message = new ZMQInitialMessage(environment.getLocation());
+                dealerExternal.send(message.toJSON());
+            } catch (ZMQException e) {
+                // The attempt failed. Close the new socket if open.
+                if (dealerExternal != null) {
+                    dealerExternal.close();
+                }
+
+                // TODO: handle.
+            }
+
+            // Create a new internal dealer socket, and forward incoming messages
+            // to the external dealer socket via a proxy.
+            dealerInternal = context.socket(ZMQ.DEALER);
+            dealerInternal.bind("inproc://dealer_" + streamId);
+            ZMQ.proxy(dealerInternal, dealerExternal, null);
+
+            // Close the sockets if open.
+            // TODO: make sure we can get here.
+            if (dealerExternal != null) {
+                dealerExternal.close();
+            }
+            dealerInternal.close();
+        }
+    }
+
+
+    /**
+     * Process-local identifier for the stream used to link local queues to the dealer thread.
+     */
+    private final long streamId;
+
     /**
      * Reference to the environment owning this stream.
      */
     private final Environment environment;
-
-    /**
-     * DEALER socket over which to send new messages.
-     */
-    private ZMQ.Socket dealer;
 
     /**
      * ZeroMQ context in which to open the DEALER socket.
@@ -43,23 +92,30 @@ public class ZMQMessageStream extends MessageStream {
     private final ZMQAddress remote;
 
     /**
+     * Thread on which messages are sent.
+     */
+    private Thread dealerThread;
+
+    /**
+     * Thread-local message queue to the dealer thread.
+     */
+    private ThreadLocal<ZMQ.Socket> queueContainer;
+
+    /**
      * Collection of listeners used to respond to messages.
      */
     private final List<MessageListener> listeners;
 
-    /**
-     * Lock used to prevent handlers of sending and receiving from seeing partially
-     * updated multiplexer state.
-     */
-    private final ReadWriteLock stateLock;
-
 
     ZMQMessageStream(Environment environment, ZMQ.Context context, ZMQAddress remote) {
+        streamId = getNextStreamId();
         this.environment = environment;
         this.context = context;
         this.remote = remote;
+        dealerThread = new DealerThread();
+        dealerThread.start();
+        queueContainer = new ThreadLocal<>();
         listeners = new ArrayList<>();
-        stateLock = new ReentrantReadWriteLock(true);
     }
 
     @Override
@@ -69,32 +125,11 @@ public class ZMQMessageStream extends MessageStream {
             return;
         }
 
-        // Connect to the peer (if not already) to send the FIN message.
-        try {
-            // Acquire the state write lock.
-            stateLock.readLock().lock();
+        // Get the message queue to the dealer thread for the current thread.
+        ZMQ.Socket queue = getQueue();
 
-            while (dealer == null) {
-                // Release the read lock around the connect call, so that connect
-                // can attain the write lock.
-                stateLock.readLock().unlock();
-                connect();
-                stateLock.readLock().lock();
-
-                // TODO: throw after n failed attempts.
-            }
-
-            // Send the message over the DEALER socket.
-            dealer.send("");
-
-            // Release the state lock.
-            stateLock.readLock().unlock();
-
-            disconnect();
-        } catch (ConnectionFailedException ignored) {
-            // This is very unlikely to happen due to the way ZeroMQ
-            // defers TCP connections.
-        }
+        // Send the FIN message to the dealer thread.
+        queue.send("");
 
         // Signal the server to stop tracking this stream for the remote address.
         super.close();
@@ -107,31 +142,24 @@ public class ZMQMessageStream extends MessageStream {
             return;
         }
 
-        // Acquire the state write lock.
-        stateLock.readLock().lock();
+        // Get the message queue to the dealer thread for the current thread.
+        ZMQ.Socket queue = getQueue();
 
-        // If the DEALER socket has not been opened, do so now.
-        while (dealer == null) {
-            // Release the read lock around the connect call, so that connect
-            // can attain the write lock. The connect call will double check
-            // the dealer is still null before proceeding, so there is no race
-            // condition with other send calls having reached this point.
-            stateLock.readLock().unlock();
-            connect();
-            stateLock.readLock().lock();
+        // Send the message to the dealer thread.
+        queue.send(message);
+    }
 
-            // TODO: throw after n failed attempts.
+    /**
+     * @return the calling thread's message queue to the dealer thread.
+     */
+    private ZMQ.Socket getQueue() {
+        if (queueContainer.get() == null) {
+            ZMQ.Socket queue = context.socket(ZMQ.DEALER);
+            queue.connect("inproc://dealer_" + streamId);
+            queueContainer.set(queue);
         }
 
-        // Send the message over the DEALER socket.
-        boolean success = dealer.send(message);
-
-        if (!success) {
-            Log.w(getTag(), "Failed to send: \"" + message + "\"");
-        }
-
-        // Release the state lock.
-        stateLock.readLock().unlock();
+        return queueContainer.get();
     }
 
     /**
@@ -142,7 +170,7 @@ public class ZMQMessageStream extends MessageStream {
      * @param listener A MessageListener implementor to be registered.
      */
     @Override
-    public void registerListener(MessageListener listener) {
+    public synchronized void registerListener(MessageListener listener) {
         // Don't allow registering of listeners after the stream has closed.
         if (isClosed()) {
             return;
@@ -153,9 +181,7 @@ public class ZMQMessageStream extends MessageStream {
             return;
         }
 
-        stateLock.writeLock().lock();
         listeners.add(listener);
-        stateLock.writeLock().unlock();
     }
 
     /**
@@ -166,10 +192,8 @@ public class ZMQMessageStream extends MessageStream {
      * @param listener A MessageListener implementor to be unregistered.
      */
     @Override
-    public void unregisterListener(MessageListener listener) {
-        stateLock.writeLock().lock();
+    public synchronized void unregisterListener(MessageListener listener) {
         listeners.remove(listener);
-        stateLock.writeLock().unlock();
     }
 
     /**
@@ -177,10 +201,8 @@ public class ZMQMessageStream extends MessageStream {
      * received after clearing will be dropped.
      */
     @Override
-    public void clearListeners() {
-        stateLock.writeLock().lock();
+    public synchronized void clearListeners() {
         listeners.clear();
-        stateLock.writeLock().unlock();
     }
 
     /**
@@ -188,7 +210,7 @@ public class ZMQMessageStream extends MessageStream {
      *
      * @param message The newly received string message.
      */
-    public void onMessage(String message) {
+    public synchronized void onMessage(String message) {
         // If we are closed, all messages should be ignored. Eventually
         // FIN will be received and we can release this object.
         if (isClosed()) {
@@ -196,76 +218,16 @@ public class ZMQMessageStream extends MessageStream {
             return;
         }
 
-        // Acquire the state read lock.
-        stateLock.readLock().lock();
-
         // Dispatch the message to all registered listeners.
         for (MessageListener listener : listeners) {
             listener.onMessage(message);
         }
-
-        // Release the state lock.
-        stateLock.readLock().unlock();
     }
 
-    /**
-     * Open the DEALER socket to the peer if this has not already been done. After
-     * opening, an initialisation message is sent containing the local host.
-     */
-    private void connect() throws ConnectionFailedException {
-        // We cannot re-establish a DEALER after the stream has been closed.
-        if (isClosed()) {
-            return; //throw new ConnectionFailedException(remoteAddress);
-        }
+    private static long nextStreamId = 0;
 
-        stateLock.writeLock().lock();
-
-        // If the DEALER socket has already been opened, do not open another.
-        if (dealer != null) {
-            return;
-        }
-
-        try {
-            // Open a new DEALER socket.
-            dealer = context.socket(ZMQ.DEALER);
-            dealer.setSendTimeOut(0);
-
-            // Attempt to connect the socket to the peer.
-            dealer.connect("tcp://" + remote.toAddressString());
-
-            // Attempt to send the initial message to the peer.
-            ZMQInitialMessage message = new ZMQInitialMessage(environment.getLocation());
-            dealer.send(message.toJSON());
-        } catch (ZMQException e) {
-            // The attempt failed. Close and release the new socket if open.
-            if (dealer != null) {
-                dealer.close();
-                dealer = null;
-            }
-
-            throw new ConnectionFailedException(remote);
-        } finally {
-            stateLock.writeLock().unlock();
-        }
-    }
-
-    /**
-     * Close the DEALER socket to the peer if it is currently open, breaking
-     * the connection to the peer.
-     */
-    private void disconnect() {
-        stateLock.writeLock().lock();
-
-        // If the DEALER does not exist, there's nothing to close.
-        if (dealer == null) {
-            return;
-        }
-
-        // Close and release the socket.
-        dealer.close();
-        dealer = null;
-
-        stateLock.writeLock().unlock();
+    private static synchronized long getNextStreamId() {
+        return nextStreamId++;
     }
 
     ZMQAddress getRemote() {
