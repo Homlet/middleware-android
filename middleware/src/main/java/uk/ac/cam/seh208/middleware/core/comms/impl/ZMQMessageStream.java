@@ -1,12 +1,15 @@
 package uk.ac.cam.seh208.middleware.core.comms.impl;
 
 import android.util.Log;
+import android.util.LongSparseArray;
 
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
 import uk.ac.cam.seh208.middleware.core.comms.Environment;
@@ -21,6 +24,14 @@ import uk.ac.cam.seh208.middleware.core.exception.NoValidAddressException;
 public class ZMQMessageStream extends MessageStream {
 
     private class DealerThread extends Thread {
+
+        /**
+         * The amount of time (in milliseconds) that the internal and external
+         * sockets should remain open after a close call if they still
+         * have messages queueing.
+         */
+        private static final int SOCKET_LINGER = 200;
+
 
         /**
          * DEALER socket that sends messages to the remote Harmony server.
@@ -39,6 +50,8 @@ public class ZMQMessageStream extends MessageStream {
             try {
                 // Open a new DEALER socket.
                 dealerExternal = context.socket(ZMQ.DEALER);
+                dealerExternal.setLinger(SOCKET_LINGER);
+                dealerExternal.setSendTimeOut(SOCKET_LINGER);
 
                 // Attempt to connect the socket to the peer.
                 dealerExternal.connect("tcp://" + remote.toAddressString());
@@ -52,21 +65,40 @@ public class ZMQMessageStream extends MessageStream {
                     dealerExternal.close();
                 }
 
-                // TODO: handle.
+                // Close the message stream and return.
+                close();
+                return;
             }
 
-            // Create a new internal dealer socket, and forward incoming messages
-            // to the external dealer socket via a proxy.
+            // Create a new internal and control dealer socket.
             dealerInternal = context.socket(ZMQ.DEALER);
+            dealerInternal.setLinger(SOCKET_LINGER);
+            dealerInternal.setReceiveTimeOut(SOCKET_LINGER);
             dealerInternal.bind("inproc://dealer_" + streamId);
-            ZMQ.proxy(dealerInternal, dealerExternal, null);
 
-            // Close the sockets if open.
-            // TODO: make sure we can get here.
-            if (dealerExternal != null) {
+            // Forward internal messages to the external dealer socket via a proxy.
+            try {
+                while (!isClosed()) {
+                    byte[] msg = dealerInternal.recv();
+                    if (msg == null) {
+                        // The recv call timed out. Check the loop condition and continue.
+                        continue;
+                    }
+                    dealerExternal.send(msg);
+                }
+
+                // Send the FIN message.
+                dealerExternal.send("");
+            } catch (ZMQException e) {
+                if (e.getErrorCode() != ZMQ.Error.ETERM.getCode()) {
+                    // This was not thrown due to context termination.
+                    Log.e(getTag(), "Fatal error in message server", e);
+                }
+            } finally {
+                // Close the sockets.
+                dealerInternal.close();
                 dealerExternal.close();
             }
-            dealerInternal.close();
         }
     }
 
@@ -92,14 +124,20 @@ public class ZMQMessageStream extends MessageStream {
     private final ZMQAddress remote;
 
     /**
-     * Thread on which messages are sent.
+     * The single thread responsible for sending queued messages out via the
+     * external dealer socket.
      */
-    private Thread dealerThread;
+    private final DealerThread dealerThread;
 
     /**
      * Thread-local message queue to the dealer thread.
      */
-    private ThreadLocal<ZMQ.Socket> queueContainer;
+    private final LongSparseArray<ZMQ.Socket> queues;
+
+    /**
+     * Read-write lock protecting the queues map.
+     */
+    private final ReadWriteLock queuesLock;
 
     /**
      * Collection of listeners used to respond to messages.
@@ -113,30 +151,52 @@ public class ZMQMessageStream extends MessageStream {
         this.context = context;
         this.remote = remote;
         dealerThread = new DealerThread();
-        dealerThread.start();
-        queueContainer = new ThreadLocal<>();
+        queues = new LongSparseArray<>();
+        queuesLock = new ReentrantReadWriteLock(true);
         listeners = new ArrayList<>();
+
+        // Start the stream dealer thread.
+        dealerThread.start();
     }
 
     @Override
-    public synchronized void close() {
-        // Don't resend the FIN message if we're already closed.
-        if (isClosed()) {
-            return;
+    public void close() {
+        synchronized (this) {
+            // Don't resend the FIN message if we're already closed.
+            if (isClosed()) {
+                return;
+            }
+
+            // Acquire the queue write lock (method-level synchronisation
+            // ensures that there is no writer-writer contention).
+            queuesLock.writeLock().lock();
+
+            // Get and close all message queues to the dealer thread.
+            int size = queues.size();
+            for (int i = 0; i < size; i++) {
+                queues.valueAt(i).close();
+                queues.removeAt(i);
+            }
+
+            // Signal the server to stop tracking this stream for the remote address.
+            super.close();
+
+            // Release the queue state lock.
+            queuesLock.writeLock().unlock();
         }
 
-        // Get the message queue to the dealer thread for the current thread.
-        ZMQ.Socket queue = getQueue();
-
-        // Send the FIN message to the dealer thread.
-        queue.send("");
-
-        // Signal the server to stop tracking this stream for the remote address.
-        super.close();
+        try {
+            dealerThread.join();
+        } catch (InterruptedException e) {
+            Log.e(getTag(), "Thread interrupted while joining with the dealer thread.");
+        }
     }
 
     @Override
     public void send(String message) throws ConnectionFailedException {
+        // Acquire the queue read lock.
+        queuesLock.readLock().lock();
+
         // We cannot send from a closed stream.
         if (isClosed()) {
             return;
@@ -147,19 +207,23 @@ public class ZMQMessageStream extends MessageStream {
 
         // Send the message to the dealer thread.
         queue.send(message);
+
+        // Release the queue state lock.
+        queuesLock.readLock().unlock();
     }
 
     /**
      * @return the calling thread's message queue to the dealer thread.
      */
     private ZMQ.Socket getQueue() {
-        if (queueContainer.get() == null) {
+        long threadId = Thread.currentThread().getId();
+        if (queues.get(threadId) == null) {
             ZMQ.Socket queue = context.socket(ZMQ.DEALER);
             queue.connect("inproc://dealer_" + streamId);
-            queueContainer.set(queue);
+            queues.put(threadId, queue);
         }
 
-        return queueContainer.get();
+        return queues.get(threadId);
     }
 
     /**

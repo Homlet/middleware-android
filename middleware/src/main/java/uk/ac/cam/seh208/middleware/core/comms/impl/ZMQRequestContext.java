@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 import uk.ac.cam.seh208.middleware.core.comms.Address;
@@ -53,12 +52,7 @@ public class ZMQRequestContext implements RequestContext {
     /**
      * Track whether the context has been terminated.
      */
-    private boolean terminated;
-
-    /**
-     * Lock for safe implementation of termination.
-     */
-    private final ReentrantReadWriteLock termLock;
+    private volatile boolean terminated;
 
 
     /**
@@ -69,9 +63,7 @@ public class ZMQRequestContext implements RequestContext {
 
         // Create a new ZMQ context.
         context = ZMQ.context(IO_THREADS);
-        termLock = new ReentrantReadWriteLock(true);
-
-        // Compute the local address.
+        terminated = false;
 
         // Set-up the request/response context.
         responder = new Responder();
@@ -126,19 +118,17 @@ public class ZMQRequestContext implements RequestContext {
      */
     @Override
     public RequestStream getRequestStream(Address address) {
-        synchronized (termLock.readLock()) {
-            if (terminated) {
-                return null;
-            }
-
-            if (!(address instanceof ZMQAddress)) {
-                return null;
-            }
-            ZMQAddress zmqAddress = (ZMQAddress) address;
-
-            // Open a new request stream to the given remote host.
-            return new ZMQRequestStream(context, zmqAddress);
+        if (terminated) {
+            return null;
         }
+
+        if (!(address instanceof ZMQAddress)) {
+            return null;
+        }
+        ZMQAddress zmqAddress = (ZMQAddress) address;
+
+        // Open a new request stream to the given remote host.
+        return new ZMQRequestStream(context, zmqAddress);
     }
 
     /**
@@ -156,17 +146,13 @@ public class ZMQRequestContext implements RequestContext {
      * Terminate the context, closing all open streams and preventing new streams
      * from being opened in the future.
      */
-    public void term() {
-        synchronized (termLock.writeLock()) {
-            if (terminated) {
-                return;
-            }
-
-            context.term();
-
-            requestServer.interrupt();
-
-            terminated = true;
+    public synchronized void term() {
+        if (terminated) {
+            return;
         }
+
+        context.term();
+
+        terminated = true;
     }
 }

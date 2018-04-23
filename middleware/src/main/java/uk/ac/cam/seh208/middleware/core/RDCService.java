@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import java8.util.Objects;
@@ -39,7 +40,7 @@ public class RDCService extends Service {
     /**
      * Read-write lock for efficient use of the database.
      */
-    private ReentrantReadWriteLock lock;
+    private ReadWriteLock lock;
 
     /**
      * Map of middleware instances by the endpoints known present there. Used for
@@ -117,20 +118,26 @@ public class RDCService extends Service {
     public List<Middleware> discover(Query query) {
         Log.i(getTag(), "Discovering with query \"" + query + "\"");
 
-        synchronized (lock.readLock()) {
-            // Remove any matches limit from the query.
-            Query modifiedQuery = new Query.Builder()
-                    .copy(query)
-                    .setMatches(Query.MATCH_INDEFINITELY)
-                    .build();
+        // Acquire the database read lock.
+        lock.readLock().lock();
 
-            // Find all matching locations using a stream.
-            return StreamSupport.stream(middlewaresByEndpoint.keySet())
-                    .filter(modifiedQuery.getFilter())
-                    .map(middlewaresByEndpoint::get)
-                    .distinct()
-                    .collect(Collectors.toList());
-        }
+        // Remove any matches limit from the query.
+        Query modifiedQuery = new Query.Builder()
+                .copy(query)
+                .setMatches(Query.MATCH_INDEFINITELY)
+                .build();
+
+        // Find all matching locations using a stream.
+        List<Middleware> middlewares = StreamSupport.stream(middlewaresByEndpoint.keySet())
+                .filter(modifiedQuery.getFilter())
+                .map(middlewaresByEndpoint::get)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Release the database read lock.
+        lock.readLock().unlock();
+
+        return middlewares;
     }
 
     /**
@@ -143,19 +150,23 @@ public class RDCService extends Service {
         Log.i(getTag(), "Updating location " + middleware + " " +
                 "with " + details.size() + " exposed endpoint(s).");
 
-        synchronized (lock.writeLock()) {
-            // Remove the prior entry from the database.
-            removeQuiet(middleware);
+        // Acquire the database write lock.
+        lock.writeLock().lock();
 
-            // Repopulate the database with the new details.
-            List<EndpointDetails> nonNullDetails = StreamSupport.stream(details)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
-            endpointsByMiddleware.put(middleware, nonNullDetails);
-            for (EndpointDetails endpoint : nonNullDetails) {
-                middlewaresByEndpoint.put(endpoint, middleware);
-            }
+        // Remove the prior entry from the database.
+        removeQuiet(middleware);
+
+        // Repopulate the database with the new details.
+        List<EndpointDetails> nonNullDetails = StreamSupport.stream(details)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        endpointsByMiddleware.put(middleware, nonNullDetails);
+        for (EndpointDetails endpoint : nonNullDetails) {
+            middlewaresByEndpoint.put(endpoint, middleware);
         }
+
+        // Release the database write lock.
+        lock.writeLock().unlock();
     }
 
     /**
@@ -172,21 +183,27 @@ public class RDCService extends Service {
      * Perform the remove operation without logging.
      */
     private void removeQuiet(Middleware middleware) {
-        synchronized (lock.writeLock()) {
-            // Remove the endpoints list from the database.
-            List<EndpointDetails> details = endpointsByMiddleware.remove(middleware);
+        // Acquire the database write lock.
+        lock.writeLock().lock();
 
-            if (details == null) {
-                // The location was not present in the map.
-                return;
-            }
+        // Remove the endpoints list from the database.
+        List<EndpointDetails> details = endpointsByMiddleware.remove(middleware);
 
-            for (EndpointDetails endpoint : details) {
-                // We never put null values into endpointsByMiddleware lists in update
-                // so we can skip a null check here.
-                middlewaresByEndpoint.remove(endpoint);
-            }
+        if (details == null) {
+            // The location was not present in the map. Release the database
+            // write lock and return.
+            lock.writeLock().unlock();
+            return;
         }
+
+        for (EndpointDetails endpoint : details) {
+            // We never put null values into endpointsByMiddleware lists in update
+            // so we can skip a null check here.
+            middlewaresByEndpoint.remove(endpoint);
+        }
+
+        // Release the database write lock.
+        lock.writeLock().unlock();
     }
 
     private static String getTag() {

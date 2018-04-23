@@ -185,7 +185,7 @@ public class ZMQMessageTest {
         streamClearup(closure2);
 
         // Check that stream 2 was closed by stream 1's FIN message.
-        Thread.sleep(500);
+        Thread.sleep(200);
         Assert.assertTrue(stream2To1.isClosed());
 
         // Terminate the context.
@@ -236,15 +236,9 @@ public class ZMQMessageTest {
         assertRecv(closure0, message5To0, 2000);
         assertRecv(closure5, message0To5, 2000);
 
-        // Close the message streams and terminate the contexts.
+        // Clearup the message streams closures and terminate the contexts.
         streamClearup(closure0);
         streamClearup(closure5);
-        for (MessageStream stream : streams) {
-            stream.close();
-        }
-
-        // Let logging catch up.
-        Thread.sleep(500);
 
         // Terminate the contexts.
         for (MessageContext context : contexts) {

@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import uk.ac.cam.seh208.middleware.core.exception.MalformedAddressException;
 import uk.ac.cam.seh208.middleware.core.comms.Address;
@@ -65,12 +64,7 @@ public class ZMQMessageContext implements MessageContext {
     /**
      * Track whether the context has been terminated.
      */
-    private boolean terminated;
-
-    /**
-     * Lock for safe implementation of termination.
-     */
-    private final ReentrantReadWriteLock termLock;
+    private volatile boolean terminated;
 
 
     /**
@@ -83,7 +77,6 @@ public class ZMQMessageContext implements MessageContext {
         // Create a new ZMQ context.
         context = ZMQ.context(IO_THREADS);
         terminated = false;
-        termLock = new ReentrantReadWriteLock(true);
 
         // Set-up the Harmony context.
         messageState = new ZMQMessageState();
@@ -144,35 +137,33 @@ public class ZMQMessageContext implements MessageContext {
      */
     @Override
     public MessageStream getMessageStream(Address address) {
-        synchronized (termLock.readLock()) {
-            if (terminated) {
-                return null;
+        if (terminated) {
+            return null;
+        }
+
+        if (!(address instanceof ZMQAddress)) {
+            return null;
+        }
+
+        ZMQAddress zmqAddress = (ZMQAddress) address;
+
+        // Retrieve the stream associated with this remote host from the state.
+        // Use synchronization to prevent interleaving with the Harmony server code
+        // that creates new streams when they do not already exist for incoming messages.
+        synchronized (messageState) {
+            ZMQMessageStream stream = messageState.getStreamByAddress(zmqAddress);
+
+            // Without synchronization, the Harmony server could create a new stream in
+            // the state here, which would then be overwritten by the stream in the
+            // null case below.
+
+            if (stream == null) {
+                // Instantiate a new stream in Harmony state.
+                stream = new ZMQMessageStream(environment, context, zmqAddress);
+                messageState.insertStreamByAddress(zmqAddress, stream);
             }
 
-            if (!(address instanceof ZMQAddress)) {
-                return null;
-            }
-
-            ZMQAddress zmqAddress = (ZMQAddress) address;
-
-            // Retrieve the stream associated with this remote host from the state.
-            // Use synchronization to prevent interleaving with the Harmony server code
-            // that creates new streams when they do not already exist for incoming messages.
-            synchronized (messageState) {
-                ZMQMessageStream stream = messageState.getStreamByAddress(zmqAddress);
-
-                // Without synchronization, the Harmony server could create a new stream in
-                // the state here, which would then be overwritten by the stream in the
-                // null case below.
-
-                if (stream == null) {
-                    // Instantiate a new stream in Harmony state.
-                    stream = new ZMQMessageStream(environment, context, zmqAddress);
-                    messageState.insertStreamByAddress(zmqAddress, stream);
-                }
-
-                return stream;
-            }
+            return stream;
         }
     }
 
@@ -181,18 +172,14 @@ public class ZMQMessageContext implements MessageContext {
      * from being opened in the future.
      */
     @Override
-    public void term() {
-        synchronized (termLock.writeLock()) {
-            if (terminated) {
-                return;
-            }
-
-            messageState.closeAll();
-            context.term();
-
-            harmonyServer.interrupt();
-
-            terminated = true;
+    public synchronized void term() {
+        if (terminated) {
+            return;
         }
+
+        messageState.closeAll();
+        context.term();
+
+        terminated = true;
     }
 }

@@ -30,6 +30,10 @@ android {
 
 unMock {
     keepStartingWith "android.util."
+    keep "com.android.internal.util.ArrayUtils"
+    keep "com.android.internal.util.GrowingArrayUtils"
+
+    keep "libcore.util.EmptyArray"
 }
 
 dependencies {

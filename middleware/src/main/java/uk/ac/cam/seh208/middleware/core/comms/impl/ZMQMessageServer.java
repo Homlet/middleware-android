@@ -92,7 +92,7 @@ class ZMQMessageServer implements Runnable {
 
             // NOTE: This loop is a hot spot of the middleware, as all incoming
             //       messages (over TCP) pass through it on the same thread.
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!context.isClosed()) {
                 // Block to receive a message on the ROUTER socket.
                 ZMsg message = ZMsg.recvMsg(router);
                 if (message == null) {
@@ -158,15 +158,13 @@ class ZMQMessageServer implements Runnable {
                 }
             }
         } catch (ZMQException e) {
-            if (e.getErrorCode() == ZMQ.Error.ETERM.getCode()) {
-                Log.i(getTag(), "Context was terminated.");
-                Log.i(getTag(), "Terminating request server...");
-                return;
+            if (e.getErrorCode() != ZMQ.Error.ETERM.getCode()) {
+                // This was not thrown due to context termination.
+                Log.e(getTag(), "Fatal error in message server", e);
             }
-
-            // This is some kind of network error.
-            Log.e(getTag(), "ZeroMQ error: " + e);
         }
+
+        Log.i(getTag(), "Message server terminated.");
     }
 
     /**
