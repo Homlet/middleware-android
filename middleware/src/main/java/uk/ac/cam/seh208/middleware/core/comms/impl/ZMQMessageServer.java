@@ -150,8 +150,6 @@ class ZMQMessageServer implements Runnable {
                             stream.close();
                         }
                     } else {
-                        Log.v(getTag(), "MSG: \"" + data + "\"");
-
                         // Otherwise, direct the message to the listeners of the stream.
                         stream.onMessage(data);
                     }

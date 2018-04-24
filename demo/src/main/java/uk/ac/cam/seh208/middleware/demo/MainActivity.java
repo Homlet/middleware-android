@@ -1,20 +1,34 @@
 package uk.ac.cam.seh208.middleware.demo;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.IdRes;
+import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -29,8 +43,20 @@ import uk.ac.cam.seh208.middleware.metrics.TCPServer;
 import uk.ac.cam.seh208.middleware.metrics.ZMQServer;
 import uk.ac.cam.seh208.middleware.metrics.exception.IncompleteMetricsException;
 
+import static android.os.Environment.DIRECTORY_DOCUMENTS;
+
 
 public class MainActivity extends AppCompatActivity {
+
+    /**
+     * Subdirectory of the public documents directory where metrics are stored.
+     */
+    private static final String DIRECTORY_METRICS = "mw_metrics";
+
+    /**
+     * Key used to detect when the storage permission has just been granted.
+     */
+    private static final int PERMISSION_STORAGE = 0;
 
 
     /**
@@ -125,6 +151,20 @@ public class MainActivity extends AppCompatActivity {
 
         // Disconnect from the middleware service.
         middleware.unbind();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_STORAGE:
+                if (grantResults.length > 0 &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // TODO: flush buffered files.
+                }
+                break;
+        }
     }
 
     private void onMiddlewareBind() {
@@ -233,7 +273,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static class MetricsTask extends AsyncTask<Object, Void, Metrics> {
 
-        private WeakReference<Context> context;
+        private WeakReference<MainActivity> activity;
 
 
         @Override
@@ -243,7 +283,7 @@ public class MainActivity extends AppCompatActivity {
             int messages = (Integer) objects[1];
             int length = (Integer) objects[2];
             //noinspection unchecked
-            context = (WeakReference<Context>) objects[3];
+            activity = (WeakReference<MainActivity>) objects[3];
 
             try {
                 // Run metrics on the client.
@@ -260,15 +300,30 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            Context context = this.context.get();
-            if (context == null) {
+            MainActivity activity = this.activity.get();
+            if (activity == null) {
                 return;
             }
 
-            new AlertDialog.Builder(context)
-                    .setTitle("Metrics")
-                    .setMessage("Latency: " + (int) metrics.latency + " \u00B5s\n" +
-                                "Throughput:" + (int) metrics.throughput + " messages per second")
+            // Generate a unique filename for the metrics data.
+            DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.UK);
+            String filename = formatter.format(new Date()) +
+                    "_" + metrics.getMessages() + "msg" +
+                    "_" + metrics.getMessageLength() + "len.csv";
+
+            // Save the metrics data to CSV file.
+            activity.writeFile(DIRECTORY_METRICS, filename, metrics.toCommaSeparatedValues());
+
+            // Show a summary alert to the user.
+            new AlertDialog.Builder(activity)
+                    .setTitle("Metrics (mean | median)")
+                    .setMessage("Latency: " + (int) metrics.getMeanLatency() +
+                                    " \u00B5s | " + (int) metrics.getMedianLatency() +
+                                    " \u00B5s\n" +
+                                "Throughput: " + (int) metrics.getMeanReceivingThroughput() +
+                                    " msg/s | " + (int) metrics.getMedianReceivingThroughput() +
+                                    " msg/s\n\n" +
+                                "Saved to \"" + filename + "\"")
                     .setPositiveButton(android.R.string.ok, null)
                     .show();
         }
@@ -286,6 +341,45 @@ public class MainActivity extends AppCompatActivity {
                 messages,
                 length,
                 new WeakReference<>(this));
+    }
+
+    public void writeFile(String directory, String filename, String contents) {
+        if (getStoragePermission()) {
+            // Create the parent directory for the file.
+            File dir = new File(
+                    Environment.getExternalStoragePublicDirectory(DIRECTORY_DOCUMENTS),
+                    directory);
+            if (!dir.exists() && !dir.mkdirs()) {
+                Log.w(getTag(), "Could not create directory " + dir.getAbsolutePath());
+                return;
+            }
+
+            // Write the data to the file.
+            File file = new File(dir, filename);
+            try (FileWriter writer = new FileWriter(file)) {
+                writer.append(contents);
+            } catch (FileNotFoundException e) {
+                Log.w(getTag(), "Could not create file " + file.getAbsolutePath());
+            } catch (IOException e) {
+                Log.w(getTag(), "Error writing to file", e);
+            }
+        } else {
+            // TODO: buffer file for writing later.
+        }
+    }
+
+    public boolean getStoragePermission() {
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
+                    PERMISSION_STORAGE);
+
+            return false;
+        }
+
+        return true;
     }
 
     public static String getTag() {
