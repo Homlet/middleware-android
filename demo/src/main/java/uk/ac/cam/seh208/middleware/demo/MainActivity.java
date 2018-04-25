@@ -2,7 +2,6 @@ package uk.ac.cam.seh208.middleware.demo;
 
 import android.Manifest;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -40,6 +39,7 @@ import uk.ac.cam.seh208.middleware.metrics.MetricsClient;
 import uk.ac.cam.seh208.middleware.metrics.MiddlewareClient;
 import uk.ac.cam.seh208.middleware.metrics.MiddlewareServer;
 import uk.ac.cam.seh208.middleware.metrics.TCPServer;
+import uk.ac.cam.seh208.middleware.metrics.ZMQClient;
 import uk.ac.cam.seh208.middleware.metrics.ZMQServer;
 import uk.ac.cam.seh208.middleware.metrics.exception.IncompleteMetricsException;
 
@@ -125,8 +125,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Create the metrics servers.
         middlewareServer = new MiddlewareServer(middleware);
-        zmqServer = new ZMQServer(this);
-        tcpServer = new TCPServer(this);
+        zmqServer = new ZMQServer();
+        tcpServer = new TCPServer();
 
         // Start the RDC if not started already.
         RDC.start(this);
@@ -186,8 +186,8 @@ public class MainActivity extends AppCompatActivity {
      *
      * @see #navigateTo(int, boolean)
      */
-    private boolean navigateTo(@IdRes int page) {
-        return navigateTo(page, true);
+    private void navigateTo(@IdRes int page) {
+        navigateTo(page, true);
     }
 
     /**
@@ -273,6 +273,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static class MetricsTask extends AsyncTask<Object, Void, Metrics> {
 
+        private String typename;
+
         private WeakReference<MainActivity> activity;
 
 
@@ -284,6 +286,8 @@ public class MainActivity extends AppCompatActivity {
             int length = (Integer) objects[2];
             //noinspection unchecked
             activity = (WeakReference<MainActivity>) objects[3];
+
+            typename = client.getName();
 
             try {
                 // Run metrics on the client.
@@ -307,7 +311,8 @@ public class MainActivity extends AppCompatActivity {
 
             // Generate a unique filename for the metrics data.
             DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.UK);
-            String filename = formatter.format(new Date()) +
+            String filename = typename +
+                    "_" + formatter.format(new Date()) +
                     "_" + metrics.getMessages() + "msg" +
                     "_" + metrics.getMessageLength() + "len.csv";
 
@@ -341,6 +346,19 @@ public class MainActivity extends AppCompatActivity {
                 messages,
                 length,
                 new WeakReference<>(this));
+    }
+
+    public void runZMQMetrics(int messages, int length) {
+        MetricsTask task = new MetricsTask();
+        task.execute(
+                new ZMQClient(),
+                messages,
+                length,
+                new WeakReference<>(this));
+    }
+
+    public void runTCPMetrics(int messages, int length) {
+        // TODO: implement.
     }
 
     public void writeFile(String directory, String filename, String contents) {

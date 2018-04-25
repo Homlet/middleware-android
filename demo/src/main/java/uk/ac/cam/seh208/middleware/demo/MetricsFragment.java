@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.Switch;
 
 import butterknife.BindView;
@@ -30,6 +31,12 @@ public class MetricsFragment extends Fragment {
 
     @BindView(R.id.switch_tcp_ip_server)
     Switch switchTCPServer;
+
+    @BindView(R.id.input_message_count)
+    EditText inputMessageCount;
+
+    @BindView(R.id.input_message_length)
+    EditText inputMessageLength;
 
 
     /**
@@ -104,8 +111,26 @@ public class MetricsFragment extends Fragment {
     }
 
     @OnClick(R.id.button_middleware_metrics)
-    void onMiddlewareButtonClicked(View button) {
-        button.setEnabled(false);
-        mainActivity.runMiddlewareMetrics(1000, 50);
+    void onMiddlewareMetricsButtonClicked(View button) {
+        int messages = Integer.parseInt(inputMessageCount.getText().toString());
+        int length = Integer.parseInt(inputMessageLength.getText().toString());
+
+        mainActivity.runMiddlewareMetrics(messages, length);
+    }
+
+    @OnClick(R.id.button_zeromq_metrics)
+    void onZMQMetricsButtonClicked(View button) {
+        int messages = Integer.parseInt(inputMessageCount.getText().toString());
+        int length = Integer.parseInt(inputMessageLength.getText().toString());
+
+        mainActivity.runZMQMetrics(messages, length);
+    }
+
+    @OnClick(R.id.button_tcp_ip_metrics)
+    void onTCPMetricsButtonClicked(View button) {
+        int messages = Integer.parseInt(inputMessageCount.getText().toString());
+        int length = Integer.parseInt(inputMessageLength.getText().toString());
+
+        mainActivity.runTCPMetrics(messages, length);
     }
 }

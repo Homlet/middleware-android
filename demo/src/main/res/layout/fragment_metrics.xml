@@ -1,45 +1,134 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.constraint.ConstraintLayout
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <Switch
         android:id="@+id/switch_middleware_server"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="46dp"
         android:layout_marginEnd="16dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:text="@string/label_middleware_server"/>
+        android:layout_marginTop="8dp"
+        android:text="@string/label_middleware_server"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
 
     <Switch
         android:id="@+id/switch_zeromq_server"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="46dp"
         android:layout_marginEnd="16dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:text="@string/label_zeromq_server"/>
+        android:text="@string/label_zeromq_server"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/switch_middleware_server"/>
 
     <Switch
         android:id="@+id/switch_tcp_ip_server"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="46dp"
         android:layout_marginEnd="16dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:text="@string/label_tcp_ip_server"/>
+        android:text="@string/label_tcp_ip_server"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/switch_zeromq_server"/>
+
+    <TextView
+        android:id="@+id/label_message_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="@string/message_count"
+        android:textAppearance="@android:style/TextAppearance.Material.Body1"
+        app:layout_constraintBottom_toBottomOf="@+id/input_message_count"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/input_message_count"/>
+
+    <EditText
+        android:id="@+id/input_message_count"
+        style="@android:style/Widget.Material.Light.EditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="64dp"
+        android:layout_weight="1"
+        android:ems="10"
+        android:inputType="number"
+        android:text="@string/default_message_count"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/label_message_length"
+        app:layout_constraintTop_toBottomOf="@id/switch_tcp_ip_server"/>
+
+    <TextView
+        android:id="@+id/label_message_length"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="@string/message_length"
+        android:textAppearance="@android:style/TextAppearance.Material.Body1"
+        app:layout_constraintBottom_toBottomOf="@+id/input_message_length"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/input_message_length" />
+
+    <EditText
+        android:id="@+id/input_message_length"
+        style="@android:style/Widget.Material.Light.EditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="64dp"
+        android:layout_weight="1"
+        android:ems="10"
+        android:inputType="number"
+        android:text="@string/default_message_length"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/label_message_length"
+        app:layout_constraintTop_toBottomOf="@id/input_message_count" />
 
     <Button
         android:id="@+id/button_middleware_metrics"
         style="@style/Widget.AppCompat.Button.Borderless.Colored"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:text="@string/run_middleware_metrics"/>
+        android:text="@string/run_middleware_metrics"
+        app:layout_constraintTop_toBottomOf="@id/input_message_length"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
-</LinearLayout>
+    <Button
+        android:id="@+id/button_zeromq_metrics"
+        style="@style/Widget.AppCompat.Button.Borderless.Colored"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="16dp"
+        android:text="@string/run_zeromq_metrics"
+        app:layout_constraintTop_toBottomOf="@id/button_middleware_metrics"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/button_tcp_ip_metrics"
+        style="@style/Widget.AppCompat.Button.Borderless.Colored"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="16dp"
+        android:text="@string/run_tcp_ip_metrics"
+        app:layout_constraintTop_toBottomOf="@id/button_zeromq_metrics"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</android.support.constraint.ConstraintLayout>

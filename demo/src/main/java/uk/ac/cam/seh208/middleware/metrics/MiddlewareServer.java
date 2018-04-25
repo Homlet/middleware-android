@@ -8,7 +8,7 @@ import uk.ac.cam.seh208.middleware.api.Middleware;
 import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
 
 
-public class MiddlewareServer {
+public class MiddlewareServer implements MetricsServer {
 
     private static String ENDPOINT_SINK = "metrics_server_sink";
 
@@ -17,7 +17,7 @@ public class MiddlewareServer {
 
     private Middleware middleware;
 
-    private boolean started;
+    private volatile boolean started;
 
 
     public MiddlewareServer(Middleware middleware) {
@@ -25,7 +25,7 @@ public class MiddlewareServer {
         started = false;
     }
 
-    public void start() {
+    public synchronized void start() {
         if (started) {
             return;
         }
@@ -57,7 +57,7 @@ public class MiddlewareServer {
         }
     }
 
-    public void stop() {
+    public synchronized void stop() {
         if (!started) {
             return;
         }

@@ -168,7 +168,11 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         stateLock.writeLock().lock();
 
         if (channels.indexOfKey(channel.getChannelId()) < 0) {
+            // Release the state lock.
+            stateLock.writeLock().unlock();
+
             Log.e(getTag(), "Attempted to remove channel not carried.");
+
             return false;
         }
 
@@ -188,6 +192,9 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
 
         if (channels.size() == 0) {
             if (BuildConfig.DEBUG && channelsByLocalEndpoint.size() > 0) {
+                // Release the state lock.
+                stateLock.writeLock().unlock();
+
                 throw new AssertionError("Inconsistent channel state in multiplexer.");
             }
 

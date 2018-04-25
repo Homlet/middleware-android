@@ -71,10 +71,10 @@ public class MiddlewareClient implements MetricsClient {
     }
 
     private Metrics run(int messages, int length) throws MiddlewareDisconnectedException {
-        if (length < minLength(messages)) {
+        if (length < MetricsClient.minLength(messages)) {
             throw new IllegalArgumentException("The minimum length for sending " + messages +
-                    "metrics messages is " + minLength(messages) + " chars due to " +
-                    "formatting overheads.");
+                    "metrics messages is " + MetricsClient.minLength(messages) + " chars due " +
+                    "to formatting overheads.");
         }
 
         Log.i(getTag(), "Running metrics (" + messages + "messages, length " + length + "chars)");
@@ -89,45 +89,31 @@ public class MiddlewareClient implements MetricsClient {
         // Send the metrics messages.
         sendMessages(messages, length, timeSend);
 
+        // Wait for the last message to arrive.
         try {
-            Thread.sleep(500);
-            sink.unregisterListener(token);
+            Thread.sleep(200);
         } catch (InterruptedException e) {
             return null;
         }
 
-        // Calculate the round-trip latency.
-        long[] latency = new long[messages];
-        for (int i = 0; i < messages; i++) {
-            latency[i] = (timeRecv[i] - timeSend[i]) / 1000;
-        }
+        // Unregister the message listener now all the messages have been received (or dropped).
+        sink.unregisterListener(token);
 
-        // Calculate the sending and receiving throughputs.
-        long[] throughputSend = new long[messages];
-        long[] throughputRecv = new long[messages];
-        for (int i = 1; i < messages; i++) {
-            if (timeSend[i] - timeSend[i-1] != 0) {
-                throughputSend[i] = 1000000000 / (timeSend[i] - timeSend[i - 1]);
-            }
-            if (timeRecv[i] - timeRecv[i-1] != 0) {
-                throughputRecv[i] = 1000000000 / (timeRecv[i] - timeRecv[i - 1]);
-            }
-        }
-
-        return new Metrics(messages, length, latency, throughputSend, throughputRecv);
+        // Process the timing data to produce a metrics object.
+        return MetricsClient.process(timeSend, timeRecv, length);
     }
 
     private MessageListener makeListener(long[] timeRecv) {
-        return message -> {
+        return msg -> {
             // Record the receive time for the message sequence number.
-            int seq = Integer.parseInt(message.split("[\\[,]")[1].trim());
+            int seq = Integer.parseInt(msg.split("[\\[,]")[1].trim());
             timeRecv[seq] = System.nanoTime();
         };
     }
 
     private void sendMessages(int messages, int length, long[] timeSend) throws MiddlewareDisconnectedException {
         // Work out and insert the amount of string padding required for the message format.
-        int padding = length - minLength(messages);
+        int padding = length - MetricsClient.minLength(messages);
         String format = "[,\"";
         for (int i = 0; i < padding; i++) {
             //noinspection StringConcatenationInLoop
@@ -194,13 +180,9 @@ public class MiddlewareClient implements MetricsClient {
         return metrics;
     }
 
-    /**
-     * @return the minimum message length as is dependent on the maximum sequence number.
-     */
-    private static int minLength(int messages) {
-        // Messages are formatted as JSON lists: [seq,"padding..."]. Therefore, there
-        // is a minimum length dependent on the maximum sequence number.
-        return (int) Math.ceil(Math.log10(messages)) + 5;
+    @Override
+    public String getName() {
+        return "mw";
     }
 
     private static String getTag() {
