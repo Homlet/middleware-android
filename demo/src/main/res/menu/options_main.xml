@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:title="@string/action_set_rdc_address"/>
-    <item android:title="@string/action_reset_middleware"/>
+    <item
+        android:id="@+id/action_run_rdc"
+        android:checkable="true"
+        android:title="@string/action_run_rdc" />
+    <item
+        android:id="@+id/action_set_rdc_address"
+        android:title="@string/action_set_rdc_address" />
+    <item
+        android:id="@+id/action_reset_middleware"
+        android:title="@string/action_reset_middleware" />
 </menu>

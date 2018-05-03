@@ -35,4 +35,7 @@
     <string name="default_message_count">100</string>
     <string name="run_zeromq_metrics">Run ZeroMQ metrics</string>
     <string name="run_tcp_ip_metrics">Run TCP/IP metrics</string>
+    <string name="action_run_rdc">Run RDC</string>
+    <string name="default_rdc_addr">zmq://127.0.0.1:4854</string>
+    <string name="default_zmq_host">127.0.0.1</string>
 </resources>

@@ -2,6 +2,7 @@ package uk.ac.cam.seh208.middleware.demo;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -14,9 +15,11 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.InputType;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import java.io.File;
@@ -58,6 +61,16 @@ public class MainActivity extends AppCompatActivity {
      */
     private static final int PERMISSION_STORAGE = 0;
 
+    /**
+     * Key used to store the preference for the RDC to disk.
+     */
+    private static final String PREFS_RUN_RDC = "RUN_RDC";
+
+    /**
+     * Key used to store the RDC address to disk.
+     */
+    private static final String PREFS_RDC_ADDR = "RDC_ADDR";
+
 
     /**
      * Instance of the middleware interface bound to this activity.
@@ -96,11 +109,110 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Inflate the default 'triple dot' options_main menu on the action bar.
+     *
+     * @param menu Reference to the menu object.
      */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.options_main, menu);
+
         return true;
+    }
+
+    /**
+     * Called when the options menu is opened by the user.
+     *
+     * @param menu Reference to the menu object.
+     */
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+
+        // Get the current value of the RDC checkbox, and set it in the menu item.
+        boolean running = getSharedPreferences("preferences", 0).getBoolean(PREFS_RUN_RDC, false);
+        menu.findItem(R.id.action_run_rdc).setChecked(running);
+
+        return true;
+    }
+
+    /**
+     * Called when a menu item is interacted with by the user.
+     *
+     * @param item Reference to the menu item that was selected.
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_run_rdc:
+                boolean running = !item.isChecked();
+
+                // Check or un-check the checkbox.
+                item.setChecked(running);
+
+                // Store the preference persistently.
+                getSharedPreferences("preferences", 0)
+                        .edit()
+                        .putBoolean(PREFS_RUN_RDC, running)
+                        .apply();
+
+                // Start or stop the RDC.
+                if (running) {
+                    RDC.start(this);
+                } else {
+                    RDC.stop(this);
+                }
+
+                return true;
+
+            case R.id.action_set_rdc_address:
+                // Get the old stored address.
+                final SharedPreferences preferences = getSharedPreferences("preferences", 0);
+                String oldAddress = preferences.getString(
+                        PREFS_RDC_ADDR, getString(R.string.default_rdc_addr));
+
+                // Set up the text input.
+                final EditText input = new EditText(this);
+                input.setInputType(InputType.TYPE_CLASS_TEXT);
+                input.setText(oldAddress);
+
+                // Show a dialog for setting the address.
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.action_set_rdc_address)
+                        .setView(input)
+                        .setPositiveButton("Set", (dialog, which) -> {
+                            // Set the new address in the preferences.
+                            String newAddress = input.getText().toString();
+                            preferences.edit()
+                                    .putString(PREFS_RDC_ADDR, newAddress)
+                                    .apply();
+
+                            try {
+                                // Set the new address in the middleware.
+                                middleware.setRDCAddress(newAddress);
+                            } catch (MiddlewareDisconnectedException e) {
+                                Log.e(getTag(), "Middleware disconnected setting RDC address.");
+                                Toast.makeText(
+                                        this,
+                                        R.string.error_contact_middleware,
+                                        Toast.LENGTH_SHORT).show();
+                                finish();
+                            }
+
+                            // Dismiss the dialog.
+                            dialog.dismiss();
+                        })
+                        .setNegativeButton("Cancel", (dialog, which) -> {
+                            dialog.cancel();
+                        })
+                        .show();
+                return true;
+
+            case R.id.action_reset_middleware:
+                // TODO: implement.
+
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     /**
@@ -128,8 +240,11 @@ public class MainActivity extends AppCompatActivity {
         zmqServer = new ZMQServer();
         tcpServer = new TCPServer();
 
-        // Start the RDC if not started already.
-        RDC.start(this);
+        // Get the current value of the RDC checkbox, and start the RDC if necessary.
+        boolean running = getSharedPreferences("preferences", 0).getBoolean(PREFS_RUN_RDC, false);
+        if (running) {
+            RDC.start(this);
+        }
     }
 
     @Override
@@ -169,7 +284,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void onMiddlewareBind() {
         try {
-            middleware.setRDCAddress("zmq://127.0.0.1:4854");
+            // Get the old stored address and set it in the middleware.
+            final SharedPreferences preferences = getSharedPreferences("preferences", 0);
+            String oldAddress = preferences.getString(
+                    PREFS_RDC_ADDR, getString(R.string.default_rdc_addr));
+            middleware.setRDCAddress(oldAddress);
         } catch (MiddlewareDisconnectedException e) {
             Log.e(getTag(), "Middleware disconnected while configuring.");
             Toast.makeText(this, R.string.error_contact_middleware, Toast.LENGTH_SHORT).show();
@@ -348,13 +467,33 @@ public class MainActivity extends AppCompatActivity {
                 new WeakReference<>(this));
     }
 
-    public void runZMQMetrics(int messages, int length) {
-        MetricsTask task = new MetricsTask();
-        task.execute(
-                new ZMQClient(),
-                messages,
-                length,
-                new WeakReference<>(this));
+    public void runZMQMetrics(final int messages, final int length) {
+        // Set up the text input.
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setText(R.string.default_zmq_host);
+
+        // Show a dialog to get the desired server address.
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.run_zeromq_metrics)
+                .setView(input)
+                .setPositiveButton("Run", (dialog, which) -> {
+                    // Run the metrics task with the given host.
+                    MetricsTask task = new MetricsTask();
+                    task.execute(
+                            new ZMQClient(input.getText().toString()),
+                            messages,
+                            length,
+                            new WeakReference<>(MainActivity.this)
+                    );
+
+                    // Dismiss the dialog.
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    dialog.cancel();
+                })
+                .show();
     }
 
     public void runTCPMetrics(int messages, int length) {

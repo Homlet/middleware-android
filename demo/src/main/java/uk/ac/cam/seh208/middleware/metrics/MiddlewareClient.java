@@ -111,7 +111,8 @@ public class MiddlewareClient implements MetricsClient {
         };
     }
 
-    private void sendMessages(int messages, int length, long[] timeSend) throws MiddlewareDisconnectedException {
+    private void sendMessages(int messages, int length, long[] timeSend)
+            throws MiddlewareDisconnectedException {
         // Work out and insert the amount of string padding required for the message format.
         int padding = length - MetricsClient.minLength(messages);
         String format = "[,\"";

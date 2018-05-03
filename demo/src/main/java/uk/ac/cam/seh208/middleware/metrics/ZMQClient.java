@@ -30,11 +30,14 @@ public class ZMQClient implements MetricsClient {
             // Create and bind the receipt dealer.
             ZMQ.Socket receiptDealer = context.socket(DEALER);
             receiptDealer.setReceiveTimeOut(200);
-            receiptDealer.connect("tcp://127.0.0.1:" + ZMQServer.PORT_RECEIPT);
+            receiptDealer.connect("tcp://" + host + ":" + ZMQServer.PORT_RECEIPT);
 
             Log.d(getTag(), "Listener thread running.");
 
             try {
+                // Wait for the connect to complete.
+                Thread.sleep(200);
+
                 // Log the time at which each message was received.
                 while (!closed) {
                     String msg = receiptDealer.recvStr();
@@ -51,6 +54,8 @@ public class ZMQClient implements MetricsClient {
                     // This was not thrown due to context termination.
                     Log.e(getTag(), "Fatal error in listener thread", e);
                 }
+            } catch (InterruptedException ignored) {
+                // Do nothing.
             } finally {
                 // Close the receipt socket.
                 receiptDealer.close();
@@ -69,6 +74,13 @@ public class ZMQClient implements MetricsClient {
 
     private ListenerThread listenerThread;
 
+    private final String host;
+
+
+    public ZMQClient(String host) {
+        this.host = host;
+    }
+
 
     private void connect() {
         // Open a new ZeroMQ context.
@@ -79,7 +91,7 @@ public class ZMQClient implements MetricsClient {
         messageDealer.setLinger(0);
         messageDealer.setSendTimeOut(200);
         messageDealer.setReceiveTimeOut(200);
-        messageDealer.connect("tcp://127.0.0.1:" + ZMQServer.PORT_MESSAGE);
+        messageDealer.connect("tcp://" + host + ":" + ZMQServer.PORT_MESSAGE);
     }
 
     private Metrics run(int messages, int length) throws InterruptedException {
@@ -106,10 +118,7 @@ public class ZMQClient implements MetricsClient {
         sendMessages(messages, length, timeSend);
 
         // Wait for the last message to arrive.
-        Thread.sleep(200);
-
-        Log.v(getTag(), Arrays.toString(timeSend));
-        Log.v(getTag(), Arrays.toString(timeRecv));
+        Thread.sleep(40000);
 
         // Close and join the listener thread.
         listenerThread.closed = true;

@@ -30,12 +30,19 @@ public class ZMQAddress extends Address {
             port = 0;
         }
 
-        public Builder setPriority(int priority) {
-            this.priority = priority;
-            return this;
-        }
-
         public Builder setHost(String host) {
+            if (host.startsWith("127.")) {
+                // This is a bit hacky, but prevents local loopback addresses
+                // leaking to peers.
+                priority = -8;
+            }
+            if (host.startsWith("192.168.")) {
+                // This is a bit hacky, but prevents local network addresses
+                // leaking to peers on other networks. This shouldn't be a massive
+                // issue since in the main use case of the middleware peers only
+                // communicate within the same network.
+                priority = -4;
+            }
             this.host = host;
             return this;
         }
@@ -76,11 +83,11 @@ public class ZMQAddress extends Address {
                     }
 
                     // Set the address parts from the matched string.
-                    host = matcher.group(group);
+                    setHost(matcher.group(group));
                     if (matcher.group(group + 1).equals("*")) {
-                        port = 0;
+                        setPort(0);
                     } else {
-                        port = Integer.parseInt(matcher.group(group + 1));
+                        setPort(Integer.parseInt(matcher.group(group + 1)));
                     }
 
                     // Return a reference to the builder.
