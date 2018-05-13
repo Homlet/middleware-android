@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -126,6 +127,18 @@ public class Middleware {
 
     public List<EndpointDetails> getAllEndpointDetails() throws MiddlewareDisconnectedException {
         return callSafe(() -> connection.waitForBinder().mw_getAllEndpointDetails());
+    }
+
+    public boolean doesEndpointExist(String name) throws MiddlewareDisconnectedException {
+        List<EndpointDetails> details = getAllEndpointDetails();
+
+        for (EndpointDetails endpoint : details) {
+            if (Objects.equals(endpoint.getName(), name)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void force(long uuid, MiddlewareCommand command)

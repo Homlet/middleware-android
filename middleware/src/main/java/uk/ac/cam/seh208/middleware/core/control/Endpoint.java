@@ -549,8 +549,6 @@ public class Endpoint {
             return;
         }
 
-        Log.v(getTag(), "Received new message: \"" + message + "\"");
-
         // Dispatch the message to each of the listeners' onMessage methods
         // in turn, logging the case where a remote error occurs.
         int failures = 0;

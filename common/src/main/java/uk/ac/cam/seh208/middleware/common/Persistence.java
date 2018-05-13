@@ -21,9 +21,7 @@ public enum Persistence implements Parcelable {
 
     /**
      * Indicate that, in the case of complete failure, the mapping should
-     * be reestablished by resending the original query. The query is
-     * resent using the original method; i.e. if the original mapping
-     * was established indirectly using the RDC, this is repeated.
+     * be reestablished by resending the original query.
      */
     RESEND_QUERY,
 
@@ -33,8 +31,6 @@ public enum Persistence implements Parcelable {
      * is modified in order to ensure the maximum number of open channels
      * in the mapping is constant. For example, if a single channel fails,
      * the modified query will only accept a single new remote endpoint.
-     *
-     * Again, if the the query is resent using the original method.
      */
     RESEND_QUERY_INDIVIDUAL,
 
