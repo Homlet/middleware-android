@@ -38,4 +38,7 @@
     <string name="action_run_rdc">Run RDC</string>
     <string name="default_rdc_addr">zmq://127.0.0.1:4854</string>
     <string name="default_zmq_host">127.0.0.1</string>
+    <string name="default_tcp_host">127.0.0.1</string>
+    <string name="label_tags">Tags</string>
+    <string name="polarity_indicator">Polarity indicator.</string>
 </resources>

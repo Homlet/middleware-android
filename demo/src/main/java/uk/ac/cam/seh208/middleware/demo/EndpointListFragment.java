@@ -12,6 +12,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -171,6 +172,41 @@ public class EndpointListFragment extends Fragment {
                 }
             }
         });
+
+        // Use an ItemTouchHelper to implement swipe-to-destroy endpoints.
+        ItemTouchHelper.SimpleCallback itemTouchHelperCallback =
+                new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT |
+                                                      ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder,
+                                  RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int swipeDir) {
+                // If the view holder position is an invalid list index, return.
+                int position = ((EndpointListAdapter.ViewHolder) viewHolder).currentPosition;
+                if (position < 0 && details.size() <= position) {
+                    return;
+                }
+
+                try {
+                    // Try to destroy the endpoint in the middleware.
+                    // TODO: move this into a background task.
+                    EndpointDetails endpoint = details.get(position);
+                    middleware.destroyEndpoint(endpoint.getName());
+                } catch (MiddlewareDisconnectedException e) {
+                    Log.e(getTag(), "Middleware disconnected destroying endpoint.");
+                }
+
+                // Remove the endpoint from the local list and notify the recycler.
+                details.remove(position);
+                recycler.getAdapter().notifyDataSetChanged();
+            }
+        };
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(itemTouchHelperCallback);
+        itemTouchHelper.attachToRecyclerView(recycler);
 
         // Update the endpoints list.
         updateEndpointDetails();

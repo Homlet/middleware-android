@@ -7,11 +7,6 @@
         android:title="@string/title_endpoints"/>
 
     <item
-        android:id="@+id/page_resources"
-        android:icon="@drawable/ic_resources_24dp"
-        android:title="@string/title_resources"/>
-
-    <item
         android:id="@+id/page_remote"
         android:icon="@drawable/ic_metrics_24dp"
         android:title="@string/title_metrics"/>

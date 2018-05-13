@@ -28,6 +28,8 @@ public class EndpointListAdapter extends RecyclerView.Adapter<EndpointListAdapte
         @BindView(R.id.endpoint_polarity)
         ImageView polarity;
 
+        int currentPosition = -1;
+
 
         ViewHolder(View view) {
             super(view);
@@ -57,6 +59,8 @@ public class EndpointListAdapter extends RecyclerView.Adapter<EndpointListAdapte
 
     @Override
     public void onBindViewHolder(ViewHolder holder, final int position) {
+        holder.currentPosition = position;
+
         // Get the endpoint details.
         synchronized (detailsList) {
             EndpointDetails details = detailsList.get(position);

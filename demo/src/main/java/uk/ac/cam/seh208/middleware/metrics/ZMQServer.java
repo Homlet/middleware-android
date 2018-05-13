@@ -52,6 +52,7 @@ public class ZMQServer implements MetricsServer {
         }
     }
 
+
     static final int PORT_MESSAGE = 5203;
 
     static final int PORT_RECEIPT = 5204;
@@ -91,7 +92,7 @@ public class ZMQServer implements MetricsServer {
     }
 
     public boolean isStarted() {
-        return false;
+        return started;
     }
 
     private static String getTag() {

@@ -15,7 +15,8 @@
 
         <activity
             android:name=".MainActivity"
-            android:label="@string/app_name">
+            android:label="@string/app_name"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -26,12 +27,14 @@
         <activity
             android:name=".ViewEndpointActivity"
             android:label="@string/title_view_endpoint"
-            android:parentActivityName=".MainActivity">
+            android:parentActivityName=".MainActivity"
+            android:screenOrientation="portrait">
         </activity>
 
         <activity
             android:name=".CreateEndpointActivity"
-            android:label="@string/title_create_endpoint">
+            android:label="@string/title_create_endpoint"
+            android:screenOrientation="portrait">
         </activity>
 
     </application>

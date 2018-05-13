@@ -41,6 +41,7 @@ import uk.ac.cam.seh208.middleware.metrics.Metrics;
 import uk.ac.cam.seh208.middleware.metrics.MetricsClient;
 import uk.ac.cam.seh208.middleware.metrics.MiddlewareClient;
 import uk.ac.cam.seh208.middleware.metrics.MiddlewareServer;
+import uk.ac.cam.seh208.middleware.metrics.TCPClient;
 import uk.ac.cam.seh208.middleware.metrics.TCPServer;
 import uk.ac.cam.seh208.middleware.metrics.ZMQClient;
 import uk.ac.cam.seh208.middleware.metrics.ZMQServer;
@@ -201,14 +202,9 @@ public class MainActivity extends AppCompatActivity {
                             // Dismiss the dialog.
                             dialog.dismiss();
                         })
-                        .setNegativeButton("Cancel", (dialog, which) -> {
-                            dialog.cancel();
-                        })
+                        .setNegativeButton("Cancel", (dialog, which) -> dialog.cancel())
                         .show();
                 return true;
-
-            case R.id.action_reset_middleware:
-                // TODO: implement.
 
             default:
                 return super.onOptionsItemSelected(item);
@@ -349,8 +345,6 @@ public class MainActivity extends AppCompatActivity {
         switch(page) {
             case R.id.page_endpoints:
                 return new EndpointListFragment();
-            case R.id.page_resources:
-                return new Fragment();  // TODO: create fragment for resources page.
             case R.id.page_remote:
                 return new MetricsFragment();
             default:
@@ -369,8 +363,6 @@ public class MainActivity extends AppCompatActivity {
         switch(page) {
             case R.id.page_endpoints:
                 return getString(R.string.title_endpoints);
-            case R.id.page_resources:
-                return getString(R.string.title_resources);
             case R.id.page_remote:
                 return getString(R.string.title_metrics);
             default:
@@ -490,14 +482,35 @@ public class MainActivity extends AppCompatActivity {
                     // Dismiss the dialog.
                     dialog.dismiss();
                 })
-                .setNegativeButton("Cancel", (dialog, which) -> {
-                    dialog.cancel();
-                })
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.cancel())
                 .show();
     }
 
-    public void runTCPMetrics(int messages, int length) {
-        // TODO: implement.
+    public void runTCPMetrics(final int messages, final int length) {
+        // Set up the text input.
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setText(R.string.default_tcp_host);
+
+        // Show a dialog to get the desired server address.
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.run_tcp_ip_metrics)
+                .setView(input)
+                .setPositiveButton("Run", (dialog, which) -> {
+                    // Run the metrics task with the given host.
+                    MetricsTask task = new MetricsTask();
+                    task.execute(
+                            new TCPClient(input.getText().toString()),
+                            messages,
+                            length,
+                            new WeakReference<>(MainActivity.this)
+                    );
+
+                    // Dismiss the dialog.
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.cancel())
+                .show();
     }
 
     public void writeFile(String directory, String filename, String contents) {

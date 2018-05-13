@@ -10,6 +10,8 @@ import android.widget.Toast;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import java8.util.stream.Collectors;
+import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.api.Endpoint;
 import uk.ac.cam.seh208.middleware.api.Middleware;
 import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
@@ -42,6 +44,12 @@ public class ViewEndpointActivity extends AppCompatActivity {
 
     @BindView(R.id.endpoint_polarity)
     ImageView imagePolarity;
+
+    @BindView(R.id.endpoint_schema)
+    TextView textSchema;
+
+    @BindView(R.id.endpoint_tags)
+    TextView textTags;
 
 
     @Override
@@ -88,6 +96,10 @@ public class ViewEndpointActivity extends AppCompatActivity {
             textDesc.setText(details.getDesc());
             imagePolarity.setImageResource(
                     ResourceUtils.getPolarityImageResource(details.getPolarity()));
+            textSchema.setText(details.getSchema());
+            textTags.setText(StreamSupport
+                    .stream(details.getTags())
+                    .collect(Collectors.joining(", ")));
         } catch (MiddlewareDisconnectedException e) {
             Log.e(getTag(), "Middleware disconnected while getting endpoint details.");
             Toast.makeText(this, R.string.error_contact_middleware, Toast.LENGTH_SHORT).show();
