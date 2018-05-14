@@ -9,7 +9,7 @@ import uk.ac.cam.seh208.middleware.core.exception.ConnectionFailedException;
  *
  * A simple implementation might maintain a single underlying connection to the remote host,
  * but there is scope for establishing multiple connections to particular hosts for load
- * balancing purposes; i.e. to leverage threading on the device when connections host channels
+ * balancing purposes; i.e. to leverage threading on the device when connections host links
  * to different endpoints.
  */
 public abstract class MessageStream extends CloseableSubject<MessageStream>

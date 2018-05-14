@@ -15,18 +15,18 @@ import uk.ac.cam.seh208.middleware.core.CloseableSubject;
 /**
  * Object storing the result of a mapping command called on an endpoint.
  *
- * Consists of a collections of channels from the local endpoint
+ * Consists of a collections of links from the local endpoint
  * to remote endpoints.
  *
  * The persistence level determines how the mapping handles failure; partial
- * failure is the closure of some channels within the mapping, while complete
- * failure is the closure of all channels, or the local middleware instance
+ * failure is the closure of some links within the mapping, while complete
+ * failure is the closure of all links, or the local middleware instance
  * being killed by the scheduler.
  */
 public class Mapping extends CloseableSubject<Mapping> {
 
     /**
-     * Universally unique identifier for the channel.
+     * Universally unique identifier for the link.
      */
     private long mappingId;
 
@@ -50,60 +50,60 @@ public class Mapping extends CloseableSubject<Mapping> {
     private Persistence persistence;
 
     /**
-     * Map of channels constituent to the mapping. This is used to determine how many
-     * new channels should be established to restore the mapping.
+     * Map of links constituent to the mapping. This is used to determine how many
+     * new links should be established to restore the mapping.
      */
-    private LongSparseArray<Channel> channels;
+    private LongSparseArray<Link> links;
 
     /**
-     * Original number of channels constituent to the mapping.
+     * Original number of links constituent to the mapping.
      */
     private int capacity;
 
 
     /**
-     * Construct a new mapping object, subscribing to every channel from the given
-     * list as an open channel.
+     * Construct a new mapping object, subscribing to every link from the given
+     * list as an open link.
      *
      * @param query Query object to be stored for restoration.
      * @param persistence Persistence level determining restoration strategy.
-     * @param channels List of channels which should be included as part of the mapping.
+     * @param links List of links which should be included as part of the mapping.
      */
-    Mapping(Endpoint local, Query query, Persistence persistence, List<Channel> channels) {
+    Mapping(Endpoint local, Query query, Persistence persistence, List<Link> links) {
         this.mappingId = new Random(System.nanoTime()).nextLong();
         this.local = local;
         this.query = query;
         this.persistence = persistence;
-        this.channels = new LongSparseArray<>();
+        this.links = new LongSparseArray<>();
 
-        // Add each channel as an open constituent of the mapping.
-        if (channels == null) {
+        // Add each link as an open constituent of the mapping.
+        if (links == null) {
             return;
         }
-        StreamSupport.stream(channels).forEach(this::addChannel);
+        StreamSupport.stream(links).forEach(this::addLink);
 
-        capacity = this.channels.size();
+        capacity = this.links.size();
     }
 
     /**
-     * Add a channel to the mapping, subscribing to its closure for
+     * Add a link to the mapping, subscribing to its closure for
      * restoration purposes.
      *
-     * @param channel Reference to the channel to add.
+     * @param link Reference to the link to add.
      */
-    private synchronized void addChannel(Channel channel) {
-        if (channel == null) {
+    private synchronized void addLink(Link link) {
+        if (link == null) {
             // We cannot subscribe to a null object.
             return;
         }
 
-        // Put the channel in the open channels list.
-        channels.put(channel.getChannelId(), channel);
+        // Put the link in the open links list.
+        links.put(link.getLinkId(), link);
 
-        // Attempt to subscribe to the channel. If the channel was closed
+        // Attempt to subscribe to the link. If the link was closed
         // prior to this point, continue with no action.
-        if (!channel.subscribeIfOpen(this::onChannelClose)) {
-            channels.remove(channel.getChannelId());
+        if (!link.subscribeIfOpen(this::onLinkClose)) {
+            links.remove(link.getLinkId());
         }
     }
 
@@ -112,10 +112,10 @@ public class Mapping extends CloseableSubject<Mapping> {
         // Drop the endpoint reference to speed up garbage collection.
         local = null;
 
-        // Close all remaining channels.
-        int size = channels.size();
+        // Close all remaining links.
+        int size = links.size();
         for (int i = 0; i < size; i++) {
-            channels.valueAt(0).close();
+            links.valueAt(0).close();
         }
 
         super.close();
@@ -126,18 +126,18 @@ public class Mapping extends CloseableSubject<Mapping> {
     }
 
     /**
-     * Called by observed channels on closure.
+     * Called by observed links on closure.
      *
-     * Mapping restoration logic is rooted here, meaning on channel closure
+     * Mapping restoration logic is rooted here, meaning on link closure
      * persistent mappings are immediately restored by the middleware.
      *
-     * @param channel Reference to the channel which closed.
+     * @param link Reference to the link which closed.
      */
-    private synchronized void onChannelClose(Channel channel) {
-        channels.remove(channel.getChannelId());
+    private synchronized void onLinkClose(Link link) {
+        links.remove(link.getLinkId());
 
         try {
-            // Attempt to restore channels; if
+            // Attempt to restore links; if
             restore();
         } catch (BadHostException e) {
             e.printStackTrace();
@@ -157,28 +157,28 @@ public class Mapping extends CloseableSubject<Mapping> {
                 return;
 
             case RESEND_QUERY:
-                if (channels.size() == 0) {
-                    // If there are no channels remaining, restore the mapping
+                if (links.size() == 0) {
+                    // If there are no links remaining, restore the mapping
                     // by re-sending the query.
                     List<Middleware> remotes = local.getService().discover(query);
-                    List<Channel> establishedChannels = local.establishChannels(remotes, query);
-                    for (Channel channel : establishedChannels) {
-                        addChannel(channel);
+                    List<Link> establishedLinks = local.establishLinks(remotes, query);
+                    for (Link link : establishedLinks) {
+                        addLink(link);
                     }
                 }
                 return;
 
             case RESEND_QUERY_INDIVIDUAL:
-                // Send a modified query to restore the remaining channels.
+                // Send a modified query to restore the remaining links.
                 Query modifiedQuery = new Query.Builder()
                         .copy(query)
-                        .setMatches(capacity - channels.size())
+                        .setMatches(capacity - links.size())
                         .build();
                 List<Middleware> remotes = local.getService().discover(query);
-                List<Channel> establishedChannels =
-                        local.establishChannels(remotes, modifiedQuery);
-                for (Channel channel : establishedChannels) {
-                    addChannel(channel);
+                List<Link> establishedLinks =
+                        local.establishLinks(remotes, modifiedQuery);
+                for (Link link : establishedLinks) {
+                    addLink(link);
                 }
                 return;
 

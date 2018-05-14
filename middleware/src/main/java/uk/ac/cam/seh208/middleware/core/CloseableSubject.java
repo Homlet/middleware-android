@@ -11,18 +11,18 @@ import java.util.List;
 public abstract class CloseableSubject<T extends CloseableSubject<T>> implements Closeable {
 
     /**
-     * Stores the current state of the object. Objects begin in the open state.
+     * Stores the current state of the subject. Subjects begin in the open state.
      */
     private volatile boolean closed;
 
     /**
-     * References all observers of the object.
+     * References all observers of the subject.
      */
     private List<CloseableObserver<T>> observers;
 
 
     /**
-     * Initialise the object state.
+     * Initialise the subject state.
      */
     protected CloseableSubject() {
         closed = false;
@@ -30,7 +30,7 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
     }
 
     /**
-     * Subscribe a CloseableObserver to channel events.
+     * Subscribe a CloseableObserver to closure events.
      *
      * @return whether subscription took place.
      */
@@ -48,8 +48,8 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
     }
 
     /**
-     * Atomically subscribe a ChannelObserver to channel events only if the
-     * channel is currently open.
+     * Atomically subscribe a CloseableObserver to closure events only if the
+     * subject is currently open.
      *
      * @return whether subscription took place.
      */
@@ -62,14 +62,14 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
     }
 
     /**
-     * Unsubscribe a CloseableObserver from channel events.
+     * Unsubscribe a CloseableObserver from closure events.
      */
     public synchronized void unsubscribe(CloseableObserver<T> observer) {
         observers.remove(observer);
     }
 
     /**
-     * Permanently close the channel, notifying the change to observers.
+     * Permanently close the subject, notifying the change to observers.
      */
     @Override
     public synchronized void close() {
@@ -77,7 +77,7 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
             return;
         }
 
-        // Notify all observers of the channel closure.
+        // Notify all observers of the subject closure.
         for (CloseableObserver<T> observer : observers) {
             try {
                 observer.onClose((T) this);
@@ -86,7 +86,7 @@ public abstract class CloseableSubject<T extends CloseableSubject<T>> implements
             }
         }
 
-        // Allow observers and channels to be efficiently garbage collected by
+        // Allow observers and subjects to be efficiently garbage collected by
         // explicitly closing the reference loop now no more events can be observed.
         observers.clear();
 

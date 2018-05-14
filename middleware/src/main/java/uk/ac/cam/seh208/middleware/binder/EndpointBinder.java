@@ -115,7 +115,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      *
      *   1. use the registered RDC to discover the locations of peers exposing endpoints
      *      matching the given query;
-     *   2. establish a mapping by opening channels to one or more endpoints from one
+     *   2. establish a mapping by opening links to one or more endpoints from one
      *      or more of these peers.
      *
      * The schema and polarity fields in the given query must be left empty; these are
@@ -123,7 +123,7 @@ public class EndpointBinder extends IEndpoint.Stub {
      *
      * If the given query allows only a limited number of matches, a new query object
      * is constructed for each peer, allowing only the number of matches remaining
-     * after channels were established with previously contacted peers. Peers are
+     * after links were established with previously contacted peers. Peers are
      * contacted in the order returned by the RDC.
      *
      * In the case that any resources returned from the RDC time out or break protocol
@@ -150,7 +150,7 @@ public class EndpointBinder extends IEndpoint.Stub {
     /**
      * Close a mapping associated with this endpoint, referenced by its unique mapping
      * identifier. The process of closing the mapping will close any remaining owned
-     * channels.
+     * links.
      *
      * @param mappingId Unique long identifier of the mapping.
      *
@@ -164,10 +164,10 @@ public class EndpointBinder extends IEndpoint.Stub {
 
     /**
      * Close all active mappings on this endpoint. The process of closing each mapping
-     * will close any remaining owned channels.
+     * will close any remaining owned links.
      *
-     * Note that channels initiated by remote mappings will remain open after this call.
-     * To close all remaining channels following this call, use EndpointBinder#closeAll
+     * Note that links initiated by remote mappings will remain open after this call.
+     * To close all remaining links following this call, use EndpointBinder#closeAll
      */
     @Override
     public void unmapAll() {
@@ -175,25 +175,25 @@ public class EndpointBinder extends IEndpoint.Stub {
     }
 
     /**
-     * Close all channels from this endpoint which match a given query.
+     * Close all links from this endpoint which match a given query.
      *
-     * @param query Query used to filter the channels from this endpoint.
+     * @param query Query used to filter the links from this endpoint.
      *
-     * @return the number of channels that were closed.
+     * @return the number of links that were closed.
      */
     @Override
     public int close(Query query) {
-        return endpoint.closeChannels(query);
+        return endpoint.closeLinks(query);
     }
 
     /**
-     * Close all channels from this endpoint.
+     * Close all links from this endpoint.
      *
-     * @return the number of channels that were closed.
+     * @return the number of links that were closed.
      */
     @Override
     public int closeAll() {
-        return endpoint.closeAllChannels();
+        return endpoint.closeAllLinks();
     }
 
     /**

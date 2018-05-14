@@ -24,9 +24,9 @@ import uk.ac.cam.seh208.middleware.core.comms.MessageStream;
  * Responsible for multiplexing and de-multiplexing messages over a message stream.
  * This provides scope to change the underlying medium via MessageStream implementors,
  * which allow for nice communication semantics such as attempted re-establishing of
- * the underlying connection before propagating failure to channels.
+ * the underlying connection before propagating failure to links.
  *
- * The multiplexer also provides deduplication between a number of channels which share a
+ * The multiplexer also provides deduplication between a number of links which share a
  * local endpoint and destination host, but different destination endpoints.
  */
 public class Multiplexer extends CloseableSubject<Multiplexer> {
@@ -53,18 +53,18 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
     private final Middleware remote;
 
     /**
-     * Map of currently open channels carried by the multiplexer, indexed by their identifier.
+     * Map of currently open links carried by the multiplexer, indexed by their identifier.
      * This is used to determine whether a timeout closure of the multiplexer should be
-     * scheduled on channel closure, and to de-multiplex incoming messages between endpoints.
+     * scheduled on link closure, and to de-multiplex incoming messages between endpoints.
      */
-    private final LongSparseArray<Channel> channels;
+    private final LongSparseArray<Link> links;
 
     /**
-     * Map of currently open channels carried by the multiplexer, grouped by the identifier
-     * of their local endpoint. This is used to determine which channel identifiers should be
+     * Map of currently open links carried by the multiplexer, grouped by the identifier
+     * of their local endpoint. This is used to determine which link identifiers should be
      * prepended to each message for multiplexing purposes.
      */
-    private final LongSparseArray<List<Channel>> channelsByLocalEndpoint;
+    private final LongSparseArray<List<Link>> linksByLocalEndpoint;
 
     /**
      * Lambda reference to the onMessage method for registering with the message stream.
@@ -82,8 +82,8 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         this.service = service;
         this.messageStream = service.getMessageStream(remote.getMessageLocation());
         this.remote = remote;
-        channels = new LongSparseArray<>();
-        channelsByLocalEndpoint = new LongSparseArray<>();
+        links = new LongSparseArray<>();
+        linksByLocalEndpoint = new LongSparseArray<>();
         stateLock = new ReentrantReadWriteLock(true);
 
         // If the local and remote middlewares are equal, this is a loopback multiplexer.
@@ -104,46 +104,46 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
     /**
      * TODO: use read-write lock to allow concurrent sending and receiving.
      *
-     * Carry a channel on this multiplexer. This requires that the channel
-     * remote endpoint resides on the instance of the middleware this channel
+     * Carry a link on this multiplexer. This requires that the link
+     * remote endpoint resides on the instance of the middleware this link
      * communicates with.
      *
-     * @return whether the channel was successfully carried.
+     * @return whether the link was successfully carried.
      */
-    boolean carryChannel(Channel channel) {
+    boolean carryLink(Link link) {
         if (isClosed()) {
             return false;
         }
 
-        if (!Objects.equals(channel.getRemote().getMiddleware(), remote)) {
-            Log.e(getTag(), "Attempted to carry an invalid channel.");
+        if (!Objects.equals(link.getRemote().getMiddleware(), remote)) {
+            Log.e(getTag(), "Attempted to carry an invalid link.");
             return false;
         }
 
         // Acquire the state write lock.
         stateLock.writeLock().lock();
 
-        // Add the channel to the channels map.
-        channels.put(channel.getChannelId(), channel);
+        // Add the link to the links map.
+        links.put(link.getLinkId(), link);
 
-        // Find the channel list associated with the channel's local endpoint,
-        // if one such list already exists, in order to add the channel to it.
-        long localId = channel.getLocal().getEndpointId();
-        if (channelsByLocalEndpoint.indexOfKey(localId) < 0) {
-            // The list does not exist; create a new list and append the channel.
-            List<Channel> channelsList = new ArrayList<>();
-            channelsList.add(channel);
-            channelsByLocalEndpoint.put(localId, channelsList);
+        // Find the link list associated with the link's local endpoint,
+        // if one such list already exists, in order to add the link to it.
+        long localId = link.getLocal().getEndpointId();
+        if (linksByLocalEndpoint.indexOfKey(localId) < 0) {
+            // The list does not exist; create a new list and append the link.
+            List<Link> linksList = new ArrayList<>();
+            linksList.add(link);
+            linksByLocalEndpoint.put(localId, linksList);
         } else {
-            // The list exists; add the channel to it.
-            channelsByLocalEndpoint.get(localId).add(channel);
+            // The list exists; add the link to it.
+            linksByLocalEndpoint.get(localId).add(link);
         }
 
-        // Attempt to subscribe to channel closure, dropping the channel
+        // Attempt to subscribe to link closure, dropping the link
         // when this occurs.
-        if (!channel.subscribeIfOpen(this::dropChannel)) {
-            // If the channel is already closed, drop it immediately.
-            dropChannel(channel);
+        if (!link.subscribeIfOpen(this::dropLink)) {
+            // If the link is already closed, drop it immediately.
+            dropLink(link);
             return false;
         }
 
@@ -154,12 +154,12 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
     }
 
     /**
-     * Stop carrying a previously carried channel. If this was the last channel
+     * Stop carrying a previously carried link. If this was the last link
      * carried by this multiplexer, set a timeout for multiplexer closure.
      *
-     * @return whether the channel was successfully dropped.
+     * @return whether the link was successfully dropped.
      */
-    private boolean dropChannel(Channel channel) {
+    private boolean dropLink(Link link) {
         if (isClosed()) {
             return false;
         }
@@ -167,38 +167,38 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         // Acquire the state write lock.
         stateLock.writeLock().lock();
 
-        if (channels.indexOfKey(channel.getChannelId()) < 0) {
+        if (links.indexOfKey(link.getLinkId()) < 0) {
             // Release the state lock.
             stateLock.writeLock().unlock();
 
-            Log.e(getTag(), "Attempted to remove channel not carried.");
+            Log.e(getTag(), "Attempted to remove link not carried.");
 
             return false;
         }
 
-        // Remove the channel from the channels map.
-        channels.remove(channel.getChannelId());
+        // Remove the link from the links map.
+        links.remove(link.getLinkId());
 
-        // Remove the channel from the channelsByLocalEndpoint list associated with
+        // Remove the link from the linksByLocalEndpoint list associated with
         // its local endpoint identifier.
-        removeChannelByEndpoint(channel, channel.getLocal().getDetails());
+        removeLinkByEndpoint(link, link.getLocal().getDetails());
 
         if (loopback) {
             // In the special case that both endpoints reside on the same middleware,
-            // we must also remove the channel from the channelsByLocalEndpoint list
+            // we must also remove the link from the linksByLocalEndpoint list
             // associated with its remote endpoint identifier.
-            removeChannelByEndpoint(channel, channel.getRemote());
+            removeLinkByEndpoint(link, link.getRemote());
         }
 
-        if (channels.size() == 0) {
-            if (BuildConfig.DEBUG && channelsByLocalEndpoint.size() > 0) {
+        if (links.size() == 0) {
+            if (BuildConfig.DEBUG && linksByLocalEndpoint.size() > 0) {
                 // Release the state lock.
                 stateLock.writeLock().unlock();
 
-                throw new AssertionError("Inconsistent channel state in multiplexer.");
+                throw new AssertionError("Inconsistent link state in multiplexer.");
             }
 
-            // If all carried channels are closed, set a timeout for the closure
+            // If all carried links are closed, set a timeout for the closure
             // of the multiplexer.
             // TODO: timeoutClose();
         }
@@ -210,26 +210,26 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
     }
 
     /**
-     * Convenience procedure for removing a channel from the channelsByLocalEndpoint collection.
-     * The given channel will (obviously) only be removed from the list pertaining to the given
+     * Convenience procedure for removing a link from the linksByLocalEndpoint collection.
+     * The given link will (obviously) only be removed from the list pertaining to the given
      * endpoint if the endpoint actually resides in that list.
      *
-     * @param channel The channel to remove.
-     * @param details Details of the endpoint the channel is associated with.
+     * @param link The link to remove.
+     * @param details Details of the endpoint the link is associated with.
      */
-    private void removeChannelByEndpoint(Channel channel, EndpointDetails details) {
+    private void removeLinkByEndpoint(Link link, EndpointDetails details) {
         long endpointId = details.getEndpointId();
-        List<Channel> channelList = channelsByLocalEndpoint.get(endpointId);
-        channelList.remove(channel);
-        if (channelList.isEmpty()) {
+        List<Link> linkList = linksByLocalEndpoint.get(endpointId);
+        linkList.remove(link);
+        if (linkList.isEmpty()) {
             // If the list is now empty, remove it from the map.
-            channelsByLocalEndpoint.remove(endpointId);
+            linksByLocalEndpoint.remove(endpointId);
         }
     }
 
     /**
      * Send the message along the associated message stream, prepending the ids of all
-     * carried channels associated with the originator endpoint.
+     * carried links associated with the originator endpoint.
      */
     public void send(Endpoint local, String data) {
         if (isClosed()) {
@@ -239,24 +239,24 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         // Acquire the state read lock.
         stateLock.readLock().lock();
 
-        if (channelsByLocalEndpoint.indexOfKey(local.getEndpointId()) < 0) {
+        if (linksByLocalEndpoint.indexOfKey(local.getEndpointId()) < 0) {
             Log.e(getTag(), "Attempted to send a message from a local endpoint with no " +
-                    "carried channels.");
+                    "carried links.");
             return;
         }
 
         try {
             // Build a message efficiently using a StringBuilder object.
             StringBuilder message = new StringBuilder();
-            for (Channel channel : channelsByLocalEndpoint.get(local.getEndpointId())) {
-                // For each channel sharing the given local endpoint, prepend the
-                // channel identifier to the message.
-                message.append(channel.getChannelId());
+            for (Link link : linksByLocalEndpoint.get(local.getEndpointId())) {
+                // For each link sharing the given local endpoint, prepend the
+                // link identifier to the message.
+                message.append(link.getLinkId());
                 message.append("|");
             }
 
             if (BuildConfig.DEBUG && message.toString().isEmpty()) {
-                throw new AssertionError("Bad state in channelsByLocalEndpoint");
+                throw new AssertionError("Bad state in linksByLocalEndpoint");
             }
 
             // Delimit the prefix from the message data using a second newline.
@@ -282,13 +282,13 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         // Acquire the state write lock.
         stateLock.writeLock().lock();
 
-        // Close (and thus drop) all remaining channels.
-        // Channels being migrated to another multiplexer should be
+        // Close (and thus drop) all remaining links.
+        // Links being migrated to another multiplexer should be
         // dropped manually before closing this multiplexer, otherwise
         // they will be closed automatically here.
-        int size = channels.size();
+        int size = links.size();
         for (int i = 0; i < size; i++) {
-            channels.valueAt(0).close();
+            links.valueAt(0).close();
         }
 
         // Remove the message listener from the message stream.
@@ -306,7 +306,7 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
 
     /**
      * On received raw message, split into prefix and data, and dispatch the data to
-     * all local endpoints referenced by the channel identifiers in the prefix.
+     * all local endpoints referenced by the link identifiers in the prefix.
      */
     private void onMessage(String message) {
         if (isClosed()) {
@@ -320,34 +320,34 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
         // Acquire the state read lock.
         stateLock.readLock().lock();
 
-        // Dispatch the message type and separated channel identifier to the local
-        // endpoint of each of the addressed channels.
+        // Dispatch the message type and separated link identifier to the local
+        // endpoint of each of the addressed links.
         for (String part : parts) {
-            long channelId = Long.valueOf(part);
+            long linkId = Long.valueOf(part);
 
-            if (channels.indexOfKey(channelId) < 0) {
-                // If the channels map does not contain the channel id, we
+            if (links.indexOfKey(linkId) < 0) {
+                // If the links map does not contain the link id, we
                 // probably shouldn't have received it.
-                // TODO: stop dropping messages here when the channel was just set up/closed.
-                // TODO: respond telling remote to close the erroneous channel.
-                Log.w(getTag(), "Received message for unknown channel (" + channelId + ")");
+                // TODO: stop dropping messages here when the link was just set up/closed.
+                // TODO: respond telling remote to close the erroneous link.
+                Log.w(getTag(), "Received message for unknown link (" + linkId + ")");
                 continue;
             }
 
-            // Find the local sink endpoint associated with this channel.
-            Endpoint sink = channels.get(channelId).getLocal();
+            // Find the local sink endpoint associated with this link.
+            Endpoint sink = links.get(linkId).getLocal();
             if (loopback) {
                 // If this is a loopback multiplexer, choose the endpoint having the sink
                 // polarity. This is a bit of a hack, and the state space of the multiplexer
                 // would have to be changed in the future to support more exotic polarities.
                 if (sink.getPolarity() != Polarity.SINK) {
-                    EndpointDetails details = channels.get(channelId).getRemote();
+                    EndpointDetails details = links.get(linkId).getRemote();
                     sink = service.getEndpointSet().getEndpointByName(details.getName());
                 }
             }
 
-            // Delegate to the message handler of the channel's local endpoint.
-            sink.onMessage(channelId, data);
+            // Delegate to the message handler of the link's local endpoint.
+            sink.onMessage(linkId, data);
         }
 
         // Release the state lock.

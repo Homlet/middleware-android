@@ -20,14 +20,14 @@ import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.SetRDCAddressCommand;
-import uk.ac.cam.seh208.middleware.core.control.CloseChannelControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.CloseLinkControlMessage;
 import uk.ac.cam.seh208.middleware.core.control.EndpointCommandControlMessage;
 import uk.ac.cam.seh208.middleware.core.control.Middleware;
 import uk.ac.cam.seh208.middleware.core.control.MiddlewareCommandControlMessage;
 import uk.ac.cam.seh208.middleware.core.control.QueryControlMessage;
 import uk.ac.cam.seh208.middleware.core.control.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.core.control.ControlMessage;
-import uk.ac.cam.seh208.middleware.core.control.OpenChannelsControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.OpenLinksControlMessage;
 import uk.ac.cam.seh208.middleware.core.control.RemoveControlMessage;
 import uk.ac.cam.seh208.middleware.core.control.UpdateControlMessage;
 import uk.ac.cam.seh208.middleware.core.exception.InvalidControlMessageException;
@@ -117,32 +117,32 @@ public class ControlMessageTest {
 
 
     @Test
-    public void testSerialiseOpenChannels() throws InvalidControlMessageException, IOException {
-        ControlMessage message = new OpenChannelsControlMessage(endpoint, query);
+    public void testSerialiseOpenLinks() throws InvalidControlMessageException, IOException {
+        ControlMessage message = new OpenLinksControlMessage(endpoint, query);
 
         testSerialise(message, ControlMessage.class);
     }
 
     @Test
-    public void testSerialiseOpenChannelsResponse()
+    public void testSerialiseOpenLinksResponse()
             throws InvalidControlMessageException, IOException {
-        ControlMessage.Response response = new OpenChannelsControlMessage.Response(remoteEndpoints);
+        ControlMessage.Response response = new OpenLinksControlMessage.Response(remoteEndpoints);
 
         testSerialise(response, ControlMessage.Response.class);
     }
 
     @Test
-    public void testSerialiseCloseChannel() throws InvalidControlMessageException, IOException {
-        ControlMessage message = new CloseChannelControlMessage(random.nextLong());
+    public void testSerialiseCloselink() throws InvalidControlMessageException, IOException {
+        ControlMessage message = new CloseLinkControlMessage(random.nextLong());
 
         testSerialise(message, ControlMessage.class);
     }
 
     @Test
-    public void testSerialiseCloseChannelResponse()
+    public void testSerialiseCloseLinkResponse()
             throws InvalidControlMessageException, IOException {
         ControlMessage.Response response =
-                new CloseChannelControlMessage.Response(random.nextBoolean());
+                new CloseLinkControlMessage.Response(random.nextBoolean());
 
         testSerialise(response, ControlMessage.Response.class);
     }

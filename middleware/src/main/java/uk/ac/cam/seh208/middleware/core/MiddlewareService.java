@@ -365,7 +365,7 @@ public class MiddlewareService extends Service {
 
     /**
      * Destroy an existing endpoint and all associated mappings, closing any open
-     * channels having this endpoint at either end. This frees the endpoint name
+     * links having this endpoint at either end. This frees the endpoint name
      * for use in newly created endpoints; however, the endpoint identifier will
      * never be reused (modulo collisions).
      */
@@ -467,16 +467,16 @@ public class MiddlewareService extends Service {
     }
 
     /**
-     * Filter existing endpoints by a query, and open channels from all matching
+     * Filter existing endpoints by a query, and open links from all matching
      * to a single given remote endpoint.
      *
      * @param query Query with which to filter local endpoints.
-     * @param remote Remote endpoint to which to open channels.
+     * @param remote Remote endpoint to which to open links.
      *
-     * @return a list of endpoint-details for the opened channels.
+     * @return a list of endpoint-details for the opened links.
      */
-    public List<RemoteEndpointDetails> openChannels(Query query, RemoteEndpointDetails remote) {
-        Log.i(getTag(), "Opening channels to " + remote.toLogString() + " on middleware " +
+    public List<RemoteEndpointDetails> openLinks(Query query, RemoteEndpointDetails remote) {
+        Log.i(getTag(), "Opening links to " + remote.toLogString() + " on middleware " +
                 remote.getMiddleware() + " from local endpoints matching " + query);
 
         // Keep track of endpoints returned.
@@ -489,14 +489,14 @@ public class MiddlewareService extends Service {
                     .filter(e -> query.getFilter().test(e.getRemoteDetails()))
                     .forEach(e -> {
                         try {
-                            e.openChannel(remote);
+                            e.openLink(remote);
                             endpoints.add(e.getRemoteDetails());
                         } catch (BadHostException | UnexpectedClosureException ex) {
-                            Log.w(getTag(), "Error opening channel on endpoint " + e, ex);
+                            Log.w(getTag(), "Error opening link on endpoint " + e, ex);
                         }
                     });
 
-            // Return the filtered channel details.
+            // Return the filtered link details.
             return endpoints;
         }
     }

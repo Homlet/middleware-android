@@ -23,7 +23,7 @@ public class QueryControlMessage extends ControlMessage {
 
     /**
      * The response contains the list of remote endpoints which matched the
-     * query, and with which channels were established.
+     * query, and with which links were established.
      */
     public static class Response extends ControlMessage.Response {
 

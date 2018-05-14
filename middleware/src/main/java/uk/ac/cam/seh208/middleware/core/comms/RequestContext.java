@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * An interface to a request context, which maintains the state necessary to send
  * asynchronous requests to other middleware instances reliably. Requests are used
- * to implement control messages, which coordinate mappings and channels between
+ * to implement control messages, which coordinate mappings and links between
  * middlewares, as well as run commands on remote instances of the middleware.
  */
 public interface RequestContext {

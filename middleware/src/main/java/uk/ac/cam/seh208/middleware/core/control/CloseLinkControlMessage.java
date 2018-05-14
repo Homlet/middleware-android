@@ -9,14 +9,14 @@ import uk.ac.cam.seh208.middleware.core.comms.RequestStream;
 
 
 /**
- * Control message sent to a remote middleware host to indicate that a channel
+ * Control message sent to a remote middleware host to indicate that a link
  * should be immediately torn down gracefully.
  */
-public class CloseChannelControlMessage extends ControlMessage {
+public class CloseLinkControlMessage extends ControlMessage {
 
     /**
-     * The response indicates whether the channel was closed (true), or whether the
-     * channel identifier was not recognised (false).
+     * The response indicates whether the link was closed (true), or whether the
+     * link identifier was not recognised (false).
      */
     public static class Response extends ControlMessage.Response {
 
@@ -47,20 +47,20 @@ public class CloseChannelControlMessage extends ControlMessage {
 
 
     /**
-     * Unique identifier of the channel that should be closed.
+     * Unique identifier of the link that should be closed.
      */
-    private long channelId;
+    private long linkId;
 
 
     /**
-     * Instantiate a new immutable CLOSE_CHANNEL control message for the given channel.
+     * Instantiate a new immutable CLOSE-LINK control message for the given link.
      */
-    public CloseChannelControlMessage(@JsonProperty("channelId") long channelId) {
-        this.channelId = channelId;
+    public CloseLinkControlMessage(@JsonProperty("linkId") long linkId) {
+        this.linkId = linkId;
     }
 
     /**
-     * Close the channel via the service, and encapsulate the result in a response object.
+     * Close the link via the service, and encapsulate the result in a response object.
      *
      * @param service A reference to the middleware service receiving the message.
      *
@@ -69,7 +69,7 @@ public class CloseChannelControlMessage extends ControlMessage {
     @Override
     public Response handle(Service service) {
         if (!(service instanceof MiddlewareService)) {
-            // Close channel can only be handled by a middleware.
+            // Close link can only be handled by a middleware.
             return null;
         }
 
@@ -90,8 +90,8 @@ public class CloseChannelControlMessage extends ControlMessage {
         if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        CloseChannelControlMessage other = (CloseChannelControlMessage) obj;
+        CloseLinkControlMessage other = (CloseLinkControlMessage) obj;
 
-        return channelId == other.channelId;
+        return linkId == other.linkId;
     }
 }

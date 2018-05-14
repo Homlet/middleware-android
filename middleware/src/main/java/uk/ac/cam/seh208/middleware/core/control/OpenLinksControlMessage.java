@@ -16,14 +16,14 @@ import uk.ac.cam.seh208.middleware.core.comms.RequestStream;
 
 
 /**
- * Control message sent to a remote host to indicate that a number of channels
+ * Control message sent to a remote host to indicate that a number of links
  * should immediately be established with endpoints that match the sent query.
  */
-public class OpenChannelsControlMessage extends ControlMessage {
+public class OpenLinksControlMessage extends ControlMessage {
 
     /**
      * The response contains the list of remote endpoints which matched the
-     * query, and with which channels were established.
+     * query, and with which links were established.
      */
     public static class Response extends ControlMessage.Response {
 
@@ -58,7 +58,7 @@ public class OpenChannelsControlMessage extends ControlMessage {
 
 
     /**
-     * Remote view of the local endpoint with which channels should be established.
+     * Remote view of the local endpoint with which links should be established.
      */
     private RemoteEndpointDetails initiatorEndpoint;
 
@@ -69,9 +69,9 @@ public class OpenChannelsControlMessage extends ControlMessage {
 
 
     /**
-     * Instantiate a new immutable OPEN_CHANNELS control message with the given query.
+     * Instantiate a new immutable OPEN-LINKS control message with the given query.
      */
-    public OpenChannelsControlMessage(
+    public OpenLinksControlMessage(
             @JsonProperty("initiatorEndpoint") RemoteEndpointDetails initiatorEndpoint,
             @JsonProperty("query") Query query) {
         this.initiatorEndpoint = initiatorEndpoint;
@@ -79,22 +79,22 @@ public class OpenChannelsControlMessage extends ControlMessage {
     }
 
     /**
-     * Open channels via the service, and encapsulate the result in a response object.
+     * Open links via the service, and encapsulate the result in a response object.
      *
      * @param service A reference to the middleware service receiving the message.
      *
-     * @return a response containing the details of the opened channels.
+     * @return a response containing the details of the opened links.
      */
     @Override
     public Response handle(Service service) {
         if (!(service instanceof MiddlewareService)) {
-            // OPEN_CHANNELS can only be handled by a middleware instance.
+            // OPEN-LINKS can only be handled by a middleware instance.
             return null;
         }
 
-        // Open channels according to the stored query.
+        // Open links according to the stored query.
         MiddlewareService middleware = (MiddlewareService) service;
-        return new Response(middleware.openChannels(query, initiatorEndpoint));
+        return new Response(middleware.openLinks(query, initiatorEndpoint));
     }
 
     @Override
@@ -110,7 +110,7 @@ public class OpenChannelsControlMessage extends ControlMessage {
         if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        OpenChannelsControlMessage other = (OpenChannelsControlMessage) obj;
+        OpenLinksControlMessage other = (OpenLinksControlMessage) obj;
 
         return (Objects.equals(initiatorEndpoint, other.initiatorEndpoint)
              && Objects.equals(query, other.query));

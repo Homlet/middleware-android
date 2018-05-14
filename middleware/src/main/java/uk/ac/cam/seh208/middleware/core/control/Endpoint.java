@@ -87,10 +87,10 @@ public class Endpoint {
     private final Set<IMessageListener> listeners;
 
     /**
-     * Map of channels owned by the endpoint; i.e. having the
+     * Map of links owned by the endpoint; i.e. having the
      * endpoint at their near end, addressed by their unique identifier.
      */
-    private final LongSparseArray<Channel> channels;
+    private final LongSparseArray<Link> links;
 
     /**
      * Map of mappings established from this endpoint, indexed by their unique identifier.
@@ -98,7 +98,7 @@ public class Endpoint {
     private final LongSparseArray<Mapping> mappings;
 
     /**
-     * Map of multiplexers carrying channels from this endpoint, indexed by the UUID
+     * Map of multiplexers carrying links from this endpoint, indexed by the UUID
      * of their remote location.
      */
     private final LongSparseArray<Multiplexer> multiplexers;
@@ -124,17 +124,17 @@ public class Endpoint {
         }
 
         listeners = new HashSet<>();
-        channels = new LongSparseArray<>();
+        links = new LongSparseArray<>();
         mappings = new LongSparseArray<>();
         multiplexers = new LongSparseArray<>();
     }
 
     /**
-     * Close all active mappings, and all remaining channels.
+     * Close all active mappings, and all remaining links.
      */
     public void destroy() {
         unmapAll();
-        closeAllChannels();
+        closeAllLinks();
     }
 
     /**
@@ -157,7 +157,7 @@ public class Endpoint {
         }
 
         synchronized (this) {
-            // Dispatch the message to all multiplexers carrying channels for this endpoint.
+            // Dispatch the message to all multiplexers carrying links for this endpoint.
             for (int i = 0; i < multiplexers.size(); i++) {
                 multiplexers.valueAt(i).send(this, message);
             }
@@ -218,7 +218,7 @@ public class Endpoint {
      *
      *   1. use the registered RDC to discover the locations of peers exposing endpoints
      *      matching the given query;
-     *   2. establish channels with one or more endpoints from one or more of these
+     *   2. establish links with one or more endpoints from one or more of these
      *      peers, by sending queries to each in turn.
      *
      * The schema and polarity fields in the given query must be left empty; these are
@@ -270,7 +270,7 @@ public class Endpoint {
     /**
      * Close a mapping associated with this endpoint, referenced by its unique mapping
      * identifier. The process of closing the mapping will close any remaining owned
-     * channels.
+     * links.
      *
      * @param mappingId Unique long identifier of the mapping.
      *
@@ -297,43 +297,43 @@ public class Endpoint {
     }
 
     /**
-     * Close all channels from this endpoint which match a given query.
+     * Close all links from this endpoint which match a given query.
      *
-     * @param query Query used to filter the channels from this endpoint.
+     * @param query Query used to filter the links from this endpoint.
      *
-     * @return the number of channels that were closed.
+     * @return the number of links that were closed.
      */
-    public synchronized int closeChannels(Query query) {
-        // Create a list of channels to close.
-        List<Channel> toClose = new ArrayList<>();
+    public synchronized int closeLinks(Query query) {
+        // Create a list of links to close.
+        List<Link> toClose = new ArrayList<>();
         Predicate<EndpointDetails> filter = query.getFilter();
 
-        // Populate the list with channels that match the query.
-        for (int i = 0; i < channels.size(); i++) {
-            Channel channel = channels.valueAt(i);
+        // Populate the list with links that match the query.
+        for (int i = 0; i < links.size(); i++) {
+            Link link = links.valueAt(i);
 
-            if (filter.test(channel.getRemote())) {
-                toClose.add(channel);
+            if (filter.test(link.getRemote())) {
+                toClose.add(link);
             }
         }
 
-        // Close all channels that matched the query.
-        StreamSupport.stream(toClose).forEach(Channel::close);
+        // Close all links that matched the query.
+        StreamSupport.stream(toClose).forEach(Link::close);
 
-        // Return the count of closed channels.
+        // Return the count of closed links.
         return toClose.size();
     }
 
     /**
-     * Close all channels from this endpoint.
+     * Close all links from this endpoint.
      *
-     * @return the number of channels that were closed.
+     * @return the number of links that were closed.
      */
-    public synchronized int closeAllChannels() {
-        int size = channels.size();
+    public synchronized int closeAllLinks() {
+        int size = links.size();
 
         for (int i = 0; i < size; i++) {
-            channels.valueAt(0).close();
+            links.valueAt(0).close();
         }
 
         return size;
@@ -341,7 +341,7 @@ public class Endpoint {
 
     /**
      * Internal function for establishing a mapping with a number of remote hosts. A given
-     * query is sent to each host in turn in order to establish channels, up to a maximum
+     * query is sent to each host in turn in order to establish links, up to a maximum
      * number given in the query.
      *
      * The schema and polarity fields in the given query must be left empty; these are
@@ -349,7 +349,7 @@ public class Endpoint {
      *
      * The return value is a list of the endpoints that were successfully mapped to.
      *
-     * @param remotes List of remote middleware instances with which to open channels.
+     * @param remotes List of remote middleware instances with which to open links.
      * @param query An endpoint query object for filtering remote endpoints.
      * @param persistence Persistence level to use for the resultant mapping.
      *
@@ -376,11 +376,11 @@ public class Endpoint {
                 .build();
 
         synchronized (this) {
-            // Keep track of the currently established channels.
-            List<Channel> mapChannels = establishChannels(remotes, query);
+            // Keep track of the currently established links.
+            List<Link> mapLinks = establishLinks(remotes, query);
 
             // Build the mapping object.
-            Mapping mapping = new Mapping(this, query, persistence, mapChannels);
+            Mapping mapping = new Mapping(this, query, persistence, mapLinks);
 
             // No need for subscribeIfOpen here because the mapping must still be open.
             mapping.subscribe(m -> mappings.remove(m.getMappingId()));
@@ -393,98 +393,98 @@ public class Endpoint {
     }
 
     /**
-     * Establish some number of channels to a collection of remote instances of the
-     * middleware by sending a OPEN-CHANNELS control message, containing the given query.
+     * Establish some number of links to a collection of remote instances of the
+     * middleware by sending a OPEN-LINKS control message, containing the given query.
      *
-     * The established channels are opened using the openChannel method, meaning
-     * they are automatically added to the channels map. However, they are not
+     * The established links are opened using the openLink method, meaning
+     * they are automatically added to the links map. However, they are not
      * automatically associated with a mapping.
      *
-     * @param remotes List of remote instances of the middleware to open channels with.
+     * @param remotes List of remote instances of the middleware to open links with.
      * @param query Query used to filter the remote endpoints.
      */
-    List<Channel> establishChannels(List<Middleware> remotes, Query query) {
-        List<Channel> establishedChannels = new ArrayList<>();
+    List<Link> establishLinks(List<Middleware> remotes, Query query) {
+        List<Link> establishedLinks = new ArrayList<>();
 
-        // Establish channels with each host in turn.
+        // Establish links with each host in turn.
         for (Middleware remote : remotes) {
-            // If we have accepted the maximum number of channels, we need not
+            // If we have accepted the maximum number of links, we need not
             // contact the remaining remote hosts.
-            if (establishedChannels.size() == query.matches) {
+            if (establishedLinks.size() == query.matches) {
                 break;
             }
 
-            // Modify the sent query to only accept the remaining number of channels.
+            // Modify the sent query to only accept the remaining number of links.
             Query modifiedQuery = new Query.Builder()
                     .copy(query)
-                    .setMatches(query.matches - establishedChannels.size())
+                    .setMatches(query.matches - establishedLinks.size())
                     .build();
 
-            // Establish channels to endpoints on the remote host, and add them to our list.
+            // Establish links to endpoints on the remote host, and add them to our list.
             try {
-                establishedChannels.addAll(establishChannels(remote, modifiedQuery));
+                establishedLinks.addAll(establishLinks(remote, modifiedQuery));
             } catch (BadHostException e) {
-                Log.w(getTag(), "Unable to establish channels to host (" +
+                Log.w(getTag(), "Unable to establish links to host (" +
                         remote.toJSON() + ").");
             }
         }
 
-        return establishedChannels;
+        return establishedLinks;
     }
 
     /**
-     * Establish some number of channels to a remote instance of the middleware by
-     * sending a OPEN-CHANNELS control message, containing the given query.
+     * Establish some number of links to a remote instance of the middleware by
+     * sending a OPEN-LINKS control message, containing the given query.
      *
-     * The established channels are opened using the openChannel method, meaning
-     * they are automatically added to the channels map. However, they are not
+     * The established links are opened using the openLink method, meaning
+     * they are automatically added to the links map. However, they are not
      * automatically associated with a mapping.
      *
-     * @param remote Remote instance of the middleware to open channels with.
+     * @param remote Remote instance of the middleware to open links with.
      * @param query Query used to filter the remote endpoints.
      */
-    private List<Channel> establishChannels(Middleware remote, Query query)
+    private List<Link> establishLinks(Middleware remote, Query query)
             throws BadHostException {
-        // Send an OPEN-CHANNELS control message to the remote host.
-        OpenChannelsControlMessage message =
-                new OpenChannelsControlMessage(getRemoteDetails(), query);
+        // Send an OPEN-LINKS control message to the remote host.
+        OpenLinksControlMessage message =
+                new OpenLinksControlMessage(getRemoteDetails(), query);
         RequestStream stream = service.getRequestStream(remote.getRequestLocation());
-        OpenChannelsControlMessage.Response response = message.getResponse(stream);
+        OpenLinksControlMessage.Response response = message.getResponse(stream);
 
-        // The response to the OPEN-CHANNELS message contains a list of remote
-        // endpoint-details from which channels were opened. Open local
-        // counterparts to these channels and track them in the returned list.
-        List<Channel> establishedChannels = new ArrayList<>();
+        // The response to the OPEN-LINKS message contains a list of remote
+        // endpoint-details from which links were opened. Open local
+        // counterparts to these links and track them in the returned list.
+        List<Link> establishedLinks = new ArrayList<>();
         for (RemoteEndpointDetails endpoint : response.getDetails()) {
             try {
-                establishedChannels.add(openChannel(endpoint));
+                establishedLinks.add(openLink(endpoint));
             } catch (UnexpectedClosureException e) {
-                // Do nothing; whilst the remote currently believes this channel to be
+                // Do nothing; whilst the remote currently believes this link to be
                 // open, any attempt to communicate over it will either lead to a
-                // ConnectionFailedException or a CLOSE-CHANNEL control response.
-                Log.w(getTag(), "Couldn't establish channel to remote endpoint due to " +
+                // ConnectionFailedException or a CLOSE-LINK control response.
+                Log.w(getTag(), "Couldn't establish link to remote endpoint due to " +
                         "unexpected closure (" + endpoint.getEndpointId() + ")");
             }
         }
 
-        return establishedChannels;
+        return establishedLinks;
     }
 
     /**
-     * Open a channel to a remote endpoint. This affects only the local state, and
-     * assumes the remote endpoint will be/has been informed that this channel exists.
+     * Open a link to a remote endpoint. This affects only the local state, and
+     * assumes the remote endpoint will be/has been informed that this link exists.
      *
-     * @param remote Remote endpoint to which the channel should be opened.
+     * @param remote Remote endpoint to which the link should be opened.
      *
-     * @return the newly generated id of the channel.
+     * @return the newly generated id of the link.
      */
-    public Channel openChannel(RemoteEndpointDetails remote)
+    public Link openLink(RemoteEndpointDetails remote)
             throws BadHostException, UnexpectedClosureException {
-        Log.i(getTag(), "Opening channel to endpoint " + remote.toLogString() +
+        Log.i(getTag(), "Opening link to endpoint " + remote.toLogString() +
                 " on middleware [" + remote.getMiddleware().getUUID() + "]");
 
-        // Create a new channel from this endpoint to the remote endpoint.
-        Channel channel = new Channel(this, remote);
+        // Create a new link from this endpoint to the remote endpoint.
+        Link link = new Link(this, remote);
 
         synchronized (this) {
             // Get the multiplexer to the remote location.
@@ -497,55 +497,54 @@ public class Endpoint {
                 multiplexers.remove(uuid);
 
                 throw new UnexpectedClosureException("Unexpected multiplexer closure " +
-                        "whilst opening channel.");
+                        "whilst opening link.");
             }
 
-            // Carry the channel on the multiplexer.
-            if (!multiplexer.carryChannel(channel)) {
+            // Carry the link on the multiplexer.
+            if (!multiplexer.carryLink(link)) {
                 throw new UnexpectedClosureException("Unexpected multiplexer closure " +
-                        "whilst opening channel.");
+                        "whilst opening link.");
             }
 
-            // Track the open channel in the channel map.
-            channels.put(channel.getChannelId(), channel);
+            // Track the open link in the link map.
+            links.put(link.getLinkId(), link);
 
-            // Subscribe to channel closure, by removing it from the channel map.
-            if (!channel.subscribeIfOpen(c -> channels.remove(c.getChannelId()))) {
-                channels.remove(channel.getChannelId());
-                throw new UnexpectedClosureException("Unexpected channel closure " +
+            // Subscribe to link closure, by removing it from the link map.
+            if (!link.subscribeIfOpen(c -> links.remove(c.getLinkId()))) {
+                links.remove(link.getLinkId());
+                throw new UnexpectedClosureException("Unexpected link closure " +
                         "whilst opening.");
             }
         }
 
-        return channel;
+        return link;
     }
 
     /**
      * Callback to be registered as a message handler with multiplexers.
      *
      * Distributes newly received messages to all registered listeners,
-     * de-multiplexed by channel identifier.
+     * de-multiplexed by link identifier.
      *
-     * @param channelId The identifier of the channel on which the message
-     *                  was received.
+     * @param linkId The identifier of the link on which the message was received.
      * @param message The newly received message string.
      */
-    void onMessage(long channelId, String message) {
-        if (channels.indexOfKey(channelId) < 0) {
-            // If the channel identifier is not in the channel set, this
+    void onMessage(long linkId, String message) {
+        if (links.indexOfKey(linkId) < 0) {
+            // If the link identifier is not in the link set, this
             // message shouldn't have ended up here.
-            Log.e(getTag(), "Received message from unknown channel ID (" +
-                    channelId + ")");
+            Log.e(getTag(), "Received message from unknown link ID (" +
+                    linkId + ")");
             return;
         }
 
         if (!validate(message)) {
             // The message does not match the schema; the remote endpoint has broken
-            // protocol, and the channel must be closed.
-            Log.e(getTag(), "Incoming message schema mismatch on channel (" +
-                    channelId + ")");
+            // protocol, and the link must be closed.
+            Log.e(getTag(), "Incoming message schema mismatch on link (" +
+                    linkId + ")");
 
-            channels.get(channelId).close();
+            links.get(linkId).close();
             return;
         }
 
@@ -599,8 +598,8 @@ public class Endpoint {
             }
 
             if (command instanceof CloseAllCommand) {
-                // Run the close all channels command.
-                closeAllChannels();
+                // Run the close all links command.
+                closeAllLinks();
                 return true;
             }
 

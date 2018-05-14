@@ -8,9 +8,9 @@ import android.os.Parcelable;
  * the length the middleware will go in attempting to reestablish
  * endpoint mappings after partial or complete failure.
  *
- * Partial failure refers to individual channels within a mapping being
- * closed. Complete failure refers to all channels being closed,
- * specifically when the last channel does so.
+ * Partial failure refers to individual links within a mapping being
+ * closed. Complete failure refers to all links being closed,
+ * specifically when the last link does so.
  */
 public enum Persistence implements Parcelable {
     /**
@@ -28,15 +28,15 @@ public enum Persistence implements Parcelable {
     /**
      * Indicate that, in the case of partial failure, the mapping should
      * be reestablished by sending a minimally modified query. The query
-     * is modified in order to ensure the maximum number of open channels
-     * in the mapping is constant. For example, if a single channel fails,
+     * is modified in order to ensure the maximum number of open links
+     * in the mapping is constant. For example, if a single link fails,
      * the modified query will only accept a single new remote endpoint.
      */
     RESEND_QUERY_INDIVIDUAL,
 
     /**
      * EXPERIMENTAL: Indicate that, in the case of partial failure, closed
-     * channels should be reopened as soon as possible with the same remote
+     * links should be reopened as soon as possible with the same remote
      * endpoint on the same remote middleware instance.
      */
     EXACT;

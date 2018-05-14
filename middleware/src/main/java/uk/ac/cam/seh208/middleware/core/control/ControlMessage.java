@@ -20,8 +20,8 @@ import uk.ac.cam.seh208.middleware.core.comms.RequestStream;
         property = "tag"
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = OpenChannelsControlMessage.class, name = "OPEN_CHANNELS"),
-        @JsonSubTypes.Type(value = CloseChannelControlMessage.class, name = "CLOSE_CHANNEL"),
+        @JsonSubTypes.Type(value = OpenLinksControlMessage.class, name = "OPEN_LINKS"),
+        @JsonSubTypes.Type(value = CloseLinkControlMessage.class, name = "CLOSE_LINK"),
         @JsonSubTypes.Type(value = QueryControlMessage.class, name = "QUERY"),
         @JsonSubTypes.Type(value = UpdateControlMessage.class, name = "UPDATE"),
         @JsonSubTypes.Type(value = RemoveControlMessage.class, name = "REMOVE"),
@@ -40,10 +40,10 @@ public abstract class ControlMessage implements JSONSerializable {
             property = "tag"
     )
     @JsonSubTypes({
-            @JsonSubTypes.Type(value = OpenChannelsControlMessage.Response.class,
-                               name = "OPEN_CHANNELS.R"),
-            @JsonSubTypes.Type(value = CloseChannelControlMessage.Response.class,
-                               name = "CLOSE_CHANNEL.R"),
+            @JsonSubTypes.Type(value = OpenLinksControlMessage.Response.class,
+                               name = "OPEN_LINKS.R"),
+            @JsonSubTypes.Type(value = CloseLinkControlMessage.Response.class,
+                               name = "CLOSE_LINK.R"),
             @JsonSubTypes.Type(value = QueryControlMessage.Response.class,
                                name = "QUERY.R"),
             @JsonSubTypes.Type(value = UpdateControlMessage.Response.class,

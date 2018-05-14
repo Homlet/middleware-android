@@ -4,7 +4,7 @@ import android.os.Parcel;
 
 
 /**
- * Command object describing a remote close-all-channels command.
+ * Command object describing a remote close-all-links command.
  */
 public class CloseAllCommand extends EndpointCommand {
 
@@ -27,7 +27,7 @@ public class CloseAllCommand extends EndpointCommand {
 
     /**
      * Construct and return a new command object describing a remote
-     * close-all-channels command.
+     * close-all-links command.
      */
     public CloseAllCommand() { }
 
