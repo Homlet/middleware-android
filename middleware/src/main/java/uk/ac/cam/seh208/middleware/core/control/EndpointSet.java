@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 
 import uk.ac.cam.seh208.middleware.common.Polarity;
 

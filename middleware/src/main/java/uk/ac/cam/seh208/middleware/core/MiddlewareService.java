@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,6 +29,7 @@ import uk.ac.cam.seh208.middleware.common.MiddlewareCommand;
 import uk.ac.cam.seh208.middleware.common.Query;
 import uk.ac.cam.seh208.middleware.common.SetRDCAddressCommand;
 import uk.ac.cam.seh208.middleware.core.control.EndpointCommandControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.Link;
 import uk.ac.cam.seh208.middleware.core.control.Middleware;
 import uk.ac.cam.seh208.middleware.core.control.MiddlewareCommandControlMessage;
 import uk.ac.cam.seh208.middleware.core.control.MiddlewareDatabase;
@@ -98,6 +100,11 @@ public class MiddlewareService extends Service {
     private EndpointSet endpointSet;
 
     /**
+     * Look-up table for links by the identifiers of their constituent links.
+     */
+    private TreeMap<Long, Link> linksByLinkId;
+
+    /**
      * Pool of open multiplexers within the middleware.
      */
     private MultiplexerPool multiplexerPool;
@@ -163,6 +170,7 @@ public class MiddlewareService extends Service {
         // Initialise object parameters.
         binder = new CombinedBinder(this);
         endpointSet = new EndpointSet();
+        linksByLinkId = new TreeMap<>();
         multiplexerPool = new MultiplexerPool(this);
 
         messageSwitch = new MessageSwitch(
@@ -526,7 +534,10 @@ public class MiddlewareService extends Service {
                     .filter(e -> query.getFilter().test(e.getRemoteDetails()))
                     .forEach(e -> {
                         try {
-                            e.openLink(remote);
+                            Link link = e.openLink(remote);
+                            linksByLinkId.put(link.getLinkId(), link);
+                            link.subscribe(l -> linksByLinkId.remove(l.getLinkId()));
+
                             endpoints.add(e.getRemoteDetails());
                         } catch (BadHostException | UnexpectedClosureException ex) {
                             Log.w(getTag(), "Error opening link on endpoint " + e, ex);
@@ -536,6 +547,22 @@ public class MiddlewareService extends Service {
             // Return the filtered link details.
             return endpoints;
         }
+    }
+
+    /**
+     * Close the link with the given link identifier.
+     *
+     * @return whether a link with the given identifier was found in the state.
+     */
+    public boolean closeLink(long linkId) {
+        Link link = linksByLinkId.get(linkId);
+
+        if (link != null) {
+            link.close();
+            return true;
+        }
+
+        return false;
     }
 
     /**

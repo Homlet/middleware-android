@@ -80,7 +80,7 @@ public class Link extends CloseableSubject<Link> {
         this.remote = remote;
     }
 
-    long getLinkId() {
+    public long getLinkId() {
         return linkId;
     }
 

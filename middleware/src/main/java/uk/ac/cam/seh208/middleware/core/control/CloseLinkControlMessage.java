@@ -73,8 +73,10 @@ public class CloseLinkControlMessage extends ControlMessage {
             return null;
         }
 
-        // TODO: implement.
-        return null;
+        MiddlewareService middleware = (MiddlewareService) service;
+
+        boolean success = middleware.closeLink(linkId);
+        return new Response(success);
     }
 
     @Override
