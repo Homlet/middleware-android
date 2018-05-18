@@ -33,6 +33,7 @@ public class Mapping extends CloseableSubject<Mapping> {
     /**
      * Back-reference to the owning local endpoint object.
      */
+
     private Endpoint local;
 
     /**
@@ -121,9 +122,22 @@ public class Mapping extends CloseableSubject<Mapping> {
         super.close();
     }
 
+    public String getEndpointName() {
+        return local.getName();
+    }
+
     public long getMappingId() {
         return mappingId;
     }
+
+    public Query getQuery() {
+        return query;
+    }
+
+    public Persistence getPersistence() {
+        return persistence;
+    }
+
 
     /**
      * Called by observed links on closure.

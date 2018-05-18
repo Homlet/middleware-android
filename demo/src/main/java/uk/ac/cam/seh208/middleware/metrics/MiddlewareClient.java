@@ -52,7 +52,6 @@ public class MiddlewareClient implements MetricsClient {
                 false);
 
         // Map the endpoints to the server.
-        // TODO: map the sink to the same peer using mapTo.
         source.map(
                 new Query.Builder()
                         .setMatches(1)

@@ -127,7 +127,6 @@ public class TCPClient implements MetricsClient {
     }
 
     private void sendMessages(int messages, int length, long[] timeSend) throws IOException {
-        // TODO: D.R.Y.
         // Work out and insert the amount of string padding required for the message format.
         int padding = length - MetricsClient.minLength(messages);
         String format = "[,\"";

@@ -14,7 +14,6 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -240,32 +239,37 @@ public class Endpoint {
     public Mapping map(Query query, Persistence persistence)
         throws BadQueryException, BadHostException, ProtocolException {
         List<Middleware> remotes = service.discover(query);
-        return establishMapping(remotes, query, persistence);
+        Mapping mapping = establishMapping(remotes, query, persistence);
+
+        // Persist the mapping to the database.
+        service.getDatabase().insertMapping(mapping);
+
+        return mapping;
     }
 
-    /**
-     * Perform a direct mapping on the bound endpoint. This is similar to the second stage
-     * of an indirect mapping: the query is sent to a given peer in order to establish
-     * mappings with remote endpoints.
-     *
-     * The schema and polarity fields in the given query must be left empty; these are
-     * determined by the schema and polarity of the bound endpoint.
-     *
-     * The return value is a list of the endpoints that were successfully mapped to.
-     *
-     * @param remote Remote middleware instance with which to map.
-     * @param query An endpoint query object for filtering remote endpoints.
-     * @param persistence Persistence level to use for the resultant mapping.
-     *
-     * @return a list of RemoteEndpointDetails objects representing the endpoints that were
-     *         successfully mapped to during the operation.
-     *
-     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
-     */
-    public Mapping mapTo(Middleware remote, Query query, Persistence persistence)
-            throws BadQueryException {
-        return establishMapping(Collections.singletonList(remote), query, persistence);
-    }
+//    /**
+//     * Perform a direct mapping on the bound endpoint. This is similar to the second stage
+//     * of an indirect mapping: the query is sent to a given peer in order to establish
+//     * mappings with remote endpoints.
+//     *
+//     * The schema and polarity fields in the given query must be left empty; these are
+//     * determined by the schema and polarity of the bound endpoint.
+//     *
+//     * The return value is a list of the endpoints that were successfully mapped to.
+//     *
+//     * @param remote Remote middleware instance with which to map.
+//     * @param query An endpoint query object for filtering remote endpoints.
+//     * @param persistence Persistence level to use for the resultant mapping.
+//     *
+//     * @return a list of RemoteEndpointDetails objects representing the endpoints that were
+//     *         successfully mapped to during the operation.
+//     *
+//     * @throws BadQueryException if either of the schema or polarity fields are set in the query.
+//     */
+//    public Mapping mapTo(Middleware remote, Query query, Persistence persistence)
+//            throws BadQueryException {
+//        return establishMapping(Collections.singletonList(remote), query, persistence);
+//    }
 
     /**
      * Close a mapping associated with this endpoint, referenced by its unique mapping
@@ -277,10 +281,14 @@ public class Endpoint {
      * @throws MappingNotFoundException if the mapping identifier is not recognised
      *                                  for this endpoint.
      */
-    public synchronized void unmap(long mappingId) throws MappingNotFoundException {
+    public synchronized void unmap(long mappingId)
+            throws MappingNotFoundException {
         if (mappings.indexOfKey(mappingId) < 0) {
             throw new MappingNotFoundException(mappingId);
         }
+
+        // Remove the mapping from the database.
+        service.getDatabase().deleteMapping(mappingId);
 
         // Close the mapping, automatically removing it from the mappings map.
         mappings.get(mappingId).close();
@@ -292,7 +300,14 @@ public class Endpoint {
     public synchronized void unmapAll() {
         int size = mappings.size();
         for (int i = 0; i < size; i++) {
-            mappings.valueAt(0).close();
+            // Get a reference to the next mapping.
+            Mapping mapping = mappings.valueAt(0);
+
+            // Remove the mapping from the database.
+            service.getDatabase().deleteMapping(mapping.getMappingId());
+
+            // Close the mapping.
+            mapping.close();
         }
     }
 
@@ -656,10 +671,14 @@ public class Endpoint {
 
     public void setExposed(boolean exposed) {
         this.exposed = exposed;
+
+        service.getDatabase().setEndpointExposed(getName(), exposed);
     }
 
     public void setForceable(boolean forceable) {
         this.forceable = forceable;
+
+        service.getDatabase().setEndpointForceable(getName(), forceable);
     }
 
     MiddlewareService getService() {

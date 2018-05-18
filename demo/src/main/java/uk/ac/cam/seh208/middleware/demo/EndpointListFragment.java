@@ -193,7 +193,6 @@ public class EndpointListFragment extends Fragment {
 
                 try {
                     // Try to destroy the endpoint in the middleware.
-                    // TODO: move this into a background task.
                     EndpointDetails endpoint = details.get(position);
                     middleware.destroyEndpoint(endpoint.getName());
                 } catch (MiddlewareDisconnectedException e) {

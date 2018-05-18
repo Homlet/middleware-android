@@ -119,7 +119,6 @@ public class ZMQClient implements MetricsClient {
     }
 
     private void sendMessages(int messages, int length, long[] timeSend) {
-        // TODO: D.R.Y.
         // Work out and insert the amount of string padding required for the message format.
         int padding = length - MetricsClient.minLength(messages);
         String format = "[,\"";

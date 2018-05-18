@@ -13,7 +13,6 @@ import java.util.Set;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 
 
-// TODO: implement Google Room-based persistence of endpoints.
 /**
  * Set for efficient storage and retrieval of active endpoint objects
  * in the middleware instance. Also handles persistence of endpoints

@@ -8,7 +8,6 @@ import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Query;
 
 
-// TODO: script generation of this file from the other two interfaces.
 interface ICombined {
     /* ======== Beginning of middleware interface ========================== */
 

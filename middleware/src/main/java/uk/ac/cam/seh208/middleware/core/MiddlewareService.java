@@ -2,6 +2,7 @@ package uk.ac.cam.seh208.middleware.core;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -29,6 +30,7 @@ import uk.ac.cam.seh208.middleware.common.SetRDCAddressCommand;
 import uk.ac.cam.seh208.middleware.core.control.EndpointCommandControlMessage;
 import uk.ac.cam.seh208.middleware.core.control.Middleware;
 import uk.ac.cam.seh208.middleware.core.control.MiddlewareCommandControlMessage;
+import uk.ac.cam.seh208.middleware.core.control.MiddlewareDatabase;
 import uk.ac.cam.seh208.middleware.core.control.QueryControlMessage;
 import uk.ac.cam.seh208.middleware.core.control.RemoteEndpointDetails;
 import uk.ac.cam.seh208.middleware.common.exception.BadHostException;
@@ -67,6 +69,12 @@ public class MiddlewareService extends Service {
      * failure is assumed.
      */
     public static final int RDC_TIMEOUT_MILLIS = 5000;
+
+
+    /**
+     * Key used to store the preference for the UUID to disk.
+     */
+    private static final String PREFS_UUID = "UUID";
 
 
     /**
@@ -123,6 +131,11 @@ public class MiddlewareService extends Service {
     private boolean discoverable;
 
     /**
+     * Instance of the middleware database used for persistence.
+     */
+    private MiddlewareDatabase database;
+
+    /**
      * Indicates that some event occurred since the last update tick invalidating
      * this middleware's RDC entry.
      */
@@ -164,15 +177,27 @@ public class MiddlewareService extends Service {
                 ),
                 handler);
 
-        // TODO: restore UUID from persistent storage.
-        Random random = new Random(System.nanoTime());
+        // Restore the middleware UUID from persistent storage.
+        SharedPreferences prefs = getSharedPreferences("preferences", 0);
+        long uuid = prefs.getLong(PREFS_UUID, -1);
+        if (uuid == -1) {
+            uuid = new Random(System.nanoTime()).nextLong() & 0x7FFFFFFFL;
+            prefs.edit()
+                    .putLong(PREFS_UUID, uuid)
+                    .apply();
+        }
+
         middleware = new Middleware(
-                random.nextLong() & 0x7FFFFFFFL,
+                uuid,
                 messageSwitch.getLocation(),
                 requestSwitch.getLocation());
 
         forceable = true;
         discoverable = true;
+
+        // Restore the previous middleware state from the database.
+        database = MiddlewareDatabase.getInstance(this);
+        database.restore(this);
 
         // Set up the RDC update ticker.
         updateExecutor = Executors.newSingleThreadExecutor();
@@ -337,7 +362,8 @@ public class MiddlewareService extends Service {
      * Create a new endpoint within the middleware, having the given details and settings.
      * The endpoint will have a freshly generated endpoint identifier.
      */
-    public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable)
+    public void createEndpoint(EndpointDetails details, boolean exposed, boolean forceable,
+                               boolean addToDatabase)
             throws EndpointCollisionException, BadSchemaException {
         Log.d(getTag(), "Creating endpoint from details " + details);
 
@@ -352,6 +378,11 @@ public class MiddlewareService extends Service {
                 Log.w(getTag(), "Endpoint with name \"" + details.getName() +
                         "\" already exists.");
                 throw new EndpointCollisionException(details.getName());
+            }
+
+            // If we have been told to persist the endpoint, do so now.
+            if (addToDatabase) {
+                database.insertEndpoint(details, exposed, forceable);
             }
 
             // Add the endpoint to the set.
@@ -369,7 +400,8 @@ public class MiddlewareService extends Service {
      * for use in newly created endpoints; however, the endpoint identifier will
      * never be reused (modulo collisions).
      */
-    public void destroyEndpoint(String name) throws EndpointNotFoundException {
+    public void destroyEndpoint(String name, boolean removeFromDatabase)
+            throws EndpointNotFoundException {
         // Synchronise on the endpoint set to prevent interleaving endpoint
         // destruction and creation/another destruction.
         //noinspection SynchronizeOnNonFinalField
@@ -384,6 +416,11 @@ public class MiddlewareService extends Service {
             binder.invalidateEndpoint(name);
             endpoint.destroy();
             endpointSet.remove(endpoint);
+
+            // If we have been told to persist the endpoint deletion, do so now.
+            if (removeFromDatabase) {
+                database.deleteEndpoint(name);
+            }
 
             Log.i(getTag(), "Endpoint with name \"" + name + "\" destroyed.");
         }
@@ -611,6 +648,10 @@ public class MiddlewareService extends Service {
 
         this.discoverable = discoverable;
         scheduleUpdateRDC();
+    }
+
+    public MiddlewareDatabase getDatabase() {
+        return database;
     }
 
     private static String getTag() {

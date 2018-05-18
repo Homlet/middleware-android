@@ -70,7 +70,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
                 details.getSchema(),
                 details.getTags());
 
-        service.createEndpoint(safeDetails, exposed, forceable);
+        service.createEndpoint(safeDetails, exposed, forceable, true);
     }
 
     /**
@@ -84,7 +84,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      */
     @Override
     public void destroyEndpoint(String name) throws EndpointNotFoundException {
-        service.destroyEndpoint(name);
+        service.destroyEndpoint(name, true);
     }
 
     /**
@@ -131,7 +131,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
      */
     @Override
     public void force(long uuid, MiddlewareCommand command) throws BadHostException {
-        // TODO: implement.
+        // Operation currently unsupported.
     }
 
     /**
@@ -146,7 +146,7 @@ public class MiddlewareBinder extends IMiddleware.Stub {
     @Override
     public void forceEndpoint(long uuid, String name,
                               EndpointCommand command) throws BadHostException {
-        // TODO: implement.
+        // Operation currently unsupported.
     }
 
     /**

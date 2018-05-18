@@ -326,7 +326,6 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
             if (links.indexOfKey(linkId) < 0) {
                 // If the links map does not contain the link id, we
                 // probably shouldn't have received it.
-                // TODO: stop dropping messages here when the link was just set up/closed.
                 // TODO: respond telling remote to close the erroneous link.
                 Log.w(getTag(), "Received message for unknown link (" + linkId + ")");
                 continue;

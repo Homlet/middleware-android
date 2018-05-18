@@ -173,8 +173,6 @@ class ZMQMessageServer implements Runnable {
      * returned. If more than one contender is open, a one is selected and the other is
      * merged into it.
      *
-     * TODO: use interface addresses to update address book.
-     *
      * @param initial The initial message.
      *
      * @return The resolved local stream end for the peer.
@@ -226,7 +224,7 @@ class ZMQMessageServer implements Runnable {
         // If there are multiple contenders, we have already opened our side of
         // the stream multiple times, under different aliased addresses.
 
-        // TODO: design and implement.
+        // TODO: figure out the best course of action here, if any.
         return null;
     }
 
