@@ -36,7 +36,7 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import uk.ac.cam.seh208.middleware.api.Middleware;
 import uk.ac.cam.seh208.middleware.api.RDC;
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
+import uk.ac.cam.seh208.middleware.api.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.metrics.Metrics;
 import uk.ac.cam.seh208.middleware.metrics.MetricsClient;
 import uk.ac.cam.seh208.middleware.metrics.MiddlewareClient;
@@ -45,7 +45,7 @@ import uk.ac.cam.seh208.middleware.metrics.TCPClient;
 import uk.ac.cam.seh208.middleware.metrics.TCPServer;
 import uk.ac.cam.seh208.middleware.metrics.ZMQClient;
 import uk.ac.cam.seh208.middleware.metrics.ZMQServer;
-import uk.ac.cam.seh208.middleware.metrics.exception.IncompleteMetricsException;
+import uk.ac.cam.seh208.middleware.metrics.IncompleteMetricsException;
 
 import static android.os.Environment.DIRECTORY_DOCUMENTS;
 

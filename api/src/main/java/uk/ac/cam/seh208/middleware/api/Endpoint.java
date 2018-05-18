@@ -2,7 +2,6 @@ package uk.ac.cam.seh208.middleware.api;
 
 import android.os.RemoteException;
 
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IMessageListener;
 import uk.ac.cam.seh208.middleware.common.Persistence;

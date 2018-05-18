@@ -3,20 +3,10 @@ package uk.ac.cam.seh208.middleware.api;
 import android.content.Context;
 import android.content.Intent;
 import android.support.annotation.NonNull;
-import android.util.Log;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-import java8.util.function.Consumer;
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
-import uk.ac.cam.seh208.middleware.binder.ICombined;
 import uk.ac.cam.seh208.middleware.common.EndpointCommand;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 import uk.ac.cam.seh208.middleware.common.IntentData;

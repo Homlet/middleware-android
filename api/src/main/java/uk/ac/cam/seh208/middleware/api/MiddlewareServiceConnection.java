@@ -6,7 +6,6 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.binder.ICombined;
 
 

@@ -5,8 +5,6 @@ import android.util.Log;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
-import uk.ac.cam.seh208.middleware.metrics.exception.IncompleteMetricsException;
-
 import static org.zeromq.ZMQ.DEALER;
 
 

@@ -11,7 +11,7 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import uk.ac.cam.seh208.middleware.api.Middleware;
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
+import uk.ac.cam.seh208.middleware.api.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.common.Polarity;
 
 

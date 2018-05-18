@@ -5,7 +5,7 @@ import android.util.Log;
 import java8.util.Lists;
 import uk.ac.cam.seh208.middleware.api.Endpoint;
 import uk.ac.cam.seh208.middleware.api.Middleware;
-import uk.ac.cam.seh208.middleware.api.exception.*;
+import uk.ac.cam.seh208.middleware.api.MiddlewareDisconnectedException;
 
 
 public class MiddlewareServer implements MetricsServer {

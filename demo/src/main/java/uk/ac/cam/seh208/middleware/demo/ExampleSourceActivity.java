@@ -9,7 +9,7 @@ import java8.util.Lists;
 import uk.ac.cam.seh208.middleware.api.Endpoint;
 import uk.ac.cam.seh208.middleware.api.Middleware;
 import uk.ac.cam.seh208.middleware.api.RDC;
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
+import uk.ac.cam.seh208.middleware.api.MiddlewareDisconnectedException;
 
 
 public class ExampleSourceActivity extends Activity {

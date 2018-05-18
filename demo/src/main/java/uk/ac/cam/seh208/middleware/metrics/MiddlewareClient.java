@@ -7,10 +7,9 @@ import uk.ac.cam.seh208.middleware.api.Endpoint;
 import uk.ac.cam.seh208.middleware.api.MessageListener;
 import uk.ac.cam.seh208.middleware.api.MessageListenerToken;
 import uk.ac.cam.seh208.middleware.api.Middleware;
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
+import uk.ac.cam.seh208.middleware.api.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.common.Persistence;
 import uk.ac.cam.seh208.middleware.common.Query;
-import uk.ac.cam.seh208.middleware.metrics.exception.IncompleteMetricsException;
 
 
 public class MiddlewareClient implements MetricsClient {

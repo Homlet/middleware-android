@@ -102,8 +102,6 @@ public class Multiplexer extends CloseableSubject<Multiplexer> {
     }
 
     /**
-     * TODO: use read-write lock to allow concurrent sending and receiving.
-     *
      * Carry a link on this multiplexer. This requires that the link
      * remote endpoint resides on the instance of the middleware this link
      * communicates with.

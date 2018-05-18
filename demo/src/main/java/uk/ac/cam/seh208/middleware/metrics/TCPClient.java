@@ -8,8 +8,6 @@ import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.Socket;
 
-import uk.ac.cam.seh208.middleware.metrics.exception.IncompleteMetricsException;
-
 
 public class TCPClient implements MetricsClient {
 

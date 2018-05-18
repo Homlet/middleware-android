@@ -14,7 +14,7 @@ import java8.util.stream.Collectors;
 import java8.util.stream.StreamSupport;
 import uk.ac.cam.seh208.middleware.api.Endpoint;
 import uk.ac.cam.seh208.middleware.api.Middleware;
-import uk.ac.cam.seh208.middleware.api.exception.MiddlewareDisconnectedException;
+import uk.ac.cam.seh208.middleware.api.MiddlewareDisconnectedException;
 import uk.ac.cam.seh208.middleware.common.EndpointDetails;
 
 
